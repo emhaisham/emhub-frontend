@@ -2726,16 +2726,16 @@ function togglePayEv(id){payExpanded.has(id)?payExpanded.delete(id):payExpanded.
 
 function renderDashboard(){
   let tot=0,paid=0,owed=0,paidEvs=0,unpaidEvs=0,staff=0,totH=0;
-  events.forEach(ev=>{
+  (crewEvents||[]).forEach(ev=>{
     const a=calcEvent(ev);tot+=a;
-    ev.groups.forEach(g=>g.days.forEach(d=>{staff+=d.pax;totH+=d.pax*d.hours}));
+    (ev.groups||[]).forEach(g=>(g.days||[]).forEach(d=>{staff+=d.pax||0;totH+=(d.pax||0)*(d.hours||0)}));
     if(isEventPaid(ev.id)){paidEvs++;paid+=a}else{unpaidEvs++;owed+=a}
   });
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
-  set('dTotal',events.length);set('dSub',`${paidEvs} paid · ${unpaidEvs} unpaid`);
+  set('dTotal',(crewEvents||[]).length);set('dSub',`${paidEvs} paid · ${unpaidEvs} unpaid`);
   set('dPaid',paidEvs);set('dUnpaid',unpaidEvs);set('dOwed',fmt(owed));
   set('dTotVal',fmt(tot));set('dStaff',staff);
-  set('sbEvents',events.length);set('sbPay',fmt(tot));
+  set('sbEvents',(crewEvents||[]).length);set('sbPay',fmt(tot));
   // Unpaid badge
   const b=document.getElementById('unpaidBadge');
   if(b){b.textContent=unpaidEvs;b.style.display=unpaidEvs>0?'':'none'}
@@ -2743,13 +2743,13 @@ function renderDashboard(){
   if(cb){cb.textContent='!';cb.style.display=unpaidEvs>0?'':'none'}
   // Recent
   const rc=document.getElementById('dashRecent');if(!rc)return;
-  const recent=events.slice(0,5);
+  const recent=(crewEvents||[]).slice(0,5);
   if(!recent.length){rc.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div class="empty-title">No events yet</div><div class="empty-sub">Go to Events to add your first event</div></div>';return}
   rc.innerHTML='<div class="events-list">'+recent.map(ev=>{
     const a=calcEvent(ev);const p=isEventPaid(ev.id);
     return`<div class="ev-card"><div class="ev-hdr" style="cursor:default">
       <div><div class="ev-name">${ev.name}</div><div class="ev-date">${fmtDate(ev.date)}</div></div>
-      <span class="badge badge-blue">${ev.groups.reduce((s,g)=>s+g.days.reduce((ss,d)=>ss+d.pax,0),0)}</span>
+      <span class="badge badge-blue">${(ev.groups||[]).reduce((s,g)=>s+(g.days||[]).reduce((ss,d)=>ss+(d.pax||0),0),0)}</span>
       <span class="badge ${p?'badge-green':'badge-red'}">${p?'Paid':'Unpaid'}</span>
       <div class="ev-total">${fmt(a)}</div>
       <button class="btn btn-ghost btn-sm" onclick="cpNav('events')">View →</button>

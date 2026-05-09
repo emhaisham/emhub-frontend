@@ -2069,7 +2069,7 @@ async function _loadAllData(){
   invWarehouses = wh || [];
   invFlightCases = fc || [];
   users = usrs || [];
-  lvTypes = lvTypes || [];
+  hrLeaveTypes = lvTypes || [];
   crewEvents = crewEvts || [];
 }
 
@@ -4533,7 +4533,12 @@ function calNav(dir){
   renderCal();
 }
 
-function calDateStr(d){ return d.toISOString().slice(0,10); }
+function calDateStr(d){
+  const yr = d.getFullYear();
+  const mo = String(d.getMonth()+1).padStart(2,'0');
+  const dy = String(d.getDate()).padStart(2,'0');
+  return `${yr}-${mo}-${dy}`;
+}
 function calFmtDate(s){ 
   if(!s) return '—';
   const clean = String(s).slice(0,10);
@@ -4571,8 +4576,10 @@ function renderCal(){
 
   // Title
   const titleEl=document.getElementById('calTitle');
-  if(calView==='month') titleEl.textContent=MONTHS[calDate.getMonth()]+' '+calDate.getFullYear();
-  else titleEl.textContent=MONTHS[calDate.getMonth()]+' '+calDate.getFullYear();
+  if(titleEl){
+    if(calView==='month') titleEl.textContent=MONTHS[calDate.getMonth()]+' '+calDate.getFullYear();
+    else titleEl.textContent=MONTHS[calDate.getMonth()]+' '+calDate.getFullYear();
+  }
 
   if(calView==='month'){
     const yr=calDate.getFullYear(), mo=calDate.getMonth();
@@ -4917,14 +4924,18 @@ function closeCalPopup(){
   if(overlay) overlay.classList.remove('open');
 }
 
-function deleteCalEvent(eid){
+async function deleteCalEvent(eid){
   closeCalPopup();
-  openConfirm('Delete this event?','This will remove the event and all its equipment lists.','Delete',()=>{
-    // Release any checked-out units assigned to this event
-    invItems.forEach(item=>{(item.units||[]).forEach(u=>{if(u.checkout&&String(u.checkout.eventId)===String(eid)){u.checkout=null;}});});
-    invSave();
-    calEvents=calEvents.filter(e=>String(e.id)!==String(eid));
-    calSave();renderCal();toast('Event deleted');
+  openConfirm('Delete this event?','This will remove the event and all its equipment lists.','Delete',async()=>{
+    await api('DELETE','/events/'+eid);
+    const rawEvts = await api('GET','/events') || [];
+    calEvents = rawEvts.map(e=>({
+      ...e,
+      eventDateFrom: e.eventDateFrom ? String(e.eventDateFrom).slice(0,10) : null,
+      eventDateTo:   e.eventDateTo   ? String(e.eventDateTo).slice(0,10)   : null,
+    }));
+    events = calEvents;
+    renderCal();toast('Event deleted');
   });
 }
 
@@ -5537,6 +5548,17 @@ function renderAll(){
   renderDashboard();renderEvents(true);
   if(cpActivePage==='payments')renderPayments();
   if(cpActivePage==='reports')renderReports();
+  // Also render calendar sidebar upcoming events
+  const upcoming=document.getElementById('calUpcoming');
+  if(upcoming&&calEvents.length){
+    const todayDs=calDateStr(new Date());
+    const future=calEvents.filter(e=>!e.completed&&String(e.eventDateTo||'').slice(0,10)>=todayDs)
+      .sort((a,b)=>String(a.eventDateFrom||'').slice(0,10)>String(b.eventDateFrom||'').slice(0,10)?1:-1).slice(0,5);
+    upcoming.innerHTML=future.length?future.map(e=>`<div style="margin-bottom:8px;cursor:pointer;border-radius:6px;padding:5px 7px;background:var(--surface);border:1px solid var(--border)" onclick="showCalPopup('${e.id}',null)">
+      <div style="font-size:12px;font-weight:600;color:var(--text)">${e.name}</div>
+      <div style="font-size:11px;color:var(--text3)">${calFmtDate(e.eventDateFrom)}</div>
+    </div>`).join(''):'<div style="font-size:12px;color:var(--text3)">No upcoming events</div>';
+  }
 }
 
 // ══ TOAST ════════════════════════════════════════════

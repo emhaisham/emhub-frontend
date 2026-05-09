@@ -6382,10 +6382,11 @@ async function invSubCatSave(){ invSubCats = await api('GET','/inventory/subcate
 // ── Render Inventory (parent list) ───────────────────────────────────────────
 // Load inventory item photos via signed URLs
 async function loadInvPhotos(){
-  const imgs = document.querySelectorAll('[data-key]');
+  const imgs = document.querySelectorAll('img[data-key]');
   for(const img of imgs){
     const key = img.getAttribute('data-key');
-    if(!key || img.src) continue;
+    if(!key || img.getAttribute('data-loaded')) continue;
+    img.setAttribute('data-loaded','1');
     try{
       const r = await api('GET','/files/signed-url?key='+encodeURIComponent(key));
       if(r?.url) img.src = r.url;
@@ -6426,7 +6427,9 @@ function invParentRowHtml(item){
   const units=item.units||[];
   const working=units.filter(u=>u.status!=='faulty').length;
   const faulty=units.filter(u=>u.status==='faulty').length;
-  const photoHtml=item.photoUrl?`<div class="inv-row-thumb"><img src="" data-key="${item.photoUrl}" id="inv-thumb-${item.id}" alt="${item.name}" onload="" onerror="this.style.opacity='0'"></div>`:`<div class="inv-row-thumb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`;
+  const photoHtml=item.photoUrl
+    ?`<div class="inv-row-thumb"><img data-key="${item.photoUrl}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;border-radius:8px"></div>`
+    :`<div class="inv-row-thumb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`;
   const catLabel=[cat?.name,sub?.name].filter(Boolean).join(' › ')||'—';
   return`<div class="inv-row" id="invcard_${item.id}" style="cursor:pointer" onclick="openInvParent('${item.id}')">
     ${photoHtml}

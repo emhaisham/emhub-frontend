@@ -6732,25 +6732,47 @@ function toggleDiscardOther(){
   const w=document.getElementById('discard_other_wrap');
   if(w) w.style.display=v==='other'?'block':'none';
 }
-function saveDiscardUnit(){
+async function saveDiscardUnit(){
   const reason=document.getElementById('discard_reason')?.value;
   if(!reason){toast('Select a reason');return;}
   const other=document.getElementById('discard_other')?.value.trim();
   if(reason==='other'&&!other){toast('Enter the reason');return;}
   const item=invItems.find(x=>String(x.id)===String(_editUnitParentId)); if(!item) return;
-  const unit=(item.units||[]).find(u=>u.unitId===_editUnitId); if(!unit) return;
-  unit.discarded=true; unit.discardReason=reason; unit.discardReasonOther=other||'';
-  unit.discardDate=new Date().toISOString().slice(0,10);
-  invSave(); closeSimpleModal(); refreshUnitsPanel(); renderInventory();
-  // Refresh detail if open
-  if(_detailParentId===_editUnitParentId&&_detailUnitId===_editUnitId) renderUnitDetailModal();
+  const unit=(item.units||[]).find(u=>String(u.unitId||u.id)===String(_editUnitId)); if(!unit) return;
+  const dbUnitId=unit.id||unit.unitId;
+  const discardReason=reason==='other'?other:reason;
+  const res=await api('PUT','/inventory/units/'+dbUnitId,{
+    itemSerial:unit.itemSerial||null,
+    importDate:unit.importDate?String(unit.importDate).slice(0,10):null,
+    warehouseId:unit.warehouseId||null,
+    fcId:unit.fcId||unit.flightCaseId||null,
+    notes:unit.notes||null,
+    discarded:true,
+    discardReason
+  });
+  if(!res){toast('Failed to discard unit');return;}
+  invItems=await api('GET','/inventory/items')||invItems;
+  closeSimpleModal(); refreshUnitsPanel(); renderInventory();
+  if(_detailParentId===_editUnitParentId) renderUnitDetailModal();
   toast('Unit marked as discarded');
 }
-function undoDiscard(parentId, unitId){
+
+async function undoDiscard(parentId, unitId){
   const item=invItems.find(x=>String(x.id)===String(parentId)); if(!item) return;
-  const unit=(item.units||[]).find(u=>u.unitId===unitId); if(!unit) return;
-  unit.discarded=false; unit.discardReason=''; unit.discardReasonOther=''; unit.discardDate='';
-  invSave(); refreshUnitsPanel(); renderInventory(); renderUnitDetailModal(); toast('Unit restored ✓');
+  const unit=(item.units||[]).find(u=>String(u.unitId||u.id)===String(unitId)); if(!unit) return;
+  const dbUnitId=unit.id||unit.unitId;
+  const res=await api('PUT','/inventory/units/'+dbUnitId,{
+    itemSerial:unit.itemSerial||null,
+    importDate:unit.importDate?String(unit.importDate).slice(0,10):null,
+    warehouseId:unit.warehouseId||null,
+    fcId:unit.fcId||unit.flightCaseId||null,
+    notes:unit.notes||null,
+    discarded:false,
+    discardReason:null
+  });
+  if(!res){toast('Failed to restore unit');return;}
+  invItems=await api('GET','/inventory/items')||invItems;
+  refreshUnitsPanel(); renderInventory(); renderUnitDetailModal(); toast('Unit restored ✓');
 }
 
 // ── Fault Reporting ────────────────────────────────────────────────────────────

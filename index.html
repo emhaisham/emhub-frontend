@@ -706,8 +706,8 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .inv-list-header{display:grid;grid-template-columns:36px 1fr 110px 90px 70px 80px 90px;gap:12px;padding:8px 16px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);border-bottom:2px solid var(--border);margin-bottom:4px}
 .inv-row{display:grid;grid-template-columns:36px 1fr 110px 90px 70px 80px 90px;gap:12px;padding:10px 16px;background:var(--white);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;align-items:center;transition:box-shadow .12s}
 .inv-row:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.inv-row-thumb{width:34px;height:34px;border-radius:7px;object-fit:cover;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;overflow:hidden}
-.inv-row-thumb img{width:100%;height:100%;object-fit:cover;border-radius:7px}
+.inv-row-thumb{width:44px;height:44px;border-radius:7px;object-fit:cover;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;overflow:hidden}
+.inv-row-thumb img{width:44px;height:44px;object-fit:cover;border-radius:7px;display:block}
 .inv-row-name{font-size:13.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .inv-row-sub{font-size:11.5px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .inv-row-cell{font-size:12.5px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -6428,8 +6428,8 @@ function invParentRowHtml(item){
   const working=units.filter(u=>u.status!=='faulty').length;
   const faulty=units.filter(u=>u.status==='faulty').length;
   const photoHtml=item.photoUrl
-    ?`<div class="inv-row-thumb"><img data-key="${item.photoUrl}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;border-radius:8px"></div>`
-    :`<div class="inv-row-thumb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`;
+    ?`<div class="inv-row-thumb"><img data-key="${item.photoUrl}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:7px;display:none" onload="this.style.display='block'" onerror="this.parentElement.innerHTML='<svg width=\\'20\\' height=\\'20\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><path d=\\'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z\\'/></svg>'"></div>`
+    :`<div class="inv-row-thumb"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`;
   const catLabel=[cat?.name,sub?.name].filter(Boolean).join(' › ')||'—';
   return`<div class="inv-row" id="invcard_${item.id}" style="cursor:pointer" onclick="openInvParent('${item.id}')">
     ${photoHtml}

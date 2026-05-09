@@ -6624,7 +6624,7 @@ function _unitInfoTab(item,unit,fc,wh,qrData){
       <table style="font-size:13px;border-collapse:collapse;width:100%;margin-bottom:14px">
         <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600;white-space:nowrap">EM Serial</td><td><span style="font-family:monospace;font-size:14px;font-weight:700;color:var(--accent)">${unit.serial}</span></td></tr>
         <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Item Serial</td><td style="font-family:monospace">${unit.itemSerial||'—'}</td></tr>
-        <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Import Date</td><td>${unit.importDate||'—'}</td></tr>
+        <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Import Date</td><td>${unit.importDate?fmtDate(String(unit.importDate).slice(0,10)):'—'}</td></tr>
         <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Location</td><td>${wh?wh.name:'—'}</td></tr>
         <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Flight Case</td><td>${fc?fc.fcSerial+' — '+fc.name:'—'}</td></tr>
         ${unit.notes?`<tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Notes</td><td>${unit.notes}</td></tr>`:''}

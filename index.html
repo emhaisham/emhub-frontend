@@ -6156,16 +6156,19 @@ function openAddInvCat(){
   document.getElementById('simpleModal').style.display='flex';
   setTimeout(()=>document.getElementById('cat_name')?.focus(),100);
 }
-function saveInvCatNew(){
+async function saveInvCatNew(){
   const name=document.getElementById('cat_name')?.value.trim();
   if(!name){toast('Enter a category name');return;}
   if(_editCatId){
-    const cat=invCats.find(c=>String(c.id)===String(_editCatId));
-    if(cat) cat.name=name;
+    const res=await api('PUT','/inventory/categories/'+_editCatId,{name});
+    if(!res) return;
+    invCats=await api('GET','/inventory/categories')||invCats;
   } else {
-    invCats.push({id:uid(),name});
+    const res=await api('POST','/inventory/categories',{name});
+    if(!res) return;
+    invCats=await api('GET','/inventory/categories')||invCats;
   }
-  invCatSave(); renderInvCats(); populateInvCatFilter(); closeSimpleModal();
+  renderInvCats(); populateInvCatFilter(); closeSimpleModal();
   toast(_editCatId?'Category updated ✓':'Category added ✓');
 }
 function editInvCat(id){
@@ -6215,18 +6218,20 @@ async function openAddInvSubCat(){
   document.getElementById('simpleModal').style.display='flex';
   setTimeout(()=>document.getElementById('subcat_name')?.focus(),100);
 }
-function saveInvSubCatNew(){
+async function saveInvSubCatNew(){
   const catId=document.getElementById('subcat_cat')?.value;
   const name=document.getElementById('subcat_name')?.value.trim();
   if(!catId){toast('Select a parent category');return;}
   if(!name){toast('Enter a sub-category name');return;}
   if(_editSubCatId){
-    const sc=invSubCats.find(s=>String(s.id)===String(_editSubCatId));
-    if(sc){sc.name=name;sc.catId=catId;}
+    const res=await api('PUT','/inventory/subcategories/'+_editSubCatId,{catId,name});
+    if(!res) return;
   } else {
-    invSubCats.push({id:uid(),catId,name});
+    const res=await api('POST','/inventory/subcategories',{catId,name});
+    if(!res) return;
   }
-  invSubCatSave(); renderInvSubCats(); closeSimpleModal();
+  invSubCats=await api('GET','/inventory/subcategories')||invSubCats;
+  renderInvSubCats(); closeSimpleModal();
   toast(_editSubCatId?'Sub-category updated ✓':'Sub-category added ✓');
 }
 function editInvSubCat(id){
@@ -6248,14 +6253,15 @@ function editInvSubCat(id){
 function deleteInvSubCat(id){
   const sc=invSubCats.find(s=>String(s.id)===String(id)); if(!sc) return;
   const usedBy=invItems.filter(x=>String(x.subCatId)===String(id)).length;
-  openConfirm('Delete sub-category?',`"${sc.name}"${usedBy>0?` — used by ${usedBy} item${usedBy!==1?'s':''}`:''}`,'Delete',()=>{
-    invSubCats=invSubCats.filter(s=>String(s.id)!==String(id));
-    invSubCatSave(); renderInvSubCats(); toast('Sub-category deleted');
+  openConfirm('Delete sub-category?',`"${sc.name}"${usedBy>0?` — used by ${usedBy} item${usedBy!==1?'s':''}`:''}`,'Delete',async()=>{
+    await api('DELETE','/inventory/subcategories/'+id);
+    invSubCats=await api('GET','/inventory/subcategories')||invSubCats;
+    renderInvSubCats(); toast('Sub-category deleted');
   });
 }
 
 // ══ WAREHOUSES ════════════════════════════════════════
-function invWhSave(){ localStorage.setItem('em_invwh', JSON.stringify(invWarehouses)); }
+async function invWhSave(){ invWarehouses = await api('GET','/inventory/warehouses')||invWarehouses; }
 
 function renderWarehouses(){
   const el=document.getElementById('invWhList'); if(!el) return;
@@ -6290,7 +6296,7 @@ function openAddWarehouse(){
   window._simpleModalFn = saveWarehouseNew;
   document.getElementById('simpleModal').style.display='flex';
 }
-function saveWarehouseNew(){
+async function saveWarehouseNew(){
   try {
     const nameEl = document.getElementById('wh_name');
     const descEl = document.getElementById('wh_desc');
@@ -6298,8 +6304,9 @@ function saveWarehouseNew(){
     const name = nameEl.value.trim();
     if(!name){ toast('Enter a location name'); return; }
     const desc = descEl ? descEl.value.trim() : '';
-    invWarehouses.push({id:uid(), name, description:desc});
-    invWhSave();
+    const res=await api('POST','/inventory/warehouses',{name,description:desc});
+    if(!res) return;
+    invWarehouses=await api('GET','/inventory/warehouses')||invWarehouses;
     renderWarehouses();
     populateInvWhFilter();
     closeSimpleModal();
@@ -6323,19 +6330,22 @@ function editWarehouse(id){
   window._simpleModalFn=saveWarehouseEdit;
   document.getElementById('simpleModal').style.display='flex';
 }
-function saveWarehouseEdit(){
-  const w=invWarehouses.find(x=>String(x.id)===String(_editWhId)); if(!w) return;
+async function saveWarehouseEdit(){
   const name=document.getElementById('wh_name')?.value.trim();
   if(!name){toast('Enter a name');return;}
-  w.name=name;w.description=document.getElementById('wh_desc')?.value.trim()||'';
-  invWhSave();renderWarehouses();populateInvWhFilter();
+  const desc=document.getElementById('wh_desc')?.value.trim()||'';
+  const res=await api('PUT','/inventory/warehouses/'+_editWhId,{name,description:desc});
+  if(!res) return;
+  invWarehouses=await api('GET','/inventory/warehouses')||invWarehouses;
+  renderWarehouses();populateInvWhFilter();
   closeSimpleModal();toast('Location updated ✓');
 }
 
 function deleteWarehouse(id){
-  openConfirm('Delete this location?','Items assigned here will lose their location.','Delete',()=>{
-    invWarehouses=invWarehouses.filter(w=>String(w.id)!==String(id));
-    invWhSave(); renderWarehouses(); populateInvWhFilter(); toast('Location deleted');
+  openConfirm('Delete this location?','Items assigned here will lose their location.','Delete',async()=>{
+    await api('DELETE','/inventory/warehouses/'+id);
+    invWarehouses=await api('GET','/inventory/warehouses')||invWarehouses;
+    renderWarehouses(); populateInvWhFilter(); toast('Location deleted');
   });
 }
 

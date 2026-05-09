@@ -6784,26 +6784,26 @@ function openReportFault(parentId, unitId){
   setTimeout(()=>document.getElementById('fault_desc')?.focus(),100);
 }
 
-function saveFaultReport(){
+async function saveFaultReport(){
   const fault=document.getElementById('fault_desc')?.value.trim();
   const by=document.getElementById('fault_by')?.value;
   const date=document.getElementById('fault_date')?.value;
   if(!fault){toast('Describe the fault');return;}
   if(!by){toast('Select who is reporting');return;}
   const item=invItems.find(x=>String(x.id)===String(_editUnitParentId)); if(!item) return;
-  const unit=(item.units||[]).find(u=>u.unitId===_editUnitId); if(!unit) return;
+  const unit=(item.units||[]).find(u=>String(u.unitId||u.id)===String(_editUnitId)); if(!unit) return;
+  const unitId = unit.id || unit.unitId;
   if(!unit.faults) unit.faults=[];
-  unit.faults.push({faultId:'f'+uid(),fault,reportedBy:by,reportedDate:date,photos:[..._faultPhotos],repairedDate:'',repairNote:'',repairedBy:''});
-  // Auto-set unit status to faulty when fault reported
-  unit.status='faulty';
-  invSave(); closeSimpleModal();
-  // Also record in global fault log
-  const globalFault={id:'gf'+uid(),parentId:String(item.id),unitId:unit.unitId,serial:unit.serial,itemName:item.name,fault,reportedBy:by,reportedDate:date,photos:[..._faultPhotos],status:'open'};
-  if(!window._invFaultLog) window._invFaultLog=JSON.parse(localStorage.getItem('em_faults')||'[]');
-  window._invFaultLog.unshift(globalFault);
-  // faults stored per unit in database via invSave
+  const newFault={faultId:'f'+uid(),fault,reportedBy:by,reportedDate:date,photos:[..._faultPhotos],repairedDate:'',repairNote:'',repairedBy:''};
+  unit.faults.push(newFault);
+  // Save faults to database
+  const res = await api('PATCH','/inventory/units/'+unitId+'/faults',{faults:unit.faults, status:'faulty'});
+  if(!res){ unit.faults.pop(); toast('Failed to save fault'); return; }
+  // Refresh items
+  invItems=await api('GET','/inventory/items')||invItems;
+  closeSimpleModal();
   refreshUnitsPanel(); renderInventory();
-  openUnitDetail(_editUnitParentId,_editUnitId,'faults');
+  openUnitDetail(_editUnitParentId, unitId, 'faults');
   toast('Fault reported ✓');
 }
 
@@ -6831,28 +6831,33 @@ function openMarkRepaired(parentId, unitId, faultId){
   window._simpleModalFn=()=>saveRepaired(parentId,unitId,faultId);
   document.getElementById('simpleModal').style.display='flex';
 }
-function saveRepaired(parentId, unitId, faultId){
+async function saveRepaired(parentId, unitId, faultId){
   const date=document.getElementById('repair_date')?.value;
   const note=document.getElementById('repair_note')?.value.trim()||'';
   const by=document.getElementById('repair_by')?.value.trim()||'';
   if(!date){toast('Enter repair date');return;}
   const item=invItems.find(x=>String(x.id)===String(parentId)); if(!item) return;
-  const unit=(item.units||[]).find(u=>u.unitId===unitId); if(!unit) return;
+  const unit=(item.units||[]).find(u=>String(u.unitId||u.id)===String(unitId)); if(!unit) return;
+  const dbUnitId=unit.id||unit.unitId;
   const fault=(unit.faults||[]).find(f=>f.faultId===faultId); if(!fault) return;
   fault.repairedDate=date; fault.repairNote=note; fault.repairedBy=by;
-  if(!(unit.faults||[]).some(f=>!f.repairedDate)) unit.status='working';
-  invSave(); closeSimpleModal(); refreshUnitsPanel(); renderInventory();
-  renderFaultReports();
-  if(_detailParentId===String(parentId)&&_detailUnitId===unitId) openUnitDetail(parentId,unitId,'faults');
+  const allFixed=!(unit.faults||[]).some(f=>!f.repairedDate);
+  await api('PATCH','/inventory/units/'+dbUnitId+'/faults',{faults:unit.faults,status:allFixed?'working':undefined});
+  invItems=await api('GET','/inventory/items')||invItems;
+  closeSimpleModal(); refreshUnitsPanel(); renderInventory();
+  if(_detailParentId===String(parentId)) openUnitDetail(parentId,dbUnitId,'faults');
   toast('Repair details saved ✓');
 }
-
 function deleteFault(parentId, unitId, faultId){
   const item=invItems.find(x=>String(x.id)===String(parentId)); if(!item) return;
-  const unit=(item.units||[]).find(u=>u.unitId===unitId); if(!unit) return;
-  openConfirm('Delete this fault report?','','Delete',()=>{
+  const unit=(item.units||[]).find(u=>String(u.unitId||u.id)===String(unitId)); if(!unit) return;
+  const dbUnitId=unit.id||unit.unitId;
+  openConfirm('Delete this fault report?','','Delete',async()=>{
     unit.faults=(unit.faults||[]).filter(f=>f.faultId!==faultId);
-    invSave(); openUnitDetail(parentId,unitId,'faults'); refreshUnitsPanel(); toast('Fault deleted');
+    const allFixed=!(unit.faults||[]).some(f=>!f.repairedDate);
+    await api('PATCH','/inventory/units/'+dbUnitId+'/faults',{faults:unit.faults,status:allFixed?'working':undefined});
+    invItems=await api('GET','/inventory/items')||invItems;
+    openUnitDetail(parentId,dbUnitId,'faults'); refreshUnitsPanel(); toast('Fault deleted');
   });
 }
 

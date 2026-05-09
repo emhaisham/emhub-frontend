@@ -6901,7 +6901,7 @@ async function openAddUnit(parentId){
       <select id="unit_wh"><option value="">— None —</option>${whOpts}</select></div>
     <div class="field"><label class="field-label">Flight Case</label>
       <div style="position:relative">
-        <input type="text" id="unit_fc_search" placeholder="Type to search flight cases…" autocomplete="off" oninput="filterUnitFC()" style="width:100%">
+        <input type="text" id="unit_fc_search" placeholder="Type to search flight cases…" autocomplete="off" oninput="filterUnitFC()" onfocus="filterUnitFC()" style="width:100%">
       </div>
       <div id="unit_fc_dd" style="display:none;border:1px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;background:var(--white);box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:4px"></div>
       <div id="unit_fc_sel" style="display:none;background:var(--accent-bg);border:1px solid var(--accent-bd);border-radius:8px;padding:7px 12px;margin-top:5px;font-size:12.5px;display:flex;align-items:center;justify-content:space-between">
@@ -6923,16 +6923,25 @@ async function openAddUnit(parentId){
   document.getElementById('simpleModal').style.display='flex';
 }
 
-function filterUnitFC(){
+async function filterUnitFC(){
+  // Fetch fresh if needed
+  if(!invFlightCases.length){
+    const fc = await api('GET','/inventory/flightcases');
+    if(fc) invFlightCases = fc;
+  }
   const q=(document.getElementById('unit_fc_search')?.value||'').toLowerCase();
   const dd=document.getElementById('unit_fc_dd'); if(!dd) return;
   const filtered=invFlightCases.filter(f=>!q||(f.name&&f.name.toLowerCase().includes(q))||(f.fcSerial&&f.fcSerial.toLowerCase().includes(q)));
-  if(!filtered.length){dd.style.display='none';return;}
+  if(!filtered.length){
+    dd.style.display='block';
+    dd.innerHTML='<div style="padding:8px 12px;font-size:13px;color:var(--text3)">No flight cases found</div>';
+    return;
+  }
   dd.style.display='block';
   dd.innerHTML=filtered.map(f=>`<div onclick="selectUnitFC('${f.id}','${f.fcSerial} — ${f.name.replace(/'/g,"&#39;")}')"
     style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)"
     onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
-    <span style="font-family:monospace;font-weight:700;color:var(--accent)">${f.fcSerial}</span> — ${f.name}
+    <span style="font-family:monospace;font-weight:700;color:var(--accent)">${f.fcSerial||''}</span> — ${f.name}
   </div>`).join('');
 }
 function selectUnitFC(id,label){
@@ -6991,7 +7000,7 @@ function openEditUnit(parentId, unitId){
       <select id="unit_wh"><option value="">— None —</option>${whOpts}</select></div>
     <div class="field"><label class="field-label">Flight Case</label>
       <div style="position:relative">
-        <input type="text" id="unit_fc_search" placeholder="Type to search flight cases…" autocomplete="off" oninput="filterUnitFC()" style="width:100%">
+        <input type="text" id="unit_fc_search" placeholder="Type to search flight cases…" autocomplete="off" oninput="filterUnitFC()" onfocus="filterUnitFC()" style="width:100%">
       </div>
       <div id="unit_fc_dd" style="display:none;border:1px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;background:var(--white);box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:4px"></div>
       <div id="unit_fc_sel" style="${fcSelLabel?'display:flex':'display:none'};background:var(--accent-bg);border:1px solid var(--accent-bd);border-radius:8px;padding:7px 12px;margin-top:5px;font-size:12.5px;align-items:center;justify-content:space-between">

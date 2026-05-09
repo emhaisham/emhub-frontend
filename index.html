@@ -6380,17 +6380,20 @@ async function invCatSave(){ invCats = await api('GET','/inventory/categories') 
 async function invSubCatSave(){ invSubCats = await api('GET','/inventory/subcategories') || invSubCats; }
 
 // ── Render Inventory (parent list) ───────────────────────────────────────────
+// Cache for signed URLs to avoid re-fetching
+const _signedUrlCache = {};
+
 // Load inventory item photos via signed URLs (bulk)
 async function loadInvPhotos(){
   const imgs = document.querySelectorAll('img[data-key]');
   if(!imgs.length) return;
-  // Collect all unique keys
   const keys = [...new Set([...imgs].map(img=>img.getAttribute('data-key')).filter(Boolean))];
   if(!keys.length) return;
   try {
-    // Get all signed URLs in one request
     const urls = await api('POST','/inventory/signed-urls',{keys});
     if(!urls) return;
+    // Cache the URLs
+    Object.assign(_signedUrlCache, urls);
     imgs.forEach(img=>{
       const key = img.getAttribute('data-key');
       if(key && urls[key]){
@@ -6401,6 +6404,14 @@ async function loadInvPhotos(){
   } catch(e){
     console.error('loadInvPhotos error:', e);
   }
+}
+
+async function getSignedUrl(key){
+  if(!key) return null;
+  if(_signedUrlCache[key]) return _signedUrlCache[key];
+  const r = await api('GET','/files/signed-url?key='+encodeURIComponent(key));
+  if(r?.url){ _signedUrlCache[key]=r.url; return r.url; }
+  return null;
 }
 
 function renderInventory(){
@@ -6471,15 +6482,23 @@ function openInvParent(parentId){
   document.getElementById('userModalTitle').textContent=''+item.name;
   document.getElementById('userModalForm').innerHTML=`
     <div style="padding:0 2px">
-      <div style="display:flex;gap:14px;align-items:center;padding:4px 0 14px;border-bottom:1px solid var(--border);margin-bottom:14px">
-        ${item.photoUrl?`<img src="" data-key="${item.photoUrl}" style="width:56px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0;display:none" onerror="this.style.display='none'" onload="this.style.display='block'">`:
-          `<div style="width:56px;height:56px;border-radius:8px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`}
-        <div style="flex:1;min-width:0">
-          <div style="font-size:11px;color:var(--text3)">${[cat?.name,sub?.name].filter(Boolean).join(' › ')||'—'}</div>
-          <div style="font-size:13px;color:var(--text2)">${[item.model,item.manufacturer].filter(Boolean).join(' · ')||'—'}</div>
-          ${item.importDate?`<div style="font-size:12px;color:var(--text3)"> Imported: ${item.importDate}</div>`:''}
+      <div style="display:flex;gap:16px;align-items:flex-start;padding:4px 0 16px;border-bottom:1px solid var(--border);margin-bottom:16px">
+        <div style="flex-shrink:0">
+          ${item.photoUrl
+            ?`<div id="invParentPhotoWrap" style="width:80px;height:80px;border-radius:10px;overflow:hidden;background:var(--surface);border:1px solid var(--border)">
+                <img id="invParentPhoto" style="width:80px;height:80px;object-fit:cover;display:none" onload="this.style.display='block'" onerror="this.style.display='none'">
+              </div>`
+            :`<div style="width:80px;height:80px;border-radius:10px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text3)"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              </div>`
+          }
         </div>
-        <div style="display:flex;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:2px">${[cat?.name,sub?.name].filter(Boolean).join(' › ')||'—'}</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px">${item.name}</div>
+          <div style="font-size:13px;color:var(--text2)">${[item.model,item.manufacturer].filter(Boolean).join(' · ')||''}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
           <button class="btn btn-primary btn-sm" onclick="openAddUnit('${item.id}')">＋ Add Unit</button>
           <button class="btn btn-ghost btn-sm" onclick="closeUserModal()">Close</button>
         </div>
@@ -6490,12 +6509,12 @@ function openInvParent(parentId){
       <div id="unitsList">${renderUnitsHtml(item)}</div>
     </div>`;
   document.getElementById('userModal').classList.add('open');
-  // Load item photo via signed URL
+  // Load item photo via signed URL (use cache if available)
   if(item.photoUrl){
-    api('GET','/files/signed-url?key='+encodeURIComponent(item.photoUrl)).then(r=>{
-      if(r?.url){
-        const img=document.querySelector('[data-key="'+item.photoUrl+'"]');
-        if(img){ img.src=r.url; img.style.display='block'; }
+    getSignedUrl(item.photoUrl).then(url=>{
+      if(url){
+        const img=document.getElementById('invParentPhoto');
+        if(img){ img.src=url; }
       }
     });
   }

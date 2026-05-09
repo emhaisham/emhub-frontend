@@ -4979,11 +4979,11 @@ function openEditCalEvent(eid){
   closeCalPopup();
   const ev=calEvents.find(e=>String(e.id)===String(eid));if(!ev)return;
   calEditId=eid;
-  // Normalize the event for the form
+  // Normalize the event for the form — fix any corrupted dates
   const evNorm={
     ...ev,
-    eventDateFrom: ev.eventDateFrom ? String(ev.eventDateFrom).slice(0,10) : '',
-    eventDateTo:   ev.eventDateTo   ? String(ev.eventDateTo).slice(0,10)   : '',
+    eventDateFrom: normalizeDate(ev.eventDateFrom),
+    eventDateTo:   normalizeDate(ev.eventDateTo),
     details: ev.notes || ev.details || '',
   };
   calPhases=(ev.phases||[]).map(p=>({...p,id:p.id||uid()}));

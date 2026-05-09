@@ -6533,16 +6533,17 @@ function renderUnitsHtml(item){
   if(!sorted.length) return '<div style="color:var(--text3);font-size:13px;padding:20px 0;text-align:center">No units yet. Click "＋ Add Unit" to add individual items.</div>';
 
   return`<div>
-    <div style="display:grid;grid-template-columns:100px 110px 130px 160px 90px auto;gap:8px;padding:7px 14px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);border-bottom:2px solid var(--border);margin-bottom:6px;align-items:center">
+    <div style="display:grid;grid-template-columns:100px 100px 120px 110px 120px 85px auto;gap:8px;padding:7px 14px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);border-bottom:2px solid var(--border);margin-bottom:6px;align-items:center">
       <div>EM Serial</div>
       <div>Item Serial</div>
       <div>Status</div>
-      <div>Flight Case / Location</div>
+      <div>Flight Case</div>
+      <div>Location</div>
       <div>Imported</div>
       <div style="text-align:right">Actions</div>
     </div>
     ${sorted.map(u=>{
-      const fc=invFlightCases.find(w=>String(w.id)===String(u.flightCaseId));
+      const fc=invFlightCases.find(w=>String(w.id)===String(u.flightCaseId||u.fcId));
       const wh=invWarehouses.find(w=>String(w.id)===String(u.warehouseId));
       const faultCount=(u.faults||[]).filter(f=>!f.repairedDate).length;
       const coEvent=u.checkout&&!u.checkout.checkedInAt?calEvents.find(e=>String(e.id)===String(u.checkout.eventId)):null;
@@ -6551,21 +6552,24 @@ function renderUnitsHtml(item){
       else if(coEvent) statusBadge=`<span style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">Out: ${coEvent.name}</span>`;
       else if(u.status==='faulty') statusBadge=`<span class="inv-badge-faulty">⚠️ Faulty${faultCount>0?' ('+faultCount+')':''}</span>`;
       else statusBadge=`<span class="inv-badge-working">✅ Working</span>`;
-      const locationHtml=fc
-        ?`<div style="font-size:12px;font-weight:600;color:var(--text)">${fc.fcSerial}</div><div style="font-size:11px;color:var(--text3)">${fc.name}</div>`
-        :wh?`<div style="font-size:12px;color:var(--text3)">${wh.name}</div>`
+      const fcHtml=fc
+        ?`<div style="font-size:11px;font-weight:700;color:var(--accent);font-family:monospace">${fc.fcSerial||''}</div><div style="font-size:11px;color:var(--text3)">${fc.name}</div>`
+        :'<div style="font-size:12px;color:var(--text3)">—</div>';
+      const whHtml=wh
+        ?`<div style="font-size:12px;color:var(--text2)">${wh.name}</div>`
         :'<div style="font-size:12px;color:var(--text3)">—</div>';
       const actionBtns=u.discarded
-        ?`<button class="btn btn-red btn-xs" onclick="deleteUnit('${item.id}','${u.unitId}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`
-        :`<button class="btn btn-ghost btn-xs" onclick="openUnitDetail('${item.id}','${u.unitId}')">View</button>
-          <button class="btn btn-ghost btn-xs" onclick="guardAction('inv_edit',()=>openEditUnit('${item.id}','${u.unitId}'))">✏️</button>
-          <button class="btn btn-ghost btn-xs" onclick="showUnitQR('${item.id}','${u.unitId}')">QR</button>
-          <button class="btn btn-red btn-xs" onclick="deleteUnit('${item.id}','${u.unitId}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`;
-      return`<div style="display:grid;grid-template-columns:100px 110px 130px 160px 90px auto;gap:8px;padding:9px 14px;background:${u.discarded?'#f9fafb':u.status==='faulty'?'var(--red-bg)':'var(--white)'};border:1px solid ${u.discarded?'#e5e7eb':u.status==='faulty'?'var(--red-bd)':'var(--border)'};border-radius:8px;margin-bottom:5px;align-items:center;opacity:${u.discarded?'0.6':'1'}">
+        ?`<button class="btn btn-red btn-xs" onclick="deleteUnit('${item.id}','${u.unitId||u.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`
+        :`<button class="btn btn-ghost btn-xs" onclick="openUnitDetail('${item.id}','${u.unitId||u.id}')">View</button>
+          <button class="btn btn-ghost btn-xs" onclick="guardAction('inv_edit',()=>openEditUnit('${item.id}','${u.unitId||u.id}'))">✏️</button>
+          <button class="btn btn-ghost btn-xs" onclick="showUnitQR('${item.id}','${u.unitId||u.id}')">QR</button>
+          <button class="btn btn-red btn-xs" onclick="deleteUnit('${item.id}','${u.unitId||u.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`;
+      return`<div style="display:grid;grid-template-columns:100px 100px 120px 110px 120px 85px auto;gap:8px;padding:9px 14px;background:${u.discarded?'#f9fafb':u.status==='faulty'?'var(--red-bg)':'var(--white)'};border:1px solid ${u.discarded?'#e5e7eb':u.status==='faulty'?'var(--red-bd)':'var(--border)'};border-radius:8px;margin-bottom:5px;align-items:center;opacity:${u.discarded?'0.6':'1'}">
         <div style="font-family:monospace;font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.serial}</div>
         <div style="font-size:12px;color:var(--text2);font-family:monospace;overflow:hidden;text-overflow:ellipsis">${u.itemSerial||'—'}</div>
         <div>${statusBadge}</div>
-        <div style="min-width:0">${locationHtml}</div>
+        <div style="min-width:0">${fcHtml}</div>
+        <div style="min-width:0">${whHtml}</div>
         <div style="font-size:12px;color:var(--text3);white-space:nowrap">${u.importDate?fmtDate(u.importDate):'—'}</div>
         <div style="display:flex;gap:4px;justify-content:flex-end;align-items:center;flex-shrink:0">${actionBtns}</div>
       </div>`;

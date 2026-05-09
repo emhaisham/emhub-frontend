@@ -6999,7 +6999,7 @@ function openEditUnit(parentId, unitId){
     <div class="field"><label class="field-label">Item Serial Number (manufacturer's)</label>
       <input type="text" id="unit_item_serial" value="${unit.itemSerial||''}" placeholder="Serial printed on the physical unit"></div>
     <div class="field"><label class="field-label">Import Date</label>
-      <input type="date" id="unit_import_date" value="${unit.importDate||''}"></div>
+      <input type="date" id="unit_import_date" value="${unit.importDate?String(unit.importDate).slice(0,10):''}"></div>
     <div class="field"><label class="field-label">Warehouse / Location</label>
       <select id="unit_wh"><option value="">— None —</option>${whOpts}</select></div>
     <div class="field"><label class="field-label">Flight Case</label>

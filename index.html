@@ -6649,15 +6649,17 @@ function _unitInfoTab(item,unit,fc,wh,qrData){
 
 function _unitFaultsTab(item,unit){
   const faults=unit.faults||[];
-  const open=faults.filter(f=>!f.repairedDate);
-  const fixed=faults.filter(f=>f.repairedDate);
+  // If unit is discarded, all faults are treated as closed
+  const open=unit.discarded?[]:faults.filter(f=>!f.repairedDate);
+  const fixed=unit.discarded?faults:faults.filter(f=>f.repairedDate);
   const userOpts=users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
   return`<div>
-    <button class="btn btn-primary btn-sm" style="margin-bottom:14px" onclick="openReportFault('${item.id}','${unit.unitId}')">＋ Report Fault</button>
+    ${!unit.discarded?`<button class="btn btn-primary btn-sm" style="margin-bottom:14px" onclick="openReportFault('${item.id}','${unit.unitId||unit.id}')">＋ Report Fault</button>`:''}
+    ${unit.discarded&&faults.length?`<div style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#6b7280">🗑️ This unit has been discarded. All faults are closed.</div>`:''}
     ${!faults.length?'<div style="color:var(--text3);font-size:13px;padding:20px 0;text-align:center">No faults reported for this unit.</div>':
     `${open.length?`<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red);margin-bottom:8px">Open Faults (${open.length})</div>
       ${open.map(f=>_faultCard(item,unit,f)).join('')}`:''}
-    ${fixed.length?`<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--green);margin-top:14px;margin-bottom:8px">Repaired (${fixed.length})</div>
+    ${fixed.length?`<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${unit.discarded?'#6b7280':'var(--green)'};margin-top:${open.length?14:0}px;margin-bottom:8px">${unit.discarded?'🗑️ Closed — Unit Discarded':'Repaired'} (${fixed.length})</div>
       ${fixed.map(f=>_faultCard(item,unit,f)).join('')}`:''}
     `}
   </div>`;
@@ -6665,16 +6667,25 @@ function _unitFaultsTab(item,unit){
 
 function _faultCard(item,unit,f){
   const repaired=!!f.repairedDate;
-  return`<div style="border:1px solid ${repaired?'var(--green-bd)':'var(--red-bd)'};background:${repaired?'var(--green-bg)':'var(--red-bg)'};border-radius:8px;padding:12px 14px;margin-bottom:8px">
+  const discarded=!!unit.discarded;
+  const isClosed=repaired||discarded;
+  const borderColor=discarded?'#d1d5db':repaired?'var(--green-bd)':'var(--red-bd)';
+  const bgColor=discarded?'#f9fafb':repaired?'var(--green-bg)':'var(--red-bg)';
+  return`<div style="border:1px solid ${borderColor};background:${bgColor};border-radius:8px;padding:12px 14px;margin-bottom:8px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">${f.fault}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${f.fault}</div>
+          ${discarded?`<span style="background:#e5e7eb;color:#6b7280;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700">Discarded</span>`:repaired?`<span style="background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700">Repaired</span>`:`<span style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700">Open</span>`}
+        </div>
         <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Reported by <strong>${f.reportedBy||'—'}</strong> on ${f.reportedDate||'—'}</div>
-        ${f.photos&&f.photos.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">${f.photos.map(p=>`<img src="${p}" style="width:52px;height:52px;border-radius:6px;object-fit:cover;cursor:pointer" onclick="window.open('${p}','_blank')">`).join('')}</div>`:''}
         ${repaired?`<div style="font-size:12px;color:var(--green);font-weight:600;margin-top:6px">✅ Repaired on ${f.repairedDate}${f.repairedBy?' by '+f.repairedBy:''}</div>${f.repairNote?`<div style="font-size:12px;color:var(--text2);margin-top:2px">${f.repairNote}</div>`:''}`:''}
+        ${discarded&&!repaired?`<div style="font-size:12px;color:#6b7280;margin-top:6px">🗑️ Closed — unit discarded (${unit.discardReason||''})</div>`:''}
       </div>
       <div style="display:flex;gap:5px;flex-shrink:0">
-        ${!repaired?`<button class="btn btn-green btn-xs" onclick="guardAction('fault_repair',()=>openMarkRepaired('${item.id}','${unit.unitId}','${f.faultId}'))">✓ Mark Repaired</button>`:`<button class="btn btn-ghost btn-xs" onclick="guardAction('fault_repair',()=>openMarkRepaired('${item.id}','${unit.unitId}','${f.faultId}'))">Edit Repair</button>`}
+        ${!isClosed?`<button class="btn btn-green btn-xs" onclick="guardAction('fault_repair',()=>openMarkRepaired('${item.id}','${unit.unitId||unit.id}','${f.faultId}'))">✓ Mark Repaired</button>`:''}
+        ${repaired&&!discarded?`<button class="btn btn-ghost btn-xs" onclick="guardAction('fault_repair',()=>openMarkRepaired('${item.id}','${unit.unitId||unit.id}','${f.faultId}'))">Edit Repair</button>`:''}
+        <button class="btn btn-red btn-xs" onclick="deleteFault('${item.id}','${unit.unitId||unit.id}','${f.faultId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
       </div>
     </div>
   </div>`;

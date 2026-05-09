@@ -6887,26 +6887,22 @@ function clearUnitFC(){
   const sel=document.getElementById('unit_fc_sel');
   if(sel) sel.style.display='none';
 }
-function saveUnitNew(){
-  const item=invItems.find(x=>String(x.id)===String(_editUnitParentId)); if(!item){toast('Parent item not found');return;}
-  if(!item.units) item.units=[];
+async function saveUnitNew(){
+  if(!_editUnitParentId){toast('Parent item not found');return;}
   const warehouseId=document.getElementById('unit_wh')?.value||null;
-  const flightCaseId=document.getElementById('unit_fc')?.value||null;
-  const status='working'; // status determined by fault reports only
+  const fcId=document.getElementById('unit_fc')?.value||null;
   const notes=document.getElementById('unit_notes')?.value.trim()||'';
   const importDate=document.getElementById('unit_import_date')?.value||'';
   const itemSerial=document.getElementById('unit_item_serial')?.value.trim()||'';
   const count=parseInt(document.getElementById('unit_count')?.value)||1;
-  for(let i=0;i<count;i++){
-    item.units.push({
-      unitId:'u'+uid(), serial:_nextSerial(),
-      itemSerial:count===1?itemSerial:'',
-      importDate, status, warehouseId, flightCaseId, notes,
-      faults:[], discarded:false,
-      createdAt:new Date().toISOString()
-    });
-  }
-  invSave(); refreshUnitsPanel(); renderInventory();
+  const units=Array.from({length:count},(_,i)=>({
+    warehouseId, fcId, notes, importDate,
+    itemSerial: count===1 ? itemSerial : ''
+  }));
+  const res=await api('POST','/inventory/items/'+_editUnitParentId+'/units',units);
+  if(!res) return;
+  invItems=await api('GET','/inventory/items')||invItems;
+  refreshUnitsPanel(); renderInventory();
   closeSimpleModal(); toast(`${count} unit${count>1?'s':''} added ✓`);
 }
 

@@ -3794,7 +3794,7 @@ function renderEmployees(){
 
 function deleteEmployee(id){
   openConfirm('Delete this employee?','Payroll and loan records will remain.','Delete',()=>{
-    hrEmployees=hrEmployees.filter(e=>String(e.id)!==String(id)); hrSave(); renderEmployees(); updateHRSidebar(); toast('Deleted');
+    api('DELETE','/hr/employees/'+id).then(()=>api('GET','/hr/employees').then(r=>{if(r)hrEmployees=r.map(e=>({...e,title:e.designation,joined:e.joinDate?String(e.joinDate).slice(0,10):'',basicSalary:e.salary,allowance:e.allowance||0,emgName:e.emergencyName,emgPhone:e.emergencyPhone,emgRelation:e.emergencyRel,docs:(e.extraDocs||[]).reduce((acc,d)=>{if(d.type)acc[d.type]=d;return acc;},e.photo?{photo:{key:e.photo}}:{})}));renderEmployees();updateHRSidebar();toast('Deleted');}));
   });
 }
 
@@ -3945,7 +3945,7 @@ function populatePayrollDept(){
 
 function deleteOrphanPayroll(prId){
   hrPayrolls=hrPayrolls.filter(p=>String(p.id)!==String(prId));
-  hrSave(); renderPayroll();
+  api('GET','/hr/payroll').then(r=>{if(r)hrPayrolls=r;}); renderPayroll();
   toast('Orphaned payroll record removed ✓');
 }
 
@@ -3990,7 +3990,7 @@ function deletePayslip(prId){
   const label=emp?emp.name:`EmpID ${pr.empId}`;
   openConfirm('Delete this payslip?',`${label} · ${monthLabel(pr.month)} · ${fmtMVR(pr.net)}. This cannot be undone.`,'Delete',()=>{
     hrPayrolls=hrPayrolls.filter(p=>String(p.id)!==String(prId));
-    hrSave(); renderPayroll(); toast('Payslip deleted');
+    api('GET','/hr/payroll').then(r=>{if(r)hrPayrolls=r;}); renderPayroll(); toast('Payslip deleted');
   });
 }
 
@@ -4085,7 +4085,7 @@ function markPayslipPaid(prId){
       const loan=hrLoans.find(l=>String(l.id)===String(pr.loanId));
       if(loan){ loan.repayments=loan.repayments||{}; loan.repayments[pr.month]='paid'; loan.remaining=Math.max(0,loan.remaining-pr.loanDeduction); if(loan.remaining<=0) loan.status='completed'; }
     }
-    hrSave(); renderPayroll(); toast('Payslip marked as paid ✓');
+    api('GET','/hr/payroll').then(r=>{if(r)hrPayrolls=r;}); renderPayroll(); toast('Payslip marked as paid ✓');
   });
 }
 
@@ -4282,7 +4282,7 @@ async function saveLoan(){
     loan.schedule=schedule;loan.notes=notes;
     loan.remaining=Math.max(0,amount-schedule.filter(mo=>(loan.repayments||{})[mo]==='paid').length*monthly);
     if(loan.remaining<=0)loan.status='completed';else loan.status='active';
-    hrSave();closeUserModal();renderLoans();toast('Loan updated ✓');
+    api('GET','/hr/loans').then(r=>{if(r)hrLoans=r;});closeUserModal();renderLoans();toast('Loan updated ✓');
   } else {
     // Check if start month already has processed payroll for this employee
     const conflict=hrPayrolls.find(p=>p.empId===empId&&p.month===start&&p.status==='paid');
@@ -4290,7 +4290,7 @@ async function saveLoan(){
     const schedule=[];let[y,m]=start.split('-').map(Number);let rem=amount;
     while(rem>0){schedule.push(`${y}-${String(m).padStart(2,'0')}`);rem-=monthly;m++;if(m>12){m=1;y++;}}
     hrLoans.push({id:uid(),empId,amount,monthlyAmount:monthly,remaining:amount,start,schedule,notes,status:'active',approvedDate:new Date().toISOString().slice(0,10),repayments:{}});
-    hrSave();closeUserModal();renderLoans();updateHRSidebar();toast('Loan approved ✓');
+    api('GET','/hr/loans').then(r=>{if(r)hrLoans=r;});closeUserModal();renderLoans();updateHRSidebar();toast('Loan approved ✓');
   }
 }
 
@@ -4351,7 +4351,7 @@ function renderLoanCard(loan,emp){
 
 function deleteLoan(id){
   openConfirm('Delete this loan?','This removes the loan record.','Delete',()=>{
-    hrLoans=hrLoans.filter(l=>String(l.id)!==String(id)); hrSave(); renderLoans(); updateHRSidebar(); toast('Loan deleted');
+    api('DELETE','/hr/loans/'+id).then(()=>api('GET','/hr/loans').then(r=>{if(r)hrLoans=r;renderLoans();updateHRSidebar();toast('Loan deleted');}));
   });
 }
 
@@ -4414,7 +4414,7 @@ function confirmLumpSum(id){
     toast(`${fmtMVR(amount)} recorded. ${fmtMVR(loan.remaining)} still outstanding.`);
   }
 
-  hrSave(); closeUserModal(); renderLoans(); updateHRSidebar();
+  api('GET','/hr/loans').then(r=>{if(r)hrLoans=r;}); closeUserModal(); renderLoans(); updateHRSidebar();
 }
 
 function renderPension(){
@@ -4456,7 +4456,7 @@ function recordPensionPayment(){
     hrPensions.push({id:uid(),empId:emp.id,month,empAmount:ea,emprAmount:ea,totalAmount:ea*2,paidDate:today});
     n++;
   });
-  hrSave(); renderPension(); toast(n>0?`Pension recorded for ${n} staff ✓`:'Already recorded for this month');
+  api('GET','/hr/pension').then(r=>{if(r)hrPensions=r;}); renderPension(); toast(n>0?`Pension recorded for ${n} staff ✓`:'Already recorded for this month');
 }
 
 function printLetter(){
@@ -5255,12 +5255,12 @@ async function updateLeaveStatus(lvId,status){
   const lv=hrLeave.find(l=>String(l.id)===String(lvId));
   if(!lv)return;
   lv.status=status;lv.processedDate=new Date().toISOString().slice(0,10);
-  leaveSave();renderLeave();toast(`Leave ${status} ✓`);
+  api('GET','/hr/leave').then(r=>{if(r)hrLeave=r;});renderLeave();toast(`Leave ${status} ✓`);
 }
 
 function deleteLeave(id){
   openConfirm('Delete this leave record?','This cannot be undone.','Delete',()=>{
-    hrLeave=hrLeave.filter(l=>String(l.id)!==String(id));leaveSave();renderLeave();toast('Deleted');
+    api('DELETE','/hr/leave/'+id).then(()=>api('GET','/hr/leave').then(r=>{if(r)hrLeave=r;renderLeave();toast('Deleted');}));
   });
 }
 
@@ -5817,7 +5817,7 @@ function sendEventNotify(){
 
 // ══ EQUIPMENT LOANS MODULE ════════════════════════════
 let equipRequests = [];
-function equipSave(){ localStorage.setItem('em_equip', JSON.stringify(equipRequests)); }
+function equipSave(){} // equipment requests stored in memory only
 
 function loanEquipNav(page){
   // Permission guard for equipment pages
@@ -6742,7 +6742,7 @@ function saveFaultReport(){
   const globalFault={id:'gf'+uid(),parentId:String(item.id),unitId:unit.unitId,serial:unit.serial,itemName:item.name,fault,reportedBy:by,reportedDate:date,photos:[..._faultPhotos],status:'open'};
   if(!window._invFaultLog) window._invFaultLog=JSON.parse(localStorage.getItem('em_faults')||'[]');
   window._invFaultLog.unshift(globalFault);
-  localStorage.setItem('em_faults',JSON.stringify(window._invFaultLog));
+  // faults stored per unit in database via invSave
   refreshUnitsPanel(); renderInventory();
   openUnitDetail(_editUnitParentId,_editUnitId,'faults');
   toast('Fault reported ✓');
@@ -7056,7 +7056,7 @@ function updateInvSubCatOpts(){
   sel.innerHTML='<option value="">— Select —</option>'+subs.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
 }
 
-function saveInvItem(){
+async function saveInvItem(){
   const name=document.getElementById('inv_name')?.value.trim();
   if(!name){toast('Enter item name');return;}
   const data={
@@ -7065,17 +7065,15 @@ function saveInvItem(){
     manufacturer:document.getElementById('inv_manufacturer')?.value.trim()||'',
     catId:document.getElementById('inv_cat')?.value||null,
     subCatId:document.getElementById('inv_subcat')?.value||null,
-    photo:_invPhotoData||(_editInvId?invItems.find(x=>String(x.id)===String(_editInvId))?.photo:null)||null,
+    photoUrl:_invPhotoData||(_editInvId?invItems.find(x=>String(x.id)===String(_editInvId))?.photoUrl:null)||null,
   };
-  if(_editInvId){
-    const idx=invItems.findIndex(x=>String(x.id)===String(_editInvId));
-    if(idx>=0) invItems[idx]={...invItems[idx],...data};
-    toast('Item updated ✓');
-  } else {
-    invItems.unshift({id:uid(),...data,units:[],createdAt:new Date().toISOString()});
-    toast('Item added ✓ — now add units to it');
-  }
-  invSave(); closeUserModal(); renderInventory();
+  let res;
+  if(_editInvId){ res=await api('PUT','/inventory/items/'+_editInvId,data); }
+  else { res=await api('POST','/inventory/items',data); }
+  if(!res) return;
+  invItems=await api('GET','/inventory/items')||invItems;
+  closeUserModal(); renderInventory();
+  toast(_editInvId?'Item updated ✓':'Item added ✓ — now add units to it');
 }
 
 // ── CSV Template ──────────────────────────────────────────────────────────────
@@ -7292,7 +7290,7 @@ function downloadInvQR(id){
 
 
 // ══ FLIGHT CASES ══════════════════════════════════════
-function fcSave(){ localStorage.setItem('em_invfc', JSON.stringify(invFlightCases)); }
+async function fcSave(){ invFlightCases = await api('GET','/inventory/flightcases')||invFlightCases; }
 
 function renderFlightCases(){
   const el=document.getElementById('fcList'); if(!el) return;
@@ -7996,7 +7994,7 @@ function saveStaffAsset(empId){
   const emp=hrEmployees.find(e=>String(e.id)===String(empId)); if(!emp) return;
   if(!emp.assetRecords) emp.assetRecords=[];
   emp.assetRecords.push({assetName:name,handedDate:date,notes,damagedDate:'',damageDetails:'',returnedDate:'',replacementAsset:'',replacementDate:'',createdAt:new Date().toISOString()});
-  hrSave(); closeSimpleModal();
+  closeSimpleModal();
   const panel=document.getElementById('ptab-assets');
   if(panel) panel.innerHTML=renderAssetsPanel(emp);
   toast('Asset recorded ✓');
@@ -8019,7 +8017,7 @@ function saveDamage(empId,idx){
   if(!date||!details){toast('Enter date and damage details');return;}
   const emp=hrEmployees.find(e=>String(e.id)===String(empId)); if(!emp) return;
   emp.assetRecords[idx].damagedDate=date; emp.assetRecords[idx].damageDetails=details;
-  hrSave(); closeSimpleModal();
+  closeSimpleModal();
   const panel=document.getElementById('ptab-assets');
   if(panel) panel.innerHTML=renderAssetsPanel(emp);
   toast('Damage recorded ✓');
@@ -8044,7 +8042,7 @@ function saveReplacement(empId,idx){
   emp.assetRecords[idx].replacementAsset=name; emp.assetRecords[idx].replacementDate=date;
   // Also add new record for the replacement
   emp.assetRecords.push({assetName:name,handedDate:date,notes:'Replacement for damaged '+emp.assetRecords[idx].assetName,damagedDate:'',damageDetails:'',returnedDate:'',replacementAsset:'',replacementDate:'',createdAt:new Date().toISOString()});
-  hrSave(); closeSimpleModal();
+  closeSimpleModal();
   const panel=document.getElementById('ptab-assets');
   if(panel) panel.innerHTML=renderAssetsPanel(emp);
   toast('Replacement recorded ✓');
@@ -8149,7 +8147,7 @@ function saveAssetFromAllStaff(){
   const emp=hrEmployees.find(e=>String(e.id)===String(empId)); if(!emp) return;
   if(!emp.assetRecords) emp.assetRecords=[];
   emp.assetRecords.push({assetName:name,handedDate:date,notes,damagedDate:'',damageDetails:'',returnedDate:'',replacementAsset:'',replacementDate:'',createdAt:new Date().toISOString()});
-  hrSave(); closeSimpleModal(); renderAllStaffAssets();
+  closeSimpleModal(); renderAllStaffAssets();
   toast('Asset recorded ✓');
 }
 

@@ -6821,8 +6821,17 @@ function showUnitQR(parentId, unitId){
 // ── Add / Edit Unit ────────────────────────────────────────────────────────────
 let _editUnitParentId=null, _editUnitId=null;
 
-function openAddUnit(parentId){
+async function openAddUnit(parentId){
   _editUnitParentId=String(parentId); _editUnitId=null;
+  // Fetch warehouses if empty
+  if(!invWarehouses.length){
+    const wh = await api('GET','/inventory/warehouses');
+    if(wh) invWarehouses = wh;
+  }
+  if(!invFlightCases.length){
+    const fc = await api('GET','/inventory/flightcases');
+    if(fc) invFlightCases = fc;
+  }
   const whOpts=invWarehouses.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
   document.getElementById('simpleModalTitle').textContent='Add Unit';
   document.getElementById('simpleModalBody').innerHTML=`

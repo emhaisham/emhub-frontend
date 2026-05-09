@@ -1918,7 +1918,7 @@ function rateFor(h){if(!h||h<=0)return 0;for(const t of TIERS)if(h<=t.max)return
 function tierLabel(h){if(h<=12)return'≤12h';const i=TIERS.findIndex(t=>h<=t.max);return i<=0?'20–24h':TIERS[i-1].max+'–'+TIERS[i].max+'h'}
 function calcDay(day){return day.pax*(day.rateOverride||rateFor(day.hours))}
 function calcGroup(g){return g.days.reduce((s,d)=>s+calcDay(d),0)}
-function calcEvent(ev){return ev.groups.reduce((s,g)=>s+calcGroup(g),0)}
+function calcEvent(ev){return (ev.groups||[]).reduce((s,g)=>s+calcGroup(g),0)}
 function fmt(n){return'MVR '+Math.round(n).toLocaleString('en-US')}
 function fmtH(h){if(!h)return'0h';const t=Math.round(h*60),hh=Math.floor(t/60),mm=t%60;return mm?hh+'h '+String(mm).padStart(2,'0')+'m':hh+'h'}
 function fmtDate(d){if(!d)return'—';const[y,m,day]=d.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+parseInt(day)+', '+y}
@@ -2035,8 +2035,8 @@ async function _loadAllData(){
   ]);
   calEvents = (evts||[]).map(e=>({
     ...e,
-    eventDateFrom: e.eventDateFrom ? String(e.eventDateFrom).slice(0,10) : null,
-    eventDateTo:   e.eventDateTo   ? String(e.eventDateTo).slice(0,10)   : null,
+    eventDateFrom: normalizeDate(e.eventDateFrom),
+    eventDateTo:   normalizeDate(e.eventDateTo),
   }));
   events = calEvents;
   hrEmployees = (emps||[]).map(e => ({
@@ -2232,8 +2232,8 @@ function switchModule(name){
         if(evts){
           calEvents = evts.map(e=>({
             ...e,
-            eventDateFrom: e.eventDateFrom ? String(e.eventDateFrom).slice(0,10) : null,
-            eventDateTo:   e.eventDateTo   ? String(e.eventDateTo).slice(0,10)   : null,
+            eventDateFrom: normalizeDate(e.eventDateFrom),
+            eventDateTo:   normalizeDate(e.eventDateTo),
           }));
           events = calEvents;
           console.log('[calendar] calEvents set to', calEvents.length, 'events');
@@ -4556,6 +4556,24 @@ function calParseDate(s){
   if(!s) return null;
   return new Date(String(s).slice(0,10)+'T00:00:00');
 }
+// Normalize any date string to YYYY-MM-DD
+function normalizeDate(s){
+  if(!s) return null;
+  const str = String(s);
+  // Already YYYY-MM-DD
+  if(/^\d{4}-\d{2}-\d{2}/.test(str)) return str.slice(0,10);
+  // Try parsing other formats (Mon May 11, etc)
+  const d = new Date(str);
+  if(!isNaN(d)){
+    const yr = d.getFullYear();
+    const mo = String(d.getMonth()+1).padStart(2,'0');
+    const dy = String(d.getDate()).padStart(2,'0');
+    // If year is wrong (no year in string), use current year
+    const yr2 = yr < 2020 ? new Date().getFullYear() : yr;
+    return yr2+'-'+mo+'-'+dy;
+  }
+  return null;
+}
 function calFmtTime(s){ if(!s)return''; let[h,m]=s.split(':').map(Number);const ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+(m<10?'0':'')+m+' '+ap; }
 
 function getEventsForDate(dateStr){
@@ -5153,8 +5171,8 @@ function renderCalDocs(){
 
 async function saveCalEvent(){
   const name=document.getElementById('cef_name')?.value.trim();
-  const dateFrom=document.getElementById('cef_dateFrom')?.value;
-  const dateTo=document.getElementById('cef_dateTo')?.value;
+  const dateFrom=document.getElementById('cef_dateFrom')?.value; // already YYYY-MM-DD from date input
+  const dateTo=document.getElementById('cef_dateTo')?.value;    // already YYYY-MM-DD from date input
   const color=document.getElementById('cef_color')?.value;
   const details=document.getElementById('cef_details')?.value.trim();
   const venue=document.getElementById('cef_venue')?.value.trim()||'';
@@ -5165,7 +5183,10 @@ async function saveCalEvent(){
     const val=document.getElementById('asgn_'+r.replace(/\s+/g,'_'))?.value;
     if(val) assignments[r]=val;
   });
-  const evData={name,eventDateFrom:dateFrom,eventDateTo:dateTo,color,notes:details,venue,
+  // Ensure dates are in YYYY-MM-DD format
+  const isoFrom = dateFrom ? dateFrom.slice(0,10) : null;
+  const isoTo = dateTo ? dateTo.slice(0,10) : null;
+  const evData={name,eventDateFrom:isoFrom,eventDateTo:isoTo,color,notes:details,venue,
     phases:calPhases.map(p=>({...p})),
     otherMembers:calOtherMembers.filter(m=>m.name).map(m=>({...m})),
     eventDocs:calEventDocs.map(d=>({...d})),

@@ -2252,10 +2252,10 @@ function switchModule(name){
         api('GET','/inventory/flightcases'),
       ]).then(([items,cats,subcats,wh,fc])=>{
         if(items) invItems=items;
-        if(cats) invCats=cats;
-        if(subcats) invSubCats=subcats;
-        if(wh) invWarehouses=wh;
-        if(fc) invFlightCases=fc;
+        if(cats){ invCats=cats; }
+        if(subcats){ invSubCats=subcats; }
+        if(wh){ invWarehouses=wh; }
+        if(fc){ invFlightCases=fc; }
         populateInvCatFilter(); populateInvWhFilter(); renderInventory(); loanEquipNav('inventory'); applyPerms();
       });
     }
@@ -6194,8 +6194,13 @@ function deleteInvCat(id){
 }
 
 let _editSubCatId=null;
-function openAddInvSubCat(){
+async function openAddInvSubCat(){
   _editSubCatId=null;
+  // Fetch fresh categories if empty
+  if(!invCats.length){
+    const cats = await api('GET','/inventory/categories');
+    if(cats) invCats = cats;
+  }
   const catOpts=invCats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
   if(!catOpts){toast('Add a category first');return;}
   document.getElementById('simpleModalTitle').textContent='Add Sub-Category';

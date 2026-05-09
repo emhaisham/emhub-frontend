@@ -5849,7 +5849,9 @@ function loanEquipNav(page){
   else if(page==='inventory'){ populateInvCatFilter(); populateInvWhFilter(); renderInventory(); }
   else if(page==='categories'){ renderInvCats(); renderInvSubCats(); }
   else if(page==='warehouses'){ renderWarehouses(); }
-  else if(page==='flightcases'){ renderFlightCases(); }
+  else if(page==='flightcases'){
+    api('GET','/inventory/flightcases').then(fc=>{ if(fc) invFlightCases=fc; renderFlightCases(); });
+  }
   else if(page==='faultreports'){ renderFaultReports(); }
   else if(page==='eventlists'){ renderEventLists(); }
   else if(page==='checkout'){ renderCheckOutPage(); }
@@ -6924,7 +6926,7 @@ async function openAddUnit(parentId){
 function filterUnitFC(){
   const q=(document.getElementById('unit_fc_search')?.value||'').toLowerCase();
   const dd=document.getElementById('unit_fc_dd'); if(!dd) return;
-  const filtered=invFlightCases.filter(f=>!q||f.name.toLowerCase().includes(q)||f.fcSerial.toLowerCase().includes(q));
+  const filtered=invFlightCases.filter(f=>!q||(f.name&&f.name.toLowerCase().includes(q))||(f.fcSerial&&f.fcSerial.toLowerCase().includes(q)));
   if(!filtered.length){dd.style.display='none';return;}
   dd.style.display='block';
   dd.innerHTML=filtered.map(f=>`<div onclick="selectUnitFC('${f.id}','${f.fcSerial} — ${f.name.replace(/'/g,"&#39;")}')"
@@ -7376,7 +7378,10 @@ function renderFlightCases(){
     invItems.forEach(item=>{(item.units||[]).forEach(u=>{if(String(u.flightCaseId)===String(fc.id))unitCount++;});});
     return`<div class="cat-row" style="cursor:default">
       <div>
-        <div class="cat-name">${fc.name}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="cat-name">${fc.name}</div>
+          <div style="font-family:monospace;font-size:11px;font-weight:700;color:var(--accent)">${fc.fcSerial||''}</div>
+        </div>
         ${fc.description?`<div class="cat-badge">${fc.description}</div>`:''}
         <div class="cat-badge" style="margin-top:2px">${unitCount} unit${unitCount!==1?'s':''} packed</div>
       </div>
@@ -7391,21 +7396,23 @@ function renderFlightCases(){
 
 function showFCQR(id){
   const fc=invFlightCases.find(x=>String(x.id)===String(id)); if(!fc) return;
-  const qrData=fc.fcSerial;
+  const qrData=fc.fcSerial||fc.id;
   const panel=document.getElementById('fcQRPanel');
   const body=document.getElementById('fcQRBody');
+  if(!panel||!body) return;
   panel.style.display='block';
   body.innerHTML=`
     <div style="margin-bottom:12px">
       <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:2px">${fc.name}</div>
       ${fc.description?`<div style="font-size:13px;color:var(--text3);margin-bottom:6px">${fc.description}</div>`:''}
-      <div style="font-family:monospace;font-size:14px;font-weight:700;color:var(--accent)">${fc.fcSerial}</div>
+      <div style="font-family:monospace;font-size:14px;font-weight:700;color:var(--accent)">${fc.fcSerial||''}</div>
     </div>
     <div style="display:inline-block;background:#fff;padding:10px;border-radius:10px;border:2px solid var(--border);margin-bottom:14px">
       <img src="${generateQRDataURL(qrData,180)}" style="width:180px;height:180px;display:block;border-radius:4px">
     </div>
     <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Scan to identify this flight case</div>
-    <a href="${generateQRDataURL(qrData,300)}" download="${fc.fcSerial}-QR.png" class="btn btn-primary btn-sm" target="_blank" style="display:inline-block">Download QR PNG</a>`;
+    <a href="${generateQRDataURL(qrData,300)}" download="${fc.fcSerial||'FC'}-QR.png" class="btn btn-primary btn-sm" target="_blank" style="display:inline-block">Download QR PNG</a>`;
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 let _editFCId=null;
@@ -7426,21 +7433,14 @@ function openAddFlightCase(){
   document.getElementById('simpleModal').style.display='flex';
 }
 
-function saveFlightCaseNew(){
+async function saveFlightCaseNew(){
   const name=document.getElementById('fc_name')?.value.trim();
   if(!name){toast('Enter a name for this flight case');return;}
-  // Generate FC serial
-  const existingNums=invFlightCases.map(fc=>{const m=fc.fcSerial?.match(/FC-(\d+)/);return m?parseInt(m[1]):0;});
-  const nextNum=(existingNums.length?Math.max(...existingNums):0)+1;
-  const fcSerial='FC-'+String(nextNum).padStart(5,'0');
-  invFlightCases.push({
-    id:uid(),
-    fcSerial,
-    name,
-    description:document.getElementById('fc_desc')?.value.trim()||'',
-    createdAt:new Date().toISOString()
-  });
-  fcSave(); renderFlightCases(); closeSimpleModal();
+  const desc=document.getElementById('fc_desc')?.value.trim()||'';
+  const res=await api('POST','/inventory/flightcases',{name,description:desc});
+  if(!res) return;
+  invFlightCases=await api('GET','/inventory/flightcases')||invFlightCases;
+  renderFlightCases(); closeSimpleModal();
   toast('Flight case created ✓ — click QR to view its QR code');
 }
 
@@ -7463,12 +7463,14 @@ function editFlightCase(id){
   document.getElementById('simpleModal').style.display='flex';
 }
 
-function saveFlightCaseEdit(){
-  const fc=invFlightCases.find(x=>String(x.id)===String(_editFCId)); if(!fc)return;
+async function saveFlightCaseEdit(){
   const name=document.getElementById('fc_name')?.value.trim();
   if(!name){toast('Enter a name');return;}
-  fc.name=name; fc.description=document.getElementById('fc_desc')?.value.trim()||'';
-  fcSave(); renderFlightCases(); closeSimpleModal(); toast('Flight case updated ✓');
+  const desc=document.getElementById('fc_desc')?.value.trim()||'';
+  const res=await api('PUT','/inventory/flightcases/'+_editFCId,{name,description:desc});
+  if(!res) return;
+  invFlightCases=await api('GET','/inventory/flightcases')||invFlightCases;
+  renderFlightCases(); closeSimpleModal(); toast('Flight case updated ✓');
 }
 
 function deleteFlightCase(id){
@@ -7477,12 +7479,11 @@ function deleteFlightCase(id){
   let unitCount=0;
   invItems.forEach(item=>{(item.units||[]).forEach(u=>{if(String(u.flightCaseId)===String(id))unitCount++;});});
   const warn=unitCount>0?` ${unitCount} unit${unitCount!==1?'s are':' is'} assigned to this case (they will be unassigned).`:'';
-  openConfirm('Delete flight case?',`${fc.fcSerial} — ${fc.name}.${warn}`,'Delete',()=>{
-    // Unassign all units from this flight case
-    invItems.forEach(item=>{(item.units||[]).forEach(u=>{if(String(u.flightCaseId)===String(id))u.flightCaseId=null;});});
-    invSave();
-    invFlightCases=invFlightCases.filter(x=>String(x.id)!==String(id));
-    fcSave(); renderFlightCases(); renderInventory(); toast('Flight case deleted');
+  openConfirm('Delete flight case?',`${fc.fcSerial} — ${fc.name}.${warn}`,'Delete',async()=>{
+    await api('DELETE','/inventory/flightcases/'+id);
+    invFlightCases=await api('GET','/inventory/flightcases')||invFlightCases;
+    invItems=await api('GET','/inventory/items')||invItems;
+    renderFlightCases(); renderInventory(); toast('Flight case deleted');
   });
 }
 

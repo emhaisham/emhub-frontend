@@ -6985,11 +6985,11 @@ async function saveUnitNew(){
 
 function openEditUnit(parentId, unitId){
   const item=invItems.find(x=>String(x.id)===String(parentId)); if(!item) return;
-  const unit=(item.units||[]).find(u=>u.unitId===unitId); if(!unit) return;
-  _editUnitParentId=String(parentId); _editUnitId=unitId;
+  const unit=(item.units||[]).find(u=>String(u.unitId||u.id)===String(unitId)); if(!unit) return;
+  _editUnitParentId=String(parentId); _editUnitId=String(unit.id||unit.unitId);
   const whOpts=invWarehouses.map(w=>`<option value="${w.id}" ${String(w.id)===String(unit.warehouseId)?'selected':''}>${w.name}</option>`).join('');
   document.getElementById('simpleModalTitle').textContent='Edit Unit — '+unit.serial;
-  const selFC=invFlightCases.find(f=>String(f.id)===String(unit.flightCaseId));
+  const selFC=invFlightCases.find(f=>String(f.id)===String(unit.fcId||unit.flightCaseId));
   const fcSelLabel=selFC?selFC.fcSerial+' — '+selFC.name:'';
   document.getElementById('simpleModalBody').innerHTML=`
     <div style="background:var(--accent-bg);border:1px solid var(--accent-bd);border-radius:8px;padding:10px 14px;margin-bottom:12px">
@@ -7011,7 +7011,7 @@ function openEditUnit(parentId, unitId){
         <span id="unit_fc_sel_label" style="font-weight:600;color:var(--accent)">${fcSelLabel}</span>
         <button onclick="clearUnitFC()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px">✕</button>
       </div>
-      <input type="hidden" id="unit_fc" value="${unit.flightCaseId||''}">
+      <input type="hidden" id="unit_fc" value="${selFC?selFC.id:''||unit.fcId||unit.flightCaseId||''}">
     </div>
     <div class="field"><label class="field-label">Notes</label>
       <input type="text" id="unit_notes" value="${unit.notes||''}" placeholder="e.g. scratched corner"></div>`;
@@ -7021,15 +7021,17 @@ function openEditUnit(parentId, unitId){
   document.getElementById('simpleModal').style.display='flex';
 }
 
-function saveUnitEdit(){
-  const item=invItems.find(x=>String(x.id)===String(_editUnitParentId)); if(!item){toast('Error: parent not found');return;}
-  const unit=(item.units||[]).find(u=>u.unitId===_editUnitId); if(!unit){toast('Error: unit not found');return;}
-  unit.itemSerial=document.getElementById('unit_item_serial')?.value.trim()||'';
-  unit.importDate=document.getElementById('unit_import_date')?.value||'';
-  unit.warehouseId=document.getElementById('unit_wh')?.value||null;
-  unit.flightCaseId=document.getElementById('unit_fc')?.value||null;
-  unit.notes=document.getElementById('unit_notes')?.value.trim()||'';
-  invSave(); refreshUnitsPanel(); renderInventory();
+async function saveUnitEdit(){
+  const unitId = _editUnitId;
+  const itemSerial=document.getElementById('unit_item_serial')?.value.trim()||'';
+  const importDate=document.getElementById('unit_import_date')?.value||'';
+  const warehouseId=document.getElementById('unit_wh')?.value||null;
+  const fcId=document.getElementById('unit_fc')?.value||null;
+  const notes=document.getElementById('unit_notes')?.value.trim()||'';
+  const res=await api('PUT','/inventory/units/'+unitId,{itemSerial,importDate,warehouseId,fcId,notes});
+  if(!res) return;
+  invItems=await api('GET','/inventory/items')||invItems;
+  refreshUnitsPanel(); renderInventory();
   closeSimpleModal(); toast('Unit updated ✓');
 }
 

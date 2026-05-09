@@ -2166,8 +2166,8 @@ function guardAction(permKey, fn, ...args){
   if(currentUser.role==='admin'){ fn(...args); return; }
   const role=currentUser.roleId?appRoles.find(r=>String(r.id)===String(currentUser.roleId)):null;
   const perms=role?.perms||{};
-  // permKey is a base key like 'hr_add_emp' — check _edit suffix for action guards
-  if(perms[permKey+'_edit']===true||perms[permKey+'_view']===true){ fn(...args); return; }
+  // Check exact key, or with _edit/_view suffixes
+  if(perms[permKey]===true||perms[permKey+'_edit']===true||perms[permKey+'_view']===true){ fn(...args); return; }
   toast('You don\'t have permission for this action');
 }
 
@@ -4931,13 +4931,21 @@ function showCalPopup(eid, evt){
   document.getElementById('calPopupOverlay').classList.add('open');
 }
 
-function markCalEventComplete(eid){
+async function markCalEventComplete(eid){
   const ev=calEvents.find(e=>String(e.id)===String(eid));if(!ev)return;
-  ev.completed=!ev.completed;
-  calSave();renderCal();
-  // Refresh panel if open
+  const res=await api('PATCH','/events/'+eid+'/complete',{});
+  if(!res) return;
+  // Refresh events from API
+  const rawEvts=await api('GET','/events')||[];
+  calEvents=rawEvts.map(e=>({...e,
+    eventDateFrom:normalizeDate(e.eventDateFrom),
+    eventDateTo:normalizeDate(e.eventDateTo)
+  }));
+  events=calEvents;
+  renderCal();
   if(document.getElementById('calPopup').classList.contains('open')) showCalPopup(eid);
-  toast(ev.completed?'Event marked as completed ✓':'Event reopened');
+  const updated=calEvents.find(e=>String(e.id)===String(eid));
+  toast(updated?.completed?'Event marked as completed ✓':'Event reopened');
 }
 
 function outsidePopupClick(e){ if(!e.target.closest('#calPopup')) closeCalPopup(); }
@@ -5853,7 +5861,12 @@ function loanEquipNav(page){
     api('GET','/inventory/flightcases').then(fc=>{ if(fc) invFlightCases=fc; renderFlightCases(); });
   }
   else if(page==='faultreports'){ renderFaultReports(); }
-  else if(page==='eventlists'){ renderEventLists(); }
+  else if(page==='eventlists'){
+    api('GET','/events').then(evts=>{
+      if(evts){ calEvents=evts.map(e=>({...e,eventDateFrom:normalizeDate(e.eventDateFrom),eventDateTo:normalizeDate(e.eventDateTo)})); events=calEvents; }
+      renderEventLists();
+    });
+  }
   else if(page==='checkout'){ renderCheckOutPage(); }
   else if(page==='checkin'){ renderCheckInPage(); }
 }
@@ -8425,13 +8438,22 @@ function openAddEquipList(evId){
     <div class="field"><label class="field-label">Team Name *</label>
       <input type="text" id="el_team" placeholder="e.g. Sound, Lighting, Video, Staging"></div>`;
   document.getElementById('simpleModalSave').textContent='Create List';
-  const fn=()=>{
+  const fn=async()=>{
     const teamName=document.getElementById('el_team')?.value.trim();
     if(!teamName){toast('Enter team name');return;}
     const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
     if(!ev.equipLists) ev.equipLists=[];
     ev.equipLists.push({teamName,items:[],createdAt:new Date().toISOString()});
-    api('PUT','/events/'+_elEventId,{...calEvents.find(e=>String(e.id)===String(_elEventId))}); closeSimpleModal(); renderEventLists(); toast('List created ✓');
+    const res=await api('PUT','/events/'+evId,{...ev});
+    if(!res){ev.equipLists.pop();toast('Failed to create list');return;}
+    // Refresh calEvents
+    const rawEvts=await api('GET','/events')||[];
+    calEvents=rawEvts.map(e=>({...e,
+      eventDateFrom:normalizeDate(e.eventDateFrom),
+      eventDateTo:normalizeDate(e.eventDateTo)
+    }));
+    events=calEvents;
+    closeSimpleModal(); renderEventLists(); toast('List created ✓');
   };
   document.getElementById('simpleModalSave').onclick=fn;
   window._simpleModalFn=fn;

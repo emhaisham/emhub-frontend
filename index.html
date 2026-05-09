@@ -2228,6 +2228,7 @@ function switchModule(name){
       const calBodyEl=document.getElementById('calBody');
       if(calBodyEl) calBodyEl.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3)">Loading events...</div>';
       api('GET','/events').then(evts=>{
+        console.log('[calendar] API returned:', evts?.length, 'events');
         if(evts){
           calEvents = evts.map(e=>({
             ...e,
@@ -2235,6 +2236,8 @@ function switchModule(name){
             eventDateTo:   e.eventDateTo   ? String(e.eventDateTo).slice(0,10)   : null,
           }));
           events = calEvents;
+          console.log('[calendar] calEvents set to', calEvents.length, 'events');
+          if(calEvents.length>0) console.log('[calendar] first event dates:', calEvents[0].eventDateFrom, 'to', calEvents[0].eventDateTo);
         }
         calDate=new Date(); calSetView('month');
       });
@@ -4568,8 +4571,11 @@ function getEventsForDate(dateStr){
 }
 
 function renderCal(){
+  console.log('[renderCal] calEvents count:', calEvents.length, 'calView:', calView);
+  if(calEvents.length>0) console.log('[renderCal] first event:', JSON.stringify(calEvents[0]).slice(0,200));
   const search=(document.getElementById('calSearch')?.value||'').toLowerCase();
-  const body=document.getElementById('calBody'); if(!body) return;
+  const body=document.getElementById('calBody'); 
+  if(!body){ console.log('[renderCal] calBody NOT FOUND'); return; }
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const today=calDateStr(new Date());

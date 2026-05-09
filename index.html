@@ -6472,7 +6472,7 @@ function openInvParent(parentId){
   document.getElementById('userModalForm').innerHTML=`
     <div style="padding:0 2px">
       <div style="display:flex;gap:14px;align-items:center;padding:4px 0 14px;border-bottom:1px solid var(--border);margin-bottom:14px">
-        ${item.photoUrl?`<img src="" data-key="${item.photoUrl}" style="width:56px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'">`:
+        ${item.photoUrl?`<img src="" data-key="${item.photoUrl}" style="width:56px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0;display:none" onerror="this.style.display='none'" onload="this.style.display='block'">`:
           `<div style="width:56px;height:56px;border-radius:8px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`}
         <div style="flex:1;min-width:0">
           <div style="font-size:11px;color:var(--text3)">${[cat?.name,sub?.name].filter(Boolean).join(' › ')||'—'}</div>
@@ -6490,6 +6490,15 @@ function openInvParent(parentId){
       <div id="unitsList">${renderUnitsHtml(item)}</div>
     </div>`;
   document.getElementById('userModal').classList.add('open');
+  // Load item photo via signed URL
+  if(item.photoUrl){
+    api('GET','/files/signed-url?key='+encodeURIComponent(item.photoUrl)).then(r=>{
+      if(r?.url){
+        const img=document.querySelector('[data-key="'+item.photoUrl+'"]');
+        if(img){ img.src=r.url; img.style.display='block'; }
+      }
+    });
+  }
 }
 
 function renderUnitsHtml(item){

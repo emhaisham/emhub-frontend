@@ -5196,16 +5196,18 @@ async function saveCalEvent(){
   if(calEditId){ res=await api('PUT','/events/'+calEditId,evData); }
   else { res=await api('POST','/events',evData); }
   if(!res) return;
-  const rawEvts = await api('GET','/events') || calEvents;
+  const rawEvts = await api('GET','/events') || [];
   calEvents = rawEvts.map(e=>({
     ...e,
-    eventDateFrom: e.eventDateFrom ? String(e.eventDateFrom).slice(0,10) : null,
-    eventDateTo:   e.eventDateTo   ? String(e.eventDateTo).slice(0,10)   : null,
+    eventDateFrom: normalizeDate(e.eventDateFrom),
+    eventDateTo:   normalizeDate(e.eventDateTo),
   }));
   events = calEvents;
-  closeUserModal();renderCal();
+  console.log('[saveCalEvent] after save, calEvents:', calEvents.length, calEvents.map(e=>e.eventDateFrom));
+  closeUserModal();
+  setTimeout(()=>{ calDate=new Date(); calSetView('month'); }, 100);
   if(calEditId){ toast('Event updated ✓'); }
-  else { setTimeout(()=>openEventNotifyModal(res.id),300); }
+  else { setTimeout(()=>openEventNotifyModal(res.id),400); }
 }
 
 // ── switchModule update ────────────────────────────────

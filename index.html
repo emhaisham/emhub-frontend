@@ -5186,8 +5186,12 @@ async function saveCalEvent(){
   // Ensure dates are in YYYY-MM-DD format
   const isoFrom = dateFrom ? dateFrom.slice(0,10) : null;
   const isoTo = dateTo ? dateTo.slice(0,10) : null;
-  const evData={name,eventDateFrom:isoFrom,eventDateTo:isoTo,color,notes:details,venue,
+  const evData={
+    name, eventDateFrom:isoFrom, eventDateTo:isoTo, color,
+    notes:details, venue,
+    assignments,
     phases:calPhases.map(p=>({...p})),
+    loadings:calLoadings.map(l=>({...l})),
     otherMembers:calOtherMembers.filter(m=>m.name).map(m=>({...m})),
     eventDocs:calEventDocs.map(d=>({...d})),
     equipLists:calEditId?(calEvents.find(e=>String(e.id)===String(calEditId))?.equipLists||[]):[],

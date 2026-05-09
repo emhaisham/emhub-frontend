@@ -6380,17 +6380,26 @@ async function invCatSave(){ invCats = await api('GET','/inventory/categories') 
 async function invSubCatSave(){ invSubCats = await api('GET','/inventory/subcategories') || invSubCats; }
 
 // ── Render Inventory (parent list) ───────────────────────────────────────────
-// Load inventory item photos via signed URLs
+// Load inventory item photos via signed URLs (bulk)
 async function loadInvPhotos(){
   const imgs = document.querySelectorAll('img[data-key]');
-  for(const img of imgs){
-    const key = img.getAttribute('data-key');
-    if(!key || img.getAttribute('data-loaded')) continue;
-    img.setAttribute('data-loaded','1');
-    try{
-      const r = await api('GET','/files/signed-url?key='+encodeURIComponent(key));
-      if(r?.url) img.src = r.url;
-    }catch(e){}
+  if(!imgs.length) return;
+  // Collect all unique keys
+  const keys = [...new Set([...imgs].map(img=>img.getAttribute('data-key')).filter(Boolean))];
+  if(!keys.length) return;
+  try {
+    // Get all signed URLs in one request
+    const urls = await api('POST','/inventory/signed-urls',{keys});
+    if(!urls) return;
+    imgs.forEach(img=>{
+      const key = img.getAttribute('data-key');
+      if(key && urls[key]){
+        img.src = urls[key];
+        img.style.display = 'block';
+      }
+    });
+  } catch(e){
+    console.error('loadInvPhotos error:', e);
   }
 }
 

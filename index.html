@@ -6005,8 +6005,9 @@ function _equipItemsHtml(){
           style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;box-sizing:border-box">
         <div id="eqdd_${item.id}" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--white);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);max-height:160px;overflow-y:auto;z-index:100"></div>
       </div>
-      <input type="number" placeholder="Qty" value="${item.qty||1}" min="1"
-        oninput="updateEquipItem('${item.id}','qty',this.value)"
+      <input type="number" placeholder="Qty" value="${item.qty||1}" min="1" ${item.maxQty?'max="'+item.maxQty+'"':''}
+        oninput="validateEquipQty('${item.id}',this.value)"
+        title="${item.maxQty?'Available: '+item.maxQty:''}"
         style="width:70px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;text-align:center">
       ${_equipItems.length>1?`<button onclick="removeEquipItem('${item.id}')" style="background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center">×</button>`:'<div style="width:28px"></div>'}
     </div>`).join('');
@@ -6019,53 +6020,88 @@ function filterEquipItemSearch(itemId, q){
   const results = [];
   invItems.forEach(item=>{
     const itemMatch = !query || item.name.toLowerCase().includes(query) || (item.model||'').toLowerCase().includes(query);
-    (item.units||[]).filter(u=>!u.discarded).forEach(u=>{
-      const unitMatch = !query || u.serial.toLowerCase().includes(query) || (u.itemSerial||'').toLowerCase().includes(query);
-      if(itemMatch || unitMatch){
+    const units = (item.units||[]).filter(u=>!u.discarded);
+    const availableUnits = units.filter(u=>!u.checkout||u.checkout.checkedInAt);
+    const unitMatch = units.some(u=>u.serial.toLowerCase().includes(query)||(u.itemSerial||'').toLowerCase().includes(query));
+    if(itemMatch || unitMatch){
+      units.forEach(u=>{
         const fc = invFlightCases.find(f=>String(f.id)===String(u.fcId||u.flightCaseId));
         const wh = invWarehouses.find(w=>String(w.id)===String(u.warehouseId));
         const alreadyOut = u.checkout&&!u.checkout.checkedInAt;
-        results.push({
-          itemName: item.name,
-          model: item.model||'',
-          serial: u.serial,
-          itemSerial: u.itemSerial||'',
-          location: fc ? fc.fcSerial+' — '+fc.name : wh ? wh.name : '',
-          alreadyOut,
-          displayName: `${item.name} · ${u.serial}`
-        });
-      }
-    });
+        if(!query || itemMatch || u.serial.toLowerCase().includes(query) || (u.itemSerial||'').toLowerCase().includes(query)){
+          results.push({
+            itemName: item.name, model: item.model||'',
+            serial: u.serial, itemSerial: u.itemSerial||'',
+            location: fc ? fc.fcSerial+' — '+fc.name : wh ? wh.name : '',
+            alreadyOut, availableQty: availableUnits.length,
+            displayName: `${item.name} · ${u.serial}`
+          });
+        }
+      });
+    }
   });
   const matches = results.slice(0,12);
   if(!matches.length){ dd.style.display='none'; return; }
   dd.style.display='block';
   dd.innerHTML = matches.map(x=>`
-    <div onclick="${x.alreadyOut?'':("selectEquipItem('"+itemId+"','"+x.displayName.replace(/'/g,"\\'")+"',event)")}"
+    <div onclick="${x.alreadyOut?'':("selectEquipItem('"+itemId+"','"+x.displayName.replace(/'/g,"\\'")+"',"+x.availableQty+",event)")}"
       style="padding:7px 12px;cursor:${x.alreadyOut?'not-allowed':'pointer'};font-size:12px;border-bottom:1px solid var(--border);opacity:${x.alreadyOut?'0.5':'1'}"
       onmouseover="this.style.background='${x.alreadyOut?'':'var(--surface)'}'" onmouseout="this.style.background=''">
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-weight:600">${x.itemName}</span>
         <span style="font-family:monospace;color:var(--accent);font-size:11px;font-weight:700">${x.serial}</span>
-        ${x.alreadyOut?'<span style="font-size:10px;background:var(--red-bg);color:var(--red);border-radius:4px;padding:1px 5px;font-weight:600">Checked Out</span>':''}
+        ${x.alreadyOut
+          ?'<span style="font-size:10px;background:var(--red-bg);color:var(--red);border-radius:4px;padding:1px 5px;font-weight:600">Checked Out</span>'
+          :`<span style="font-size:10px;background:var(--green-bg);color:var(--green);border-radius:4px;padding:1px 5px;font-weight:600">Avail: ${x.availableQty}</span>`}
       </div>
       <div style="font-size:11px;color:var(--text3)">${[x.model,x.itemSerial?'S/N: '+x.itemSerial:'',x.location].filter(Boolean).join(' · ')}</div>
     </div>`).join('');
 }
 
-function selectEquipItem(itemId, name, e){
-  if(e) e.preventDefault();
+function selectEquipItem(itemId, name, availableQty, e){
+  if(e&&e.preventDefault) e.preventDefault();
   const item = _equipItems.find(x=>x.id===itemId);
-  if(item){ item.name=name; }
-  // Update the input value
+  if(item){ item.name=name; item.qty=1; item.maxQty=availableQty||1; }
   const wrap = document.getElementById('eqitem_'+itemId);
   if(wrap){
     const input = wrap.querySelector('input[type="text"]');
     if(input) input.value = name;
+    const qtyInput = wrap.querySelector('input[type="number"]');
+    if(qtyInput){
+      qtyInput.value = 1;
+      qtyInput.max = availableQty||1;
+      qtyInput.readOnly = false;
+      qtyInput.style.background = '';
+      qtyInput.style.color = '';
+      qtyInput.style.cursor = '';
+      qtyInput.title = `Available: ${availableQty||1} unit${availableQty>1?'s':''}`;
+    }
+    // Show available qty hint
+    let hint = wrap.querySelector('.eq-qty-hint');
+    if(!hint){ hint=document.createElement('div'); hint.className='eq-qty-hint'; hint.style.cssText='font-size:10px;color:var(--text3);margin-top:2px;white-space:nowrap'; wrap.appendChild(hint); }
+    hint.textContent = `Max: ${availableQty||1}`;
   }
-  // Hide dropdown
   const dd = document.getElementById('eqdd_'+itemId);
   if(dd) dd.style.display='none';
+}
+
+function validateEquipQty(itemId, val){
+  const item = _equipItems.find(x=>x.id===itemId);
+  if(!item) return;
+  const qty = parseInt(val)||1;
+  const max = item.maxQty||999;
+  if(qty > max){
+    const wrap = document.getElementById('eqitem_'+itemId);
+    const qtyInput = wrap?.querySelector('input[type="number"]');
+    if(qtyInput){ qtyInput.value = max; qtyInput.style.borderColor='var(--red)'; }
+    toast(`Only ${max} unit${max>1?'s':''} available for "${item.name}"`);
+    item.qty = max;
+  } else {
+    item.qty = qty;
+    const wrap = document.getElementById('eqitem_'+itemId);
+    const qtyInput = wrap?.querySelector('input[type="number"]');
+    if(qtyInput) qtyInput.style.borderColor='';
+  }
 }
 
 function updateEquipItem(id, field, val){

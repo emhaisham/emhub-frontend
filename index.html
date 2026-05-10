@@ -3366,7 +3366,7 @@ function hrNav(page, extra){
   if(page==='loans')         { populateLoanFilter(); renderLoans(); }
   if(page==='pension')       { renderPension(); }
   if(page==='profile')       { renderProfile(extra); }
-  if(page==='leave')         { populateLeaveFilter(); renderLeave(); }
+  if(page==='leave')         { api('GET','/hr/leave').then(r=>{if(r)hrLeave=r; populateLeaveFilter(); renderLeave();}); }
   if(page==='letters')       { populateLetterEmp(); document.getElementById('ltDate').valueAsDate=new Date(); }
   updateHRSidebar();
 }
@@ -5359,16 +5359,21 @@ function renderLeave(){
   const fEmp=document.getElementById('lvFilterEmp')?.value||'';
   const fSt=document.getElementById('lvFilterStatus')?.value||'';
   const fTy=document.getElementById('lvFilterType')?.value||'';
-  const today=new Date().toISOString().slice(0,10);
+  const today=calDateStr(new Date());
+  // Normalize helper
+  const lvEmpId=l=>String(l.empId||l.emp_id||'');
+  const lvFrom=l=>String(l.fromDate||l.from_date||l.from||'').slice(0,10);
+  const lvTo=l=>String(l.toDate||l.to_date||l.to||'').slice(0,10);
+  const lvType=l=>l.leave_type||l.leaveType||l.type||'';
   let list=hrLeave.filter(l=>{
-    if(fEmp&&String(l.empId)!==String(fEmp))return false;
+    if(fEmp&&lvEmpId(l)!==String(fEmp))return false;
     if(fSt&&l.status!==fSt)return false;
-    if(fTy&&l.type!==fTy)return false;
+    if(fTy&&lvType(l)!==fTy)return false;
     return true;
-  }).sort((a,b)=>b.from>a.from?1:-1);
-  const now=hrLeave.filter(l=>l.status==='approved'&&l.from<=today&&l.to>=today).length;
+  }).sort((a,b)=>lvFrom(b)>lvFrom(a)?1:-1);
+  const now=hrLeave.filter(l=>l.status==='approved'&&lvFrom(l)<=today&&lvTo(l)>=today).length;
   const yr=new Date().getFullYear().toString();
-  const daysUsed=hrLeave.filter(l=>l.status==='approved'&&l.from.startsWith(yr)).reduce((s,l)=>s+l.days,0);
+  const daysUsed=hrLeave.filter(l=>l.status==='approved'&&lvFrom(l).startsWith(yr)).reduce((s,l)=>s+(parseInt(l.days)||0),0);
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
   set('lvStatPending',hrLeave.filter(l=>l.status==='pending').length);
   set('lvStatApproved',hrLeave.filter(l=>l.status==='approved').length);
@@ -5377,22 +5382,22 @@ function renderLeave(){
   const el=document.getElementById('leaveList');if(!el)return;
   if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div><div class="empty-title">No leave records</div><div class="empty-sub">Click "+ New Request" to submit a leave request</div></div>';return;}
   el.innerHTML=list.map(lv=>{
-    const emp=hrEmployees.find(e=>String(e.id)===String(lv.empId))||{name:'Unknown'};
+    const emp=hrEmployees.find(e=>String(e.id)===lvEmpId(lv))||{name:'Unknown'};
     const sc={pending:'badge-amber',approved:'badge-green',rejected:'badge-red'}[lv.status]||'badge-amber';
-    const lvType=hrLeaveTypes.find(t=>t.name===(lv.leave_type||lv.leaveType||lv.type));
-    const dotColor=lvType?.color||'#6b7280';
+    const lt=hrLeaveTypes.find(t=>t.name===lvType(lv));
+    const dotColor=lt?.color||'#6b7280';
     return`<div class="card" style="margin-bottom:10px">
       <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 18px">
         <div style="width:10px;height:10px;border-radius:50%;background:${dotColor};flex-shrink:0;margin-top:5px"></div>
         <div style="flex:1">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <span style="font-size:14px;font-weight:600;color:var(--text)">${emp.name}</span>
-            <span class="badge ${sc}" style="font-size:11px">${lv.status.charAt(0).toUpperCase()+lv.status.slice(1)}</span>
-            <span class="badge" style="background:${dotColor}22;color:${dotColor};border:1px solid ${dotColor}44;font-size:11px">${lv.leave_type||lv.leaveType||lv.type||'—'}</span>
+            <span class="badge ${sc}" style="font-size:11px">${(lv.status||'pending').charAt(0).toUpperCase()+(lv.status||'pending').slice(1)}</span>
+            <span class="badge" style="background:${dotColor}22;color:${dotColor};border:1px solid ${dotColor}44;font-size:11px">${lvType(lv)||'—'}</span>
           </div>
-          <div style="font-size:12.5px;color:var(--text2);margin-top:4px">${fmtDate(String(lv.fromDate||lv.from_date||lv.from||"").slice(0,10))} → ${fmtDate(String(lv.toDate||lv.to_date||lv.to||"").slice(0,10))} · <strong>${lv.days}</strong> day${lv.days!==1?'s':''}</div>
-          ${lv.notes?`<div style="font-size:12px;color:var(--text3);margin-top:3px">${lv.notes}</div>`:''}
-          ${lv.processedDate?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${lv.status==='approved'?'Approved':'Rejected'} on ${lv.processedDate}</div>`:''}
+          <div style="font-size:12.5px;color:var(--text2);margin-top:4px">${fmtDate(lvFrom(lv))} → ${fmtDate(lvTo(lv))} · <strong>${lv.days||0}</strong> day${(lv.days||0)!==1?'s':''}</div>
+          ${lv.reason?`<div style="font-size:12px;color:var(--text3);margin-top:3px">${lv.reason}</div>`:''}
+          ${lv.processed_date||lv.processedDate?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${lv.status==='approved'?'Approved':'Rejected'} on ${fmtDate(String(lv.processed_date||lv.processedDate||'').slice(0,10))}</div>`:''}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
           ${lv.status==='pending'?`

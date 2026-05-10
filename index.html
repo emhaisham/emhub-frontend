@@ -2337,19 +2337,19 @@ function addFormGroup(){
   renderFormGroups();
 }
 function newDay(){return{id:uid(),pax:'',startDate:'',startTime:'',endDate:'',endTime:'',override:false,customRate:''}}
-function removeFormGroup(id){if(fGroups.length===1)return toast('Need at least one group');fGroups=fGroups.filter(g=>g.id!==id);renderFormGroups()}
-function addFormGroupDay(gid){const g=fGroups.find(x=>x.id===gid);if(g){g.days.push(newDay());renderFormGroups()}}
-function removeFormGroupDay(gid,did){const g=fGroups.find(x=>x.id===gid);if(!g)return;if(g.days.length===1)return toast('Need at least one work day');g.days=g.days.filter(d=>d.id!==did);renderFormGroups()}
+function removeFormGroup(id){if(fGroups.length===1)return toast('Need at least one group');fGroups=fGroups.filter(g=>String(g.id)!==String(id));renderFormGroups()}
+function addFormGroupDay(gid){const g=fGroups.find(x=>String(x.id)===String(gid));if(g){g.days.push(newDay());renderFormGroups()}}
+function removeFormGroupDay(gid,did){const g=fGroups.find(x=>String(x.id)===String(gid));if(!g)return;if(g.days.length===1)return toast('Need at least one work day');g.days=g.days.filter(d=>String(d.id)!==String(did));renderFormGroups()}
 
-function onFGLabel(gid,val){const g=fGroups.find(x=>x.id===gid);if(g)g.label=val}
+function onFGLabel(gid,val){const g=fGroups.find(x=>String(x.id)===String(gid));if(g)g.label=val}
 function onFGDay(gid,did,field,val){
-  const g=fGroups.find(x=>x.id===gid);if(!g)return;
+  const g=fGroups.find(x=>String(x.id)===String(gid));if(!g)return;
   const d=g.days.find(x=>x.id===did);if(!d)return;
   if(field==='override')d.override=val;else d[field]=val;
   updateFormPreviews();
 }
 function toggleDayOverride(gid,did,checked){
-  const g=fGroups.find(x=>x.id===gid);if(!g)return;
+  const g=fGroups.find(x=>String(x.id)===String(gid));if(!g)return;
   const d=g.days.find(x=>x.id===did);if(!d)return;
   d.override=checked;
   // re-render just the override input
@@ -3149,10 +3149,10 @@ function closeEditEvent(){document.getElementById('editEventModal').classList.re
 
 function addEditGroup(){eGroups.push({id:++egSeq,origId:null,label:'',days:[newEditDay()]});renderEditGroups()}
 function newEditDay(){return{id:uid(),origId:null,pax:'',startDate:'',startTime:'',endDate:'',endTime:'',hours:0,override:false,customRate:''}}
-function removeEditGroup(id){if(eGroups.length===1)return toast('Need at least one group');eGroups=eGroups.filter(g=>g.id!==id);renderEditGroups()}
-function addEditGroupDay(gid){const g=eGroups.find(x=>x.id===gid);if(g){g.days.push(newEditDay());renderEditGroups()}}
-function removeEditGroupDay(gid,did){const g=eGroups.find(x=>x.id===gid);if(!g)return;if(g.days.length===1)return toast('Need at least one work day');g.days=g.days.filter(d=>d.id!==did);renderEditGroups()}
-function onEGLabel(gid,val){const g=eGroups.find(x=>x.id===gid);if(g)g.label=val}
+function removeEditGroup(id){if(eGroups.length===1)return toast('Need at least one group');eGroups=eGroups.filter(g=>String(g.id)!==String(id));renderEditGroups()}
+function addEditGroupDay(gid){const g=eGroups.find(x=>String(x.id)===String(gid));if(g){g.days.push(newEditDay());renderEditGroups()}}
+function removeEditGroupDay(gid,did){const g=eGroups.find(x=>String(x.id)===String(gid));if(!g)return;if(g.days.length===1)return toast('Need at least one work day');g.days=g.days.filter(d=>d.id!==did);renderEditGroups()}
+function onEGLabel(gid,val){const g=eGroups.find(x=>String(x.id)===String(gid));if(g)g.label=val}
 function onEGDay(gid,did,field,val){const g=eGroups.find(x=>x.id===gid);if(!g)return;const d=g.days.find(x=>x.id===did);if(!d)return;d[field]=val;updateEditPreviews()}
 function toggleEditDayOverride(gid,did,checked){
   const g=eGroups.find(x=>x.id===gid);if(!g)return;
@@ -6005,8 +6005,7 @@ function equipCardHtml(r){
   return`<div class="eq-card">
     <div class="eq-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
     <div class="eq-info">
-      <div class="eq-item-name">${itemLabel}</div>
-      <div style="margin:6px 0">${itemsHtml}</div>
+      <div class="eq-item-name" style="margin-bottom:4px">${itemsHtml}</div>
       <div class="eq-meta">
         <span> Requested by: <strong>${r.requestedBy}</strong></span><br>
         <span>Handed to: <strong>${r.handedTo}</strong>${r.contact?' · '+r.contact:''}</span><br>

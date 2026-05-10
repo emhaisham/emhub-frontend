@@ -4347,24 +4347,31 @@ async function saveLoan(){
   const start=document.getElementById('ln_start')?.value;
   const notes=document.getElementById('ln_notes')?.value.trim();
   if(!empId||!amount||!monthly||!start) return toast('Fill all required fields');
+
+  const schedule=[];let[y,m]=start.split('-').map(Number);let rem=amount;
+  while(rem>0){schedule.push(`${y}-${String(m).padStart(2,'0')}`);rem-=monthly;m++;if(m>12){m=1;y++;}}
+
   if(editingLoanId){
     const loan=hrLoans.find(l=>String(l.id)===String(editingLoanId));if(!loan) return;
-    // Rebuild schedule from start
-    const schedule=[];let[y,m]=start.split('-').map(Number);let rem=amount;
-    while(rem>0){schedule.push(`${y}-${String(m).padStart(2,'0')}`);rem-=monthly;m++;if(m>12){m=1;y++;}}
-    loan.empId=empId;loan.amount=amount;loan.monthlyAmount=monthly;loan.start=start;
-    loan.schedule=schedule;loan.notes=notes;
-    loan.remaining=Math.max(0,amount-schedule.filter(mo=>(loan.repayments||{})[mo]==='paid').length*monthly);
-    if(loan.remaining<=0)loan.status='completed';else loan.status='active';
-    api('GET','/hr/loans').then(r=>{if(r)hrLoans=r;});closeUserModal();renderLoans();toast('Loan updated ✓');
+    const remaining=Math.max(0,amount-schedule.filter(mo=>(loan.repayments||{})[mo]==='paid').length*monthly);
+    const status=remaining<=0?'completed':'active';
+    const res=await api('PUT','/hr/loans/'+editingLoanId,{
+      empId,amount,monthlyAmount:monthly,startMonth:start,
+      schedule,notes,remaining,status
+    });
+    if(!res){toast('Failed to update loan');return;}
+    hrLoans=await api('GET','/hr/loans')||hrLoans;
+    closeUserModal();renderLoans();toast('Loan updated ✓');
   } else {
-    // Check if start month already has processed payroll for this employee
-    const conflict=hrPayrolls.find(p=>p.empId===empId&&p.month===start&&p.status==='paid');
+    const conflict=hrPayrolls.find(p=>String(p.empId)===String(empId)&&p.month===start&&p.status==='paid');
     if(conflict) return toast(`Warning: ${monthLabel(start)} payroll is already paid. Start from next month.`);
-    const schedule=[];let[y,m]=start.split('-').map(Number);let rem=amount;
-    while(rem>0){schedule.push(`${y}-${String(m).padStart(2,'0')}`);rem-=monthly;m++;if(m>12){m=1;y++;}}
-    hrLoans.push({id:uid(),empId,amount,monthlyAmount:monthly,remaining:amount,start,schedule,notes,status:'active',approvedDate:new Date().toISOString().slice(0,10),repayments:{}});
-    api('GET','/hr/loans').then(r=>{if(r)hrLoans=r;});closeUserModal();renderLoans();updateHRSidebar();toast('Loan approved ✓');
+    const res=await api('POST','/hr/loans',{
+      empId,amount,monthlyAmount:monthly,start,
+      schedule,notes,remaining:amount,status:'active'
+    });
+    if(!res){toast('Failed to save loan');return;}
+    hrLoans=await api('GET','/hr/loans')||hrLoans;
+    closeUserModal();renderLoans();updateHRSidebar();toast('Loan approved ✓');
   }
 }
 

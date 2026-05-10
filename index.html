@@ -8452,6 +8452,7 @@ function renderEventLists(){
           </div>
         </div>
         ${!isDone?`<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();guardAction('eel_add_list',()=>openAddEquipList('${evId}'))" style="flex-shrink:0">＋ Add Team List</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();exportAllListsPDF('${evId}')" style="flex-shrink:0" title="Export all lists as PDF">📄 All Lists PDF</button>
       </div>
       <!-- Accordion Body -->
       <div id="el-body-${evId}" style="display:${expanded?'block':'none'};border-top:1px solid var(--border)">
@@ -8687,34 +8688,66 @@ async function removeItemFromList(evId,li,ii){
 }
 
 // ── Export List PDF ───────────────────────────────────────────────────────────
-function exportListPDF(evId,li){
-  const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
-  const list=ev.equipLists[li]; if(!list) return;
-  const rows=list.items.map((item,i)=>`<tr>
-    <td>${i+1}</td>
-    <td style="font-weight:600">${item.parentName}</td>
-    <td style="font-family:monospace;color:#1d4ed8;font-weight:700">${item.emSerial}</td>
-    <td style="font-family:monospace">${item.itemSerial||'—'}</td>
-    <td>${item.fcName?`${item.fcSerial} — ${item.fcName}`:'—'}</td>
-    <td><img src="${generateQRDataURL(item.emSerial,60)}" style="width:60px;height:60px"></td>
-  </tr>`).join('');
-  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${ev.name} — ${list.teamName}</title>
-  <style>body{font-family:Arial;font-size:12px;padding:28px}h1{font-size:18px;font-weight:800;margin:0 0 4px}
-  .sub{color:#6b7280;font-size:12px;margin-bottom:20px}table{width:100%;border-collapse:collapse}
-  th{background:#0f172a;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase}
-  td{padding:8px 10px;border-bottom:1px solid #e5e7eb;vertical-align:middle}
-  tr:nth-child(even) td{background:#f9fafb}.footer{margin-top:20px;font-size:10px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:10px;text-align:center}</style>
+function _buildEquipPDF(ev, lists){
+  const allRows = lists.map(list=>{
+    const rows = list.items.map((item,i)=>`<tr>
+      <td>${i+1}</td>
+      <td style="font-weight:600">${item.parentName}</td>
+      <td style="font-family:monospace;color:#1d4ed8;font-weight:700">${item.emSerial}</td>
+      <td style="font-family:monospace;font-size:10px">${item.itemSerial||'—'}</td>
+      <td style="font-size:10px">${item.fcName?`${item.fcSerial} — ${item.fcName}`:'—'}</td>
+      <td style="text-align:center"><input type="checkbox" style="width:14px;height:14px"></td>
+    </tr>`).join('');
+    return `
+      <div class="team-header">${list.teamName} <span style="font-weight:400;font-size:11px;color:#6b7280">${list.items.length} item${list.items.length!==1?'s':''}</span></div>
+      <table><thead><tr><th style="width:28px">#</th><th>Item</th><th style="width:90px">EM Serial</th><th style="width:90px">Item Serial</th><th style="width:160px">Flight Case</th><th style="width:40px">✓</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      <div style="height:14px"></div>
+    `;
+  }).join('');
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>${ev.name} — Equipment List</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:11px;padding:24px;color:#111;margin:0}
+    h1{font-size:17px;font-weight:800;margin:0 0 2px}
+    .sub{color:#6b7280;font-size:11px;margin-bottom:16px}
+    .team-header{font-size:12px;font-weight:700;background:#0f172a;color:#fff;padding:5px 8px;margin-bottom:0;border-radius:3px 3px 0 0}
+    table{width:100%;border-collapse:collapse;margin-bottom:0}
+    th{background:#1e293b;color:#fff;padding:4px 7px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+    td{padding:3px 7px;border-bottom:1px solid #e5e7eb;vertical-align:middle;font-size:11px}
+    tr:nth-child(even) td{background:#f8fafc}
+    .footer{margin-top:18px;font-size:9px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px;text-align:center}
+    @media print{body{padding:16px}}
+  </style>
   </head><body>
   <h1>${ev.name}</h1>
-  <div class="sub">Team: ${list.teamName} · ${ev.eventDateFrom||''} · ${list.items.length} items · EM HUB Equipment List</div>
-  <table><thead><tr><th>#</th><th>Item</th><th>EM Serial</th><th>Item Serial</th><th>Flight Case</th><th>QR</th></tr></thead>
-  <tbody>${rows}</tbody></table>
-  <div class="footer">Confidential · EM HUB · Event Equipment List</div>
+  <div class="sub">${ev.eventDateFrom||''}${ev.eventDateTo&&ev.eventDateTo!==ev.eventDateFrom?' → '+ev.eventDateTo:''} · ${lists.length} team${lists.length!==1?'s':''} · EM HUB Equipment List</div>
+  ${allRows}
+  <div class="footer">Confidential · EM HUB · Event Equipment List · Printed ${new Date().toLocaleDateString()}</div>
   </body></html>`;
+}
+
+function exportListPDF(evId, li){
+  const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
+  const list=ev.equipLists[li]; if(!list) return;
+  const html=_buildEquipPDF(ev,[list]);
   const frame=document.getElementById('printFrame')||document.createElement('iframe');
   frame.id='printFrame'; frame.style.display='none'; document.body.appendChild(frame);
   const doc=frame.contentWindow.document;
-  doc.open();doc.write(html);doc.close();
+  doc.open(); doc.write(html); doc.close();
+  setTimeout(()=>frame.contentWindow.print(),400);
+}
+
+function exportAllListsPDF(evId){
+  const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
+  const lists=ev.equipLists||[];
+  if(!lists.length){toast('No lists to export');return;}
+  const html=_buildEquipPDF(ev,lists);
+  const frame=document.getElementById('printFrame')||document.createElement('iframe');
+  frame.id='printFrame'; frame.style.display='none'; document.body.appendChild(frame);
+  const doc=frame.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
   setTimeout(()=>frame.contentWindow.print(),400);
 }
 

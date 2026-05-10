@@ -8690,17 +8690,18 @@ async function removeItemFromList(evId,li,ii){
 // ── Export List PDF ───────────────────────────────────────────────────────────
 function _buildEquipPDF(ev, lists){
   const allRows = lists.map(list=>{
-    const rows = list.items.map((item,i)=>`<tr>
-      <td>${i+1}</td>
+  const rows = list.items.map((item,i)=>`<tr>
+      <td style="text-align:center;color:#6b7280">${i+1}</td>
       <td style="font-weight:600">${item.parentName}</td>
       <td style="font-family:monospace;color:#1d4ed8;font-weight:700">${item.emSerial}</td>
-      <td style="font-family:monospace;font-size:10px">${item.itemSerial||'—'}</td>
-      <td style="font-size:10px">${item.fcName?`${item.fcSerial} — ${item.fcName}`:'—'}</td>
-      <td style="text-align:center"><input type="checkbox" style="width:14px;height:14px"></td>
+      <td style="font-family:monospace">${item.itemSerial||'—'}</td>
+      <td>${item.fcName?`${item.fcSerial} — ${item.fcName}`:'—'}</td>
+      <td style="text-align:center"><input type="checkbox" style="width:13px;height:13px"></td>
     </tr>`).join('');
     return `
-      <div class="team-header">${list.teamName} <span style="font-weight:400;font-size:11px;color:#6b7280">${list.items.length} item${list.items.length!==1?'s':''}</span></div>
-      <table><thead><tr><th style="width:28px">#</th><th>Item</th><th style="width:90px">EM Serial</th><th style="width:90px">Item Serial</th><th style="width:160px">Flight Case</th><th style="width:40px">✓</th></tr></thead>
+      <div class="team-header">${list.teamName} <span style="font-weight:400;font-size:11px;color:#94a3b8">${list.items.length} item${list.items.length!==1?'s':''}</span></div>
+      <table><colgroup><col style="width:30px"><col style="width:auto"><col style="width:90px"><col style="width:90px"><col style="width:180px"><col style="width:30px"></colgroup>
+      <thead><tr><th>#</th><th>Item</th><th>EM Serial</th><th>Item Serial</th><th>Flight Case</th><th>✓</th></tr></thead>
       <tbody>${rows}</tbody></table>
       <div style="height:14px"></div>
     `;
@@ -8713,9 +8714,10 @@ function _buildEquipPDF(ev, lists){
     h1{font-size:17px;font-weight:800;margin:0 0 2px}
     .sub{color:#6b7280;font-size:11px;margin-bottom:16px}
     .team-header{font-size:12px;font-weight:700;background:#0f172a;color:#fff;padding:5px 8px;margin-bottom:0;border-radius:3px 3px 0 0}
-    table{width:100%;border-collapse:collapse;margin-bottom:0}
-    th{background:#1e293b;color:#fff;padding:4px 7px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
-    td{padding:3px 7px;border-bottom:1px solid #e5e7eb;vertical-align:middle;font-size:11px}
+    table{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:0}
+    th,td{padding:4px 8px;text-align:left;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    th{background:#1e293b;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+    td{border-bottom:1px solid #e5e7eb;vertical-align:middle}
     tr:nth-child(even) td{background:#f8fafc}
     .footer{margin-top:18px;font-size:9px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px;text-align:center}
     @media print{body{padding:16px}}

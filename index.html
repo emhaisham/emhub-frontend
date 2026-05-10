@@ -1976,8 +1976,9 @@ let _invPhotoData = null;
 
 function saveAll(){
   localStorage.setItem('em_pays', JSON.stringify(payments));
-  // Also sync to API
+  // Sync payments to API for each event
   crewEvents.forEach(ev=>{
+    if(!ev.id) return;
     api('PUT','/crewpay/events/'+ev.id,{
       name:ev.name, date:ev.date,
       groups:ev.groups||[], payments:payments[ev.id]||{}
@@ -2081,6 +2082,15 @@ async function _loadAllData(){
   users = usrs || [];
   hrLeaveTypes = lvTypes || [];
   crewEvents = crewEvts || [];
+  // Restore payments from API events + localStorage fallback
+  const localPays = JSON.parse(localStorage.getItem('em_pays')||'{}');
+  crewEvents.forEach(e=>{
+    if(e.payments && Object.keys(e.payments).length){
+      payments[e.id] = e.payments;
+    } else if(localPays[e.id]){
+      payments[e.id] = localPays[e.id];
+    }
+  });
 }
 
 function resetToDefaults(){ toast('Account management is now handled via the backend.'); }
@@ -2207,7 +2217,15 @@ function switchModule(name){
         if(evts){
           crewEvents=evts;
           events=evts.map(e=>({...e,groups:e.groups||[]}));
-          evts.forEach(e=>{ if(e.payments) Object.assign(payments,{[e.id]:e.payments}); });
+          // Restore payments from API (merged with localStorage fallback)
+          const localPays=JSON.parse(localStorage.getItem('em_pays')||'{}');
+          evts.forEach(e=>{
+            if(e.payments&&Object.keys(e.payments).length){
+              payments[e.id]=e.payments; // prefer API data
+            } else if(localPays[e.id]){
+              payments[e.id]=localPays[e.id]; // fallback to localStorage
+            }
+          });
           populateMonths();
         }
         renderAll();
@@ -3231,11 +3249,16 @@ function saveEditEvent(){
     }
     groups.push({id:fg.origId||uid(),label:fg.label,days});
   }
-  const idx=events.findIndex(e=>e.id===editingEventId);
+  const idx=events.findIndex(e=>String(e.id)===String(editingEventId));
   if(idx<0)return toast('Event not found');
   events[idx]={...events[idx],name,date,groups};
+  crewEvents[crewEvents.findIndex(e=>String(e.id)===String(editingEventId))]={...events[idx]};
   // Sync payment records for new groups
   ensurePay(editingEventId,groups);
+  // Save to API
+  api('PUT','/crewpay/events/'+editingEventId,{
+    name,date,groups,payments:payments[editingEventId]||{}
+  });
   saveAll();populateMonths();renderAll();
   closeEditEvent();toast('Event updated ✓');
 }
@@ -5420,7 +5443,7 @@ function _openLeaveTypeModal(lt){
     </div>`;
   document.getElementById('userModal').classList.add('open');
 }
-function saveLeaveType(existingId){
+async function saveLeaveType(existingId){
   const name=document.getElementById('lte_name')?.value.trim();
   const days=parseInt(document.getElementById('lte_days')?.value)||0;
   const color=document.getElementById('lte_color')?.value;
@@ -5428,11 +5451,12 @@ function saveLeaveType(existingId){
   if(!name)return toast('Enter leave type name');
   if(existingId&&existingId!=='null'){
     const lt=hrLeaveTypes.find(x=>String(x.id)===String(existingId));
-    if(lt){lt.name=name;lt.days=days;lt.color=color;lt.paid=paid;}
+    if(lt){Object.assign(lt,{name,days,color,paid});}
   } else {
     hrLeaveTypes.push({id:uid(),name,days,color,paid});
   }
-  lvtSave();closeUserModal();renderLeaveTypes();toast('Saved ✓');
+  await api('POST','/hr/leave-types',{types:hrLeaveTypes});
+  closeSimpleModal(); renderLeaveTypes(); populateLeaveTypeFilter(); toast('Leave type saved ✓');
 }
 function deleteLeaveType(id){
   openConfirm('Delete this leave type?','Existing leave records will remain.','Delete',()=>{
@@ -6112,13 +6136,27 @@ function updateEquipItem(id, field, val){
   if(item) item[field] = field==='qty' ? (parseInt(val)||1) : val;
 }
 
+function _syncEquipItems(){
+  // Sync current DOM values back to _equipItems before re-rendering
+  _equipItems.forEach(item=>{
+    const wrap = document.getElementById('eqitem_'+item.id);
+    if(!wrap) return;
+    const nameInput = wrap.querySelector('input[type="text"]');
+    const qtyInput = wrap.querySelector('input[type="number"]');
+    if(nameInput) item.name = nameInput.value;
+    if(qtyInput) item.qty = parseInt(qtyInput.value)||1;
+  });
+}
+
 function addEquipItem(){
+  _syncEquipItems(); // save current values first
   _equipItems.push({id:uid(), name:'', qty:1});
   const wrap = document.getElementById('eq_items_wrap');
   if(wrap) wrap.innerHTML = _equipItemsHtml();
 }
 
 function removeEquipItem(id){
+  _syncEquipItems(); // save current values first
   _equipItems = _equipItems.filter(x=>String(x.id)!==String(id));
   const wrap = document.getElementById('eq_items_wrap');
   if(wrap) wrap.innerHTML = _equipItemsHtml();
@@ -6197,7 +6235,8 @@ async function saveEquipRequest(){
 
   if(!requestedBy) return toast('Enter who requested this');
   if(!handedTo) return toast('Enter who the items are handed to');
-  const validItems = _equipItems.filter(x=>x.name.trim());
+  _syncEquipItems(); // sync DOM values to _equipItems
+  const validItems = _equipItems.filter(x=>x.name&&x.name.trim());
   if(!validItems.length) return toast('Add at least one item');
 
   const itemSummary = validItems.length===1
@@ -8233,15 +8272,18 @@ function clearDiscEmp(){
   document.getElementById('disc_emp_id').value='';
   document.getElementById('disc_emp_sel').style.display='none';
 }
-function saveDiscNew(){
+async function saveDiscNew(){
   const empId=document.getElementById('disc_emp_id')?.value;
   const date=document.getElementById('disc_date')?.value;
   const details=document.getElementById('disc_details')?.value.trim();
   const by=document.getElementById('disc_by')?.value.trim();
   if(!empId){toast('Select a staff member');return;}
   if(!details){toast('Enter the complaint/details');return;}
-  hrDisciplinary.unshift({id:'d'+uid(),empId,date,details,enteredBy:by,status:'open',createdAt:new Date().toISOString()});
-  discSave(); closeSimpleModal(); renderDisciplinaryPage(); toast('Record saved ✓');
+  const rec={id:'d'+uid(),empId,date,details,enteredBy:by,status:'open',createdAt:new Date().toISOString()};
+  const res=await api('POST','/hr/disciplinary',rec);
+  if(!res){toast('Failed to save');return;}
+  hrDisciplinary=await api('GET','/hr/disciplinary')||hrDisciplinary;
+  closeSimpleModal(); renderDisciplinaryPage(); toast('Record saved ✓');
 }
 function openCloseDisc(id){
   const rec=hrDisciplinary.find(d=>d.id===id);
@@ -8277,7 +8319,7 @@ function openCloseDisc(id){
   document.getElementById('simpleModal').style.display='flex';
 }
 
-function saveCloseDisc(id){
+async function saveCloseDisc(id){
   const handling=document.getElementById('disc_handling')?.value.trim();
   const action=document.getElementById('disc_action')?.value.trim();
   const closedBy=document.getElementById('disc_closedby')?.value.trim();
@@ -8288,14 +8330,13 @@ function saveCloseDisc(id){
   if(!closedBy){toast('Enter who authorised the closure');return;}
   if(informed==='yes'&&!informedDate){toast('Enter the date staff was informed');return;}
   const rec=hrDisciplinary.find(d=>d.id===id); if(!rec) return;
-  rec.status='closed';
-  rec.handling=handling;
-  rec.action=action;
-  rec.staffInformed=informed;
-  rec.staffInformedDate=informedDate;
-  rec.closedBy=closedBy;
-  rec.closedAt=new Date().toISOString();
-  discSave(); closeSimpleModal(); renderDisciplinaryPage();
+  const updated={...rec,status:'closed',handling,action,staffInformed:informed,
+    staffInformedDate:informedDate,closedBy,closedAt:new Date().toISOString()};
+  const res=await api('PUT','/hr/disciplinary/'+id,updated);
+  if(!res){toast('Failed to save');return;}
+  Object.assign(rec,updated);
+  hrDisciplinary=await api('GET','/hr/disciplinary')||hrDisciplinary;
+  closeSimpleModal(); renderDisciplinaryPage();
   const profPanel=document.getElementById('ptab-disciplinary');
   if(profPanel&&profPanel.classList.contains('active')){
     const emp=hrEmployees.find(e=>String(e.id)===String(rec.empId));

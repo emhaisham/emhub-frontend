@@ -8386,58 +8386,49 @@ async function saveCloseDisc(id){
 // ══ STAFF ASSETS ══════════════════════════════════════
 function renderAssetsPanel(emp){
   const assets=emp.assetRecords||[];
-  return`<div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
-      <button class="btn btn-primary btn-sm" onclick="openAddStaffAsset('${emp.id}')">＋ Hand Over Asset</button>
-    </div>
-    ${!assets.length?'<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div class="empty-title">No assets recorded</div><div class="empty-sub">Record equipment or assets handed over to this staff member</div></div>':
-    assets.map((a,i)=>`<div style="border:1px solid ${a.damagedDate?'var(--red-bd)':a.returnedDate?'var(--border)':'var(--green-bd)'};background:${a.damagedDate?'var(--red-bg)':a.returnedDate?'var(--surface)':'var(--green-bg)'};border-radius:10px;padding:14px 16px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-        <div style="flex:1">
-          <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">${a.assetName}</div>
-          <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Handed over: <strong>${a.handedDate||'—'}</strong></div>
-          ${a.notes?`<div style="font-size:12px;color:var(--text2);margin-bottom:4px">Notes: ${a.notes}</div>`:''}
-          ${a.returnedDate?`<div style="font-size:12px;color:var(--text3)">Returned: ${a.returnedDate}</div>`:''}
-          ${a.damagedDate?`<div style="font-size:12px;color:var(--red);font-weight:600;margin-top:6px">⚠️ Damaged on ${a.damagedDate}</div>${a.damageDetails?`<div style="font-size:12px;color:var(--text2)">${a.damageDetails}</div>`:''}`:''}
-          ${a.replacementAsset?`<div style="font-size:12px;color:var(--accent);margin-top:4px">↩ Replaced with: <strong>${a.replacementAsset}</strong> on ${a.replacementDate||'—'}</div>`:''}
-        </div>
-        <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
-          ${!a.returnedDate&&!a.damagedDate?`<button class="btn btn-ghost btn-xs" onclick="openRecordDamage('${emp.id}','${i}')">⚠️ Damaged</button>`:''}
-          ${a.damagedDate&&!a.replacementAsset?`<button class="btn btn-primary btn-xs" onclick="openReplaceAsset('${emp.id}','${i}')">↩ Replace</button>`:''}
-        </div>
-      </div>
-    </div>`).join('')}
-  </div>`;
+  let html='<div>';
+  html+='<div style="display:flex;justify-content:flex-end;margin-bottom:14px">';
+  html+='<button class="btn btn-primary btn-sm" onclick="openAddStaffAsset(\''+emp.id+'\')">&#65291; Hand Over Asset</button></div>';
+  if(!assets.length){
+    html+='<div class="empty"><div class="empty-title">No assets recorded</div><div class="empty-sub">Record assets handed to this employee</div></div>';
+  } else {
+    assets.forEach((a,i)=>{
+      const isDamaged=!!a.damagedDate;
+      const isReplaced=!!a.replacementAsset;
+      const isReturned=!!a.returnedDate;
+      const isActive=!isReturned&&!isDamaged;
+      const isDmgPending=isDamaged&&!isReplaced&&!isReturned;
+      const border=isDmgPending?'var(--red-bd)':isReturned||isReplaced?'var(--border)':'var(--green-bd)';
+      const bg=isDmgPending?'var(--red-bg)':isReturned||isReplaced?'var(--surface)':'var(--green-bg)';
+      html+='<div style="border:1px solid '+border+';background:'+bg+';border-radius:10px;padding:14px 16px;margin-bottom:10px">';
+      html+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">';
+      html+='<div style="flex:1">';
+      html+='<div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px">'+a.assetName+'</div>';
+      html+='<div style="font-size:12px;color:var(--text3)">Handed: '+(fmtDate(a.handedDate)||'—')+(a.notes?' · '+a.notes:'')+'</div>';
+      if(isDamaged) html+='<div style="font-size:12px;color:var(--red);margin-top:4px">&#9888;&#65039; Damaged: '+(fmtDate(a.damagedDate)||'—')+' — '+(a.damageDetails||'')+'</div>';
+      if(isReturned) html+='<div style="font-size:12px;color:var(--text3);margin-top:4px">&#10003; Returned: '+(fmtDate(a.returnedDate)||'—')+'</div>';
+      if(isReplaced) html+='<div style="font-size:12px;color:var(--accent);margin-top:4px">&#x21A9; Replaced with: <strong>'+a.replacementAsset+'</strong> on '+(fmtDate(a.replacementDate)||'—')+'</div>';
+      html+='</div>';
+      html+='<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">';
+      if(isActive) html+='<button class="btn btn-ghost btn-xs" onclick="openRecordDamage(\''+emp.id+'\',\''+i+'\')">&#9888; Damage</button>';
+      if(isDmgPending) html+='<button class="btn btn-primary btn-xs" onclick="openReplaceAsset(\''+emp.id+'\',\''+i+'\')">&#x21A9; Replace</button>';
+      if(isActive) html+='<button class="btn btn-ghost btn-xs" onclick="markAssetReturned(\''+emp.id+'\',\''+i+'\')">&#10003; Return</button>';
+      html+='</div></div></div>';
+    });
+  }
+  html+='</div>';
+  return html;
 }
-
-function openAddStaffAsset(empId){
-  document.getElementById('simpleModalTitle').textContent='Hand Over Asset';
-  document.getElementById('simpleModalBody').innerHTML=`
-    <div class="field"><label class="field-label">Asset / Equipment Name *</label>
-      <input type="text" id="sa_name" placeholder="e.g. Company Laptop, iPhone 13, Radio Set"></div>
-    <div class="field"><label class="field-label">Date Handed Over *</label>
-      <input type="date" id="sa_date" value="${new Date().toISOString().slice(0,10)}"></div>
-    <div class="field"><label class="field-label">Notes (optional)</label>
-      <input type="text" id="sa_notes" placeholder="e.g. Serial number, condition"></div>`;
-  document.getElementById('simpleModalSave').textContent='Record Hand Over';
-  document.getElementById('simpleModalSave').onclick=()=>saveStaffAsset(empId);
-  window._simpleModalFn=()=>saveStaffAsset(empId);
-  document.getElementById('simpleModal').style.display='flex';
-}
-async function saveStaffAsset(empId){
-  const name=document.getElementById('sa_name')?.value.trim();
-  const date=document.getElementById('sa_date')?.value;
-  const notes=document.getElementById('sa_notes')?.value.trim();
-  if(!name){toast('Enter asset name');return;}
+async function markAssetReturned(empId,idx){
   const emp=hrEmployees.find(e=>String(e.id)===String(empId)); if(!emp) return;
-  if(!emp.assetRecords) emp.assetRecords=[];
-  emp.assetRecords.push({id:uid(),assetName:name,handedDate:date,notes,damagedDate:'',damageDetails:'',returnedDate:'',replacementAsset:'',replacementDate:'',createdAt:new Date().toISOString()});
+  const i=parseInt(idx); if(!emp.assetRecords[i]) return;
+  const prev={...emp.assetRecords[i]};
+  emp.assetRecords[i].returnedDate=new Date().toISOString().slice(0,10);
   const res=await api('PUT','/hr/employees/'+empId,{...emp,assetRecords:emp.assetRecords,extraDocs:[]});
-  if(!res){emp.assetRecords.pop();toast('Failed to save');return;}
-  closeSimpleModal();
+  if(!res){emp.assetRecords[i]=prev;toast('Failed to save');return;}
   const panel=document.getElementById('ptab-assets');
   if(panel) panel.innerHTML=renderAssetsPanel(emp);
-  toast('Asset recorded ✓');
+  toast('Asset marked as returned ✓');
 }
 
 function openRecordDamage(empId,idx){
@@ -8458,10 +8449,11 @@ async function saveDamage(empId,idx){
   const details=document.getElementById('dam_details')?.value.trim();
   if(!date||!details){toast('Enter date and damage details');return;}
   const emp=hrEmployees.find(e=>String(e.id)===String(empId)); if(!emp) return;
-  const prev={...emp.assetRecords[idx]};
-  emp.assetRecords[idx].damagedDate=date; emp.assetRecords[idx].damageDetails=details;
+  const i=parseInt(idx);
+  const prev={...emp.assetRecords[i]};
+  emp.assetRecords[i].damagedDate=date; emp.assetRecords[i].damageDetails=details;
   const res=await api('PUT','/hr/employees/'+empId,{...emp,assetRecords:emp.assetRecords,extraDocs:[]});
-  if(!res){emp.assetRecords[idx]=prev;toast('Failed to save');return;}
+  if(!res){emp.assetRecords[i]=prev;toast('Failed to save');return;}
   closeSimpleModal();
   const panel=document.getElementById('ptab-assets');
   if(panel) panel.innerHTML=renderAssetsPanel(emp);
@@ -8498,7 +8490,7 @@ async function saveReplacement(empId,idx){
     createdAt:new Date().toISOString()};
   emp.assetRecords.push(newRec);
   const res=await api('PUT','/hr/employees/'+empId,{...emp,assetRecords:emp.assetRecords,extraDocs:[]});
-  if(!res){emp.assetRecords[idx]=prev;emp.assetRecords.pop();toast('Failed to save');return;}
+  if(!res){emp.assetRecords[i]=prev;emp.assetRecords.pop();toast('Failed to save');return;}
   closeSimpleModal();
   const panel=document.getElementById('ptab-assets');
   if(panel) panel.innerHTML=renderAssetsPanel(emp);

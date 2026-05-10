@@ -1600,11 +1600,12 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <button class="btn btn-primary btn-sm" onclick="guardAction('fault_add', openGlobalFaultReport)">＋ Report Fault</button>
               </div>
               <div class="toolbar" style="margin-bottom:14px">
-                <select id="frFilterStatus" onchange="renderFaultReports()">
-                  <option value="">All</option>
-                  <option value="open">Open</option>
-                  <option value="repaired">Repaired</option>
-                </select>
+                <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;width:fit-content">
+                  <button id="frTab-all" class="staff-tab active" onclick="setFRTab('')" style="border-radius:0;border:none;padding:7px 16px;font-size:13px">All</button>
+                  <button id="frTab-open" class="staff-tab" onclick="setFRTab('open')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">🔴 Open</button>
+                  <button id="frTab-repaired" class="staff-tab" onclick="setFRTab('repaired')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">✅ Repaired</button>
+                  <button id="frTab-discarded" class="staff-tab" onclick="setFRTab('discarded')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">🗑️ Discarded</button>
+                </div>
               </div>
               <div id="faultReportsList"></div>
             </div>
@@ -6806,6 +6807,41 @@ async function undoDiscard(parentId, unitId){
 
 // ── Fault Reporting ────────────────────────────────────────────────────────────
 let _faultPhotos=[];
+
+async function handleFaultPhotos(input){
+  const files=Array.from(input.files||[]);
+  if(!files.length) return;
+  const preview=document.getElementById('fault_photos_preview');
+  for(const file of files){
+    if(!file.type.startsWith('image/')) continue;
+    // Show loading placeholder
+    const placeholderId='fp'+uid();
+    if(preview) preview.insertAdjacentHTML('beforeend',`<div id="${placeholderId}" style="width:60px;height:60px;border-radius:6px;background:var(--surface);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text3)">...</div>`);
+    try{
+      const formData=new FormData();
+      formData.append('file',file);
+      formData.append('folder','faults');
+      const res=await fetch(API_BASE+'/files/upload',{
+        method:'POST',
+        headers:{'Authorization':'Bearer '+localStorage.getItem('em_auth_token')},
+        body:formData
+      });
+      const data=await res.json();
+      if(data.key){
+        _faultPhotos.push(data.key);
+        // Get signed URL and show preview
+        const urlRes=await api('GET','/files/signed-url?key='+encodeURIComponent(data.key));
+        const ph=document.getElementById(placeholderId);
+        if(ph&&urlRes?.url) ph.outerHTML=`<img src="${urlRes.url}" style="width:60px;height:60px;border-radius:6px;object-fit:cover;cursor:pointer" onclick="window.open('${urlRes.url}','_blank')" title="Click to view">`;
+      }
+    }catch(e){
+      const ph=document.getElementById(placeholderId);
+      if(ph) ph.remove();
+      toast('Failed to upload photo');
+    }
+  }
+  input.value='';
+}
 function openReportFault(parentId, unitId){
   _editUnitParentId=String(parentId); _editUnitId=unitId; _faultPhotos=[];
   const item=invItems.find(x=>String(x.id)===String(parentId));
@@ -7579,12 +7615,23 @@ function _getAllFaults(){
   return faults.sort((a,b)=>new Date(b.reportedDate)-new Date(a.reportedDate));
 }
 
+let _frTab='';
+function setFRTab(tab){
+  _frTab=tab;
+  ['all','open','repaired','discarded'].forEach(t=>{
+    const btn=document.getElementById('frTab-'+t);
+    if(btn) btn.classList.toggle('active', (t==='all'&&tab==='')||(t===tab));
+  });
+  renderFaultReports();
+}
+
 function renderFaultReports(){
   const el=document.getElementById('faultReportsList'); if(!el) return;
-  const fStatus=document.getElementById('frFilterStatus')?.value||'';
+  const fStatus=_frTab||'';
   let faults=_getAllFaults();
   if(fStatus==='open') faults=faults.filter(f=>!f.repairedDate&&!f.unitDiscarded);
-  if(fStatus==='repaired') faults=faults.filter(f=>f.repairedDate||f.unitDiscarded);
+  if(fStatus==='repaired') faults=faults.filter(f=>f.repairedDate&&!f.unitDiscarded);
+  if(fStatus==='discarded') faults=faults.filter(f=>f.unitDiscarded);
   if(!faults.length){
     el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div><div class="empty-title">No fault reports</div><div class="empty-sub">Fault reports will appear here when submitted</div></div>';
     return;
@@ -7610,6 +7657,7 @@ function renderFaultReports(){
         <div style="font-size:12.5px;color:var(--text2);margin-bottom:2px">${f.fault}</div>
         <div style="font-size:11.5px;color:var(--text3)">By <strong>${f.reportedBy||'—'}</strong> · ${f.reportedDate||'—'}${repaired?` · Fixed ${f.repairedDate}${f.repairedBy?' by '+f.repairedBy:''}`:discarded?` · Unit discarded`:''}</div>
         ${f.repairNote?`<div style="font-size:11.5px;color:var(--text3)">${f.repairNote}</div>`:''}
+        ${f.photos&&f.photos.length?`<div class="fault-photo-row" data-photos='${JSON.stringify(f.photos)}' style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>`:''}
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
         <button class="btn btn-ghost btn-xs" onclick="openInvParent('${f.parentId}');setTimeout(()=>openUnitDetail('${f.parentId}','${f.unitId}','faults'),300)">View</button>
@@ -7618,6 +7666,20 @@ function renderFaultReports(){
       </div>
     </div>`;
   }).join('');
+  // Load fault photos via signed URLs
+  setTimeout(async()=>{
+    const rows=el.querySelectorAll('.fault-photo-row');
+    for(const row of rows){
+      try{
+        const keys=JSON.parse(row.getAttribute('data-photos')||'[]');
+        for(const key of keys){
+          if(!key) continue;
+          const url=await getSignedUrl(key);
+          if(url) row.insertAdjacentHTML('beforeend',`<img src="${url}" style="width:52px;height:52px;border-radius:6px;object-fit:cover;cursor:pointer" onclick="window.open('${url}','_blank')">`);
+        }
+      }catch(e){}
+    }
+  },100);
 }
 
 function openGlobalFaultReport(){

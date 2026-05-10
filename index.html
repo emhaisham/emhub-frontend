@@ -6022,6 +6022,7 @@ function filterEquipItemSearch(itemId, q){
     const itemMatch = !query || item.name.toLowerCase().includes(query) || (item.model||'').toLowerCase().includes(query);
     const units = (item.units||[]).filter(u=>!u.discarded);
     const availableUnits = units.filter(u=>!u.checkout||u.checkout.checkedInAt);
+    const totalAvailable = availableUnits.reduce((s,u)=>s+(u.qty||1),0);
     const unitMatch = units.some(u=>u.serial.toLowerCase().includes(query)||(u.itemSerial||'').toLowerCase().includes(query));
     if(itemMatch || unitMatch){
       units.forEach(u=>{
@@ -6132,7 +6133,7 @@ function _equipFormHtml(r){
       <div class="field"><label class="field-label">Handed Over To *</label>
         <input type="text" id="eq_handedTo" value="${r?.handedTo||''}" placeholder="Person receiving the items"></div>
       <div class="field"><label class="field-label">Contact Number</label>
-        <input type="tel" id="eq_contact" value="${r?.contact||''}" placeholder="+960 xxxxxxx"></div>
+        <input type="text" id="eq_contact" value="${r?.contact||''}" placeholder="+960 xxxxxxx"></div>
       <div class="field"><label class="field-label">Expected Return Date</label>
         <input type="date" id="eq_returnDate" value="${r?.returnDate||''}"></div>
       <div class="field"><label class="field-label">Notes</label>
@@ -6686,7 +6687,7 @@ function renderUnitsHtml(item){
       const faultCount=(u.faults||[]).filter(f=>!f.repairedDate).length;
       const coEvent=u.checkout&&!u.checkout.checkedInAt?calEvents.find(e=>String(e.id)===String(u.checkout.eventId)):null;
       let statusBadge;
-      if(u.discarded) statusBadge=`<span style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">Discarded</span>`;
+      if(u.discarded) statusBadge=`<span style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">🗑️ Discarded</span>`;
       else if(coEvent) statusBadge=`<span style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">Out: ${coEvent.name}</span>`;
       else if(u.status==='faulty') statusBadge=`<span class="inv-badge-faulty">⚠️ Faulty${faultCount>0?' ('+faultCount+')':''}</span>`;
       else statusBadge=`<span class="inv-badge-working">✅ Working</span>`;
@@ -6704,7 +6705,7 @@ function renderUnitsHtml(item){
           <button class="btn btn-red btn-xs" onclick="deleteUnit('${item.id}','${u.unitId||u.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`;
       return`<div style="display:grid;grid-template-columns:90px 90px 110px 110px 110px 80px auto;gap:6px;padding:9px 14px;background:${u.discarded?'#f9fafb':u.status==='faulty'?'var(--red-bg)':'var(--white)'};border:1px solid ${u.discarded?'#e5e7eb':u.status==='faulty'?'var(--red-bd)':'var(--border)'};border-radius:8px;margin-bottom:5px;align-items:center;opacity:${u.discarded?'0.6':'1'}">
         <div style="font-family:monospace;font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.serial}</div>
-        <div style="font-size:12px;color:var(--text2);font-family:monospace;overflow:hidden;text-overflow:ellipsis">${u.itemSerial||'—'}</div>
+        <div style="font-size:12px;color:var(--text2);font-family:monospace;overflow:hidden;text-overflow:ellipsis">${u.itemSerial||'—'}${(u.qty||1)>1?` <span style="background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700">×${u.qty}</span>`:''}</div>
         <div>${statusBadge}</div>
         <div style="min-width:0">${fcHtml}</div>
         <div style="min-width:0">${whHtml}</div>
@@ -7130,12 +7131,13 @@ async function openAddUnit(parentId){
     </div>
     <div class="field"><label class="field-label">Notes (optional)</label>
       <input type="text" id="unit_notes" placeholder="e.g. new condition"></div>
-    <div class="field">
-      <label class="field-label">How many units to add?</label>
-      <input type="number" id="unit_count" value="1" min="1" max="50" style="width:80px">
-      <div style="font-size:11px;color:var(--text3);margin-top:4px">Each gets its own EM serial. Item serials must be entered individually via Edit.</div>
+    <div class="field"><label class="field-label">Quantity</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="number" id="unit_qty" value="1" min="1" style="width:90px">
+        <div style="font-size:12px;color:var(--text3)">For serialized items (with item serial), keep qty at 1.<br>For non-serialized bulk items (e.g. vases), enter total qty.</div>
+      </div>
     </div>`;
-  document.getElementById('simpleModalSave').textContent='Add Unit(s)';
+  document.getElementById('simpleModalSave').textContent='Add Unit';
   document.getElementById('simpleModalSave').onclick=saveUnitNew;
   window._simpleModalFn=saveUnitNew;
   document.getElementById('simpleModal').style.display='flex';
@@ -7185,16 +7187,14 @@ async function saveUnitNew(){
   const notes=document.getElementById('unit_notes')?.value.trim()||'';
   const importDate=document.getElementById('unit_import_date')?.value||'';
   const itemSerial=document.getElementById('unit_item_serial')?.value.trim()||'';
-  const count=parseInt(document.getElementById('unit_count')?.value)||1;
-  const units=Array.from({length:count},(_,i)=>({
-    warehouseId, fcId, notes, importDate,
-    itemSerial: count===1 ? itemSerial : ''
-  }));
-  const res=await api('POST','/inventory/items/'+_editUnitParentId+'/units',units);
+  const qty=parseInt(document.getElementById('unit_qty')?.value)||1;
+  const res=await api('POST','/inventory/items/'+_editUnitParentId+'/units',[{
+    warehouseId, fcId, notes, importDate, itemSerial, qty
+  }]);
   if(!res) return;
   invItems=await api('GET','/inventory/items')||invItems;
   refreshUnitsPanel(); renderInventory();
-  closeSimpleModal(); toast(`${count} unit${count>1?'s':''} added ✓`);
+  closeSimpleModal(); toast('Unit added ✓');
 }
 
 function openEditUnit(parentId, unitId){
@@ -7227,6 +7227,9 @@ function openEditUnit(parentId, unitId){
       </div>
       <input type="hidden" id="unit_fc" value="${selFC?selFC.id:''||unit.fcId||unit.flightCaseId||''}">
     </div>
+    <div class="field"><label class="field-label">Quantity</label>
+      <input type="number" id="unit_qty" value="${unit.qty||1}" min="1" style="width:90px">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">For serialized items keep at 1. For bulk non-serialized items enter total qty.</div></div>
     <div class="field"><label class="field-label">Notes</label>
       <input type="text" id="unit_notes" value="${unit.notes||''}" placeholder="e.g. scratched corner"></div>`;
   document.getElementById('simpleModalSave').textContent='Save Changes';
@@ -7242,7 +7245,8 @@ async function saveUnitEdit(){
   const warehouseId=document.getElementById('unit_wh')?.value||null;
   const fcId=document.getElementById('unit_fc')?.value||null;
   const notes=document.getElementById('unit_notes')?.value.trim()||'';
-  const res=await api('PUT','/inventory/units/'+unitId,{itemSerial,importDate,warehouseId,fcId,notes});
+  const qty=parseInt(document.getElementById('unit_qty')?.value)||1;
+  const res=await api('PUT','/inventory/units/'+unitId,{itemSerial,importDate,warehouseId,fcId,notes,qty});
   if(!res) return;
   invItems=await api('GET','/inventory/items')||invItems;
   refreshUnitsPanel(); renderInventory();

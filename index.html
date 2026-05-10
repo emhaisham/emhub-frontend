@@ -8424,19 +8424,22 @@ function openAddStaffAsset(empId){
   window._simpleModalFn=()=>saveStaffAsset(empId);
   document.getElementById('simpleModal').style.display='flex';
 }
-function saveStaffAsset(empId){
+async function saveStaffAsset(empId){
   const name=document.getElementById('sa_name')?.value.trim();
   const date=document.getElementById('sa_date')?.value;
   const notes=document.getElementById('sa_notes')?.value.trim();
   if(!name){toast('Enter asset name');return;}
   const emp=hrEmployees.find(e=>String(e.id)===String(empId)); if(!emp) return;
   if(!emp.assetRecords) emp.assetRecords=[];
-  emp.assetRecords.push({assetName:name,handedDate:date,notes,damagedDate:'',damageDetails:'',returnedDate:'',replacementAsset:'',replacementDate:'',createdAt:new Date().toISOString()});
+  emp.assetRecords.push({id:uid(),assetName:name,handedDate:date,notes,damagedDate:'',damageDetails:'',returnedDate:'',replacementAsset:'',replacementDate:'',createdAt:new Date().toISOString()});
+  const res=await api('PUT','/hr/employees/'+empId,{...emp,assetRecords:emp.assetRecords,extraDocs:[]});
+  if(!res){emp.assetRecords.pop();toast('Failed to save');return;}
   closeSimpleModal();
   const panel=document.getElementById('ptab-assets');
   if(panel) panel.innerHTML=renderAssetsPanel(emp);
   toast('Asset recorded ✓');
 }
+
 function openRecordDamage(empId,idx){
   document.getElementById('simpleModalTitle').textContent='⚠️ Record Damage';
   document.getElementById('simpleModalBody').innerHTML=`
@@ -8449,37 +8452,53 @@ function openRecordDamage(empId,idx){
   window._simpleModalFn=()=>saveDamage(empId,idx);
   document.getElementById('simpleModal').style.display='flex';
 }
-function saveDamage(empId,idx){
+
+async function saveDamage(empId,idx){
   const date=document.getElementById('dam_date')?.value;
   const details=document.getElementById('dam_details')?.value.trim();
   if(!date||!details){toast('Enter date and damage details');return;}
   const emp=hrEmployees.find(e=>String(e.id)===String(empId)); if(!emp) return;
+  const prev={...emp.assetRecords[idx]};
   emp.assetRecords[idx].damagedDate=date; emp.assetRecords[idx].damageDetails=details;
+  const res=await api('PUT','/hr/employees/'+empId,{...emp,assetRecords:emp.assetRecords,extraDocs:[]});
+  if(!res){emp.assetRecords[idx]=prev;toast('Failed to save');return;}
   closeSimpleModal();
   const panel=document.getElementById('ptab-assets');
   if(panel) panel.innerHTML=renderAssetsPanel(emp);
   toast('Damage recorded ✓');
 }
+
 function openReplaceAsset(empId,idx){
   document.getElementById('simpleModalTitle').textContent='↩ Replace Asset';
   document.getElementById('simpleModalBody').innerHTML=`
     <div class="field"><label class="field-label">Replacement Asset Name *</label>
       <input type="text" id="rep_name" placeholder="e.g. Company Laptop (new), iPhone 14"></div>
     <div class="field"><label class="field-label">Date Handed Over *</label>
-      <input type="date" id="rep_date" value="${new Date().toISOString().slice(0,10)}"></div>`;
+      <input type="date" id="rep_date" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div class="field"><label class="field-label">Notes</label>
+      <input type="text" id="rep_notes" placeholder="e.g. New model, upgraded version"></div>`;
   document.getElementById('simpleModalSave').textContent='Record Replacement';
   document.getElementById('simpleModalSave').onclick=()=>saveReplacement(empId,idx);
   window._simpleModalFn=()=>saveReplacement(empId,idx);
   document.getElementById('simpleModal').style.display='flex';
 }
-function saveReplacement(empId,idx){
+
+async function saveReplacement(empId,idx){
   const name=document.getElementById('rep_name')?.value.trim();
   const date=document.getElementById('rep_date')?.value;
+  const notes=document.getElementById('rep_notes')?.value.trim()||'';
   if(!name){toast('Enter replacement asset name');return;}
   const emp=hrEmployees.find(e=>String(e.id)===String(empId)); if(!emp) return;
+  const prev={...emp.assetRecords[idx]};
   emp.assetRecords[idx].replacementAsset=name; emp.assetRecords[idx].replacementDate=date;
-  // Also add new record for the replacement
-  emp.assetRecords.push({assetName:name,handedDate:date,notes:'Replacement for damaged '+emp.assetRecords[idx].assetName,damagedDate:'',damageDetails:'',returnedDate:'',replacementAsset:'',replacementDate:'',createdAt:new Date().toISOString()});
+  // Add new record for the replacement asset
+  const newRec={id:uid(),assetName:name,handedDate:date,
+    notes:notes||(prev.assetName?'Replacement for: '+prev.assetName:''),
+    damagedDate:'',damageDetails:'',returnedDate:'',replacementAsset:'',replacementDate:'',
+    createdAt:new Date().toISOString()};
+  emp.assetRecords.push(newRec);
+  const res=await api('PUT','/hr/employees/'+empId,{...emp,assetRecords:emp.assetRecords,extraDocs:[]});
+  if(!res){emp.assetRecords[idx]=prev;emp.assetRecords.pop();toast('Failed to save');return;}
   closeSimpleModal();
   const panel=document.getElementById('ptab-assets');
   if(panel) panel.innerHTML=renderAssetsPanel(emp);
@@ -8575,7 +8594,7 @@ function openAddAssetFromAllStaff(){
   document.getElementById('simpleModal').style.display='flex';
 }
 
-function saveAssetFromAllStaff(){
+async function saveAssetFromAllStaff(){
   const empId=document.getElementById('aa_emp')?.value;
   if(!empId){toast('Select a staff member');return;}
   const name=document.getElementById('sa_name')?.value.trim();
@@ -8584,7 +8603,9 @@ function saveAssetFromAllStaff(){
   if(!name){toast('Enter asset name');return;}
   const emp=hrEmployees.find(e=>String(e.id)===String(empId)); if(!emp) return;
   if(!emp.assetRecords) emp.assetRecords=[];
-  emp.assetRecords.push({assetName:name,handedDate:date,notes,damagedDate:'',damageDetails:'',returnedDate:'',replacementAsset:'',replacementDate:'',createdAt:new Date().toISOString()});
+  emp.assetRecords.push({id:uid(),assetName:name,handedDate:date,notes,damagedDate:'',damageDetails:'',returnedDate:'',replacementAsset:'',replacementDate:'',createdAt:new Date().toISOString()});
+  const res=await api('PUT','/hr/employees/'+empId,{...emp,assetRecords:emp.assetRecords,extraDocs:[]});
+  if(!res){emp.assetRecords.pop();toast('Failed to save');return;}
   closeSimpleModal(); renderAllStaffAssets();
   toast('Asset recorded ✓');
 }

@@ -3945,8 +3945,9 @@ function populatePayrollDept(){
 }
 
 function deleteOrphanPayroll(prId){
-  hrPayrolls=hrPayrolls.filter(p=>String(p.id)!==String(prId));
-  api('GET','/hr/payroll').then(r=>{if(r)hrPayrolls=r;}); renderPayroll();
+  api('DELETE','/hr/payroll/'+prId).then(()=>{
+    api('GET','/hr/payroll').then(r=>{if(r)hrPayrolls=r; renderPayroll();});
+  });
   toast('Orphaned payroll record removed ✓');
 }
 
@@ -6709,9 +6710,7 @@ function _faultCard(item,unit,f){
 function toggleUnitStatus(parentId, unitId){
   const item=invItems.find(x=>String(x.id)===String(parentId)); if(!item) return;
   const unit=(item.units||[]).find(u=>u.unitId===unitId); if(!unit) return;
-  unit.status=unit.status==='faulty'?'working':'faulty';
-  invSave(); refreshUnitsPanel(); renderInventory();
-  if(_detailParentId===String(parentId)&&_detailUnitId===unitId) renderUnitDetailModal();
+  // handled by async version above
   toast('Status updated ✓');
 }
 
@@ -6719,8 +6718,8 @@ function deleteUnit(parentId, unitId){
   const item=invItems.find(x=>String(x.id)===String(parentId)); if(!item) return;
   const u=(item.units||[]).find(x=>x.unitId===unitId);
   openConfirm('Delete this unit?',`Serial: ${u?.serial||unitId}`,'Delete',()=>{
-    item.units=(item.units||[]).filter(u=>u.unitId!==unitId);
-    invSave(); refreshUnitsPanel(); renderInventory();
+    // unit deleted via API above
+    refreshUnitsPanel(); renderInventory();
     // If we're in the unit detail modal, go back to parent
     if(document.getElementById('userModal').classList.contains('open')){
       openInvParent(parentId);
@@ -7412,7 +7411,7 @@ function _parseAndImportCSV(csvText){
     addedUnits++;
   });
 
-  invSave();populateInvCatFilter();populateInvWhFilter();renderInventory();
+  api('GET','/inventory/items').then(r=>{if(r)invItems=r;});populateInvCatFilter();populateInvWhFilter();renderInventory();
   const msg=`${addedParents} item${addedParents!==1?'s':''} and ${addedUnits} unit${addedUnits!==1?'s':''} imported.${addedUnits===0?' Tip: make sure unit Item Names match exactly with ITEMS section.':''}`;
   showInvFeedback(addedUnits>0||addedParents>0?'success':'error', msg);
 }
@@ -7440,7 +7439,7 @@ function _parseAndImportCSVFlat(csvText){
     invItems.push({id:uid(),name,model:get(row,'modelnumber')||get(row,'model'),manufacturer:get(row,'manufacturer'),catId,subCatId,photo:null,units,createdAt:new Date().toISOString()});
     added++;
   });
-  invSave();populateInvCatFilter();populateInvWhFilter();renderInventory();
+  api('GET','/inventory/items').then(r=>{if(r)invItems=r;});populateInvCatFilter();populateInvWhFilter();renderInventory();
   showInvFeedback(added>0?'success':'error',`${added} item${added!==1?'s':''} imported (flat format).${skipped?' '+skipped+' skipped.':''}`);
 }
 function _csvParseLine(line){
@@ -8523,9 +8522,14 @@ function openAddEquipList(evId){
 }
 
 function deleteEquipList(evId,li){
-  openConfirm('Delete this list?','All items in it will be removed.','Delete',()=>{
+  openConfirm('Delete this list?','All items in it will be removed.','Delete',async()=>{
     const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
-    ev.equipLists.splice(li,1); api('PUT','/events/'+ev.id,ev); renderEventLists(); toast('List deleted');
+    ev.equipLists.splice(li,1);
+    await api('PUT','/events/'+ev.id,{...ev});
+    const rawEvts=await api('GET','/events')||[];
+    calEvents=rawEvts.map(e=>({...e,eventDateFrom:normalizeDate(e.eventDateFrom),eventDateTo:normalizeDate(e.eventDateTo)}));
+    events=calEvents;
+    renderEventLists(); toast('List deleted');
   });
 }
 
@@ -8606,24 +8610,13 @@ function selectElParent(parentId){
   }).join('');
 }
 
-function saveItemsToList(){
+async function saveItemsToList(){
   const checked=[...document.querySelectorAll('.el-unit-chk:checked')];
   if(!checked.length){toast('Select at least one unit');return;}
 
-  // Validate none are checked out
-  const blockedSerials=[];
-  checked.forEach(chk=>{
-    const res=_findUnitBySerial(chk.value);
-    if(res?.unit.checkout&&!res.unit.checkout.checkedInAt){
-      const ev=calEvents.find(e=>String(e.id)===String(res.unit.checkout.eventId));
-      blockedSerials.push(`${chk.value} (checked out to ${ev?.name||'another event'})`);
-    }
-  });
-  if(blockedSerials.length){
-    toast('Cannot add — item(s) checked out: '+blockedSerials.join(', '));
-    return;
-  }  const ev=calEvents.find(e=>String(e.id)===String(_addListEvId)); if(!ev) return;
-  const list=ev.equipLists[_addListIdx]; if(!list) return;
+  const ev=calEvents.find(e=>String(e.id)===String(_addListEvId||_elEventId)); if(!ev){toast('Event not found');return;}
+  const list=ev.equipLists[_addListIdx]; if(!list){toast('List not found');return;}
+
   checked.forEach(chk=>{
     const emSerial=chk.value;
     const parentId=chk.dataset.parent;
@@ -8631,23 +8624,40 @@ function saveItemsToList(){
     const item=invItems.find(x=>String(x.id)===String(parentId));
     const unit=(item?.units||[]).find(u=>u.serial===emSerial);
     if(!unit) return;
-    const fc=invFlightCases.find(f=>String(f.id)===String(unit.flightCaseId));
-    list.items.push({
-      parentId,parentName,emSerial,
-      itemSerial:unit.itemSerial||'',
-      fcId:unit.flightCaseId||'',
-      fcSerial:fc?.fcSerial||'',
-      fcName:fc?.name||''
-    });
+    const fc=invFlightCases.find(f=>String(f.id)===String(unit.fcId||unit.flightCaseId));
+    // Avoid duplicates
+    if(!list.items.find(i=>i.emSerial===emSerial)){
+      list.items.push({
+        parentId, parentName, emSerial,
+        itemSerial:unit.itemSerial||'',
+        fcId:unit.fcId||unit.flightCaseId||'',
+        fcSerial:fc?.fcSerial||'',
+        fcName:fc?.name||''
+      });
+    }
   });
-  api('PUT','/events/'+_elEventId,{...calEvents.find(e=>String(e.id)===String(_elEventId))}); closeSimpleModal(); renderEventLists();
+
+  const res=await api('PUT','/events/'+ev.id,{...ev});
+  if(!res){toast('Failed to save');return;}
+  // Refresh calEvents
+  const rawEvts=await api('GET','/events')||[];
+  calEvents=rawEvts.map(e=>({...e,
+    eventDateFrom:normalizeDate(e.eventDateFrom),
+    eventDateTo:normalizeDate(e.eventDateTo)
+  }));
+  events=calEvents;
+  closeSimpleModal(); renderEventLists();
   toast(`${checked.length} unit${checked.length>1?'s':''} added to list ✓`);
 }
 
-function removeItemFromList(evId,li,ii){
+async function removeItemFromList(evId,li,ii){
   const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
   ev.equipLists[li].items.splice(ii,1);
-  api('PUT','/events/'+_elEventId,{...calEvents.find(e=>String(e.id)===String(_elEventId))}); renderEventLists(); toast('Item removed');
+  await api('PUT','/events/'+evId,{...ev});
+  const rawEvts=await api('GET','/events')||[];
+  calEvents=rawEvts.map(e=>({...e,eventDateFrom:normalizeDate(e.eventDateFrom),eventDateTo:normalizeDate(e.eventDateTo)}));
+  events=calEvents;
+  renderEventLists(); toast('Item removed');
 }
 
 // ── Export List PDF ───────────────────────────────────────────────────────────
@@ -8758,20 +8768,32 @@ function toggleSelectAll(type, li){
   if(btn) btn.textContent=allChecked?'Select All':'Unselect All';
 }
 
-function doCheckOutSelected(li){
+async function doCheckOutSelected(li){
   const evId=document.getElementById('coEventSel')?.value;
   if(!evId){toast('Select an event first');return;}
   const ev=calEvents.find(e=>String(e.id)===String(evId));
   const chks=[...document.querySelectorAll(`.co-item-chk-${li}:checked`)];
   if(!chks.length){toast('Tick at least one item');return;}
   const now=new Date().toISOString(); let count=0;
-  chks.forEach(chk=>{
+  for(const chk of chks){
     const res=_findUnitBySerial(chk.dataset.serial);
     if(res&&(!res.unit.checkout||res.unit.checkout.checkedInAt)){
-      res.unit.checkout={eventId:evId,eventName:ev?.name||'',checkedOutAt:now,checkedInAt:null}; count++;
+      const checkout={eventId:evId,eventName:ev?.name||'',checkedOutAt:now,checkedInAt:null};
+      res.unit.checkout=checkout;
+      const dbUnitId=res.unit.id||res.unit.unitId;
+      await api('PUT','/inventory/units/'+dbUnitId,{
+        itemSerial:res.unit.itemSerial||null,
+        importDate:res.unit.importDate?String(res.unit.importDate).slice(0,10):null,
+        warehouseId:res.unit.warehouseId||null,
+        fcId:res.unit.fcId||res.unit.flightCaseId||null,
+        notes:res.unit.notes||null,
+        checkoutData:checkout
+      });
+      count++;
     }
-  });
-  invSave(); renderCoEventList(); renderCoRecent();
+  }
+  invItems=await api('GET','/inventory/items')||invItems;
+  renderCheckOutPage();
   toast(`${count} item${count!==1?'s':''} checked out ✓`);
 }
 
@@ -8832,20 +8854,31 @@ function coLookup(){
   confirmWrap.style.display='none'; _coTarget=null;
 }
 
-function doCheckOut(){
+async function doCheckOut(){
   if(!_coTarget) return;
   const eventId=document.getElementById('coEventSel')?.value;
   if(!eventId){toast('Select an event');return;}
   const now=new Date().toISOString();
   const ev=calEvents.find(e=>String(e.id)===String(eventId));
+  const checkout={eventId,eventName:ev?.name||'',checkedOutAt:now,checkedInAt:null};
   if(_coTarget.type==='unit'){
-    _coTarget.unit.checkout={eventId,eventName:ev?.name||'',checkedOutAt:now,checkedInAt:null};
-    invSave(); toast(`${_coTarget.unit.serial} checked out to ${ev?.name} ✓`);
+    _coTarget.unit.checkout=checkout;
+    const dbId=_coTarget.unit.id||_coTarget.unit.unitId;
+    await api('PUT','/inventory/units/'+dbId,{itemSerial:_coTarget.unit.itemSerial||null,importDate:_coTarget.unit.importDate?String(_coTarget.unit.importDate).slice(0,10):null,warehouseId:_coTarget.unit.warehouseId||null,fcId:_coTarget.unit.fcId||_coTarget.unit.flightCaseId||null,notes:_coTarget.unit.notes||null,checkoutData:checkout});
+    toast(`${_coTarget.unit.serial} checked out to ${ev?.name} ✓`);
   } else {
     let count=0;
-    _coTarget.units.forEach(({unit})=>{if(!unit.checkout||unit.checkout.checkedInAt){unit.checkout={eventId,eventName:ev?.name||'',checkedOutAt:now,checkedInAt:null};count++;}});
-    invSave(); toast(`${count} unit${count!==1?'s':''} from ${_coTarget.fc.name} checked out ✓`);
+    for(const {unit} of _coTarget.units){
+      if(!unit.checkout||unit.checkout.checkedInAt){
+        unit.checkout=checkout;
+        const dbId=unit.id||unit.unitId;
+        await api('PUT','/inventory/units/'+dbId,{itemSerial:unit.itemSerial||null,importDate:unit.importDate?String(unit.importDate).slice(0,10):null,warehouseId:unit.warehouseId||null,fcId:unit.fcId||unit.flightCaseId||null,notes:unit.notes||null,checkoutData:checkout});
+        count++;
+      }
+    }
+    toast(`${count} unit${count!==1?'s':''} from ${_coTarget.fc.name} checked out ✓`);
   }
+  invItems=await api('GET','/inventory/items')||invItems;
   document.getElementById('coItemPreview').style.display='none';
   document.getElementById('coConfirmWrap').style.display='none';
   document.getElementById('coSearchInput').value='';
@@ -8901,15 +8934,28 @@ function renderCiEventList(){
     </div>`).join('');
 }
 
-function doCheckInSelected(li){
+async function doCheckInSelected(li){
   const chks=[...document.querySelectorAll(`.ci-item-chk-${li}:checked`)];
   if(!chks.length){toast('Tick at least one item');return;}
   const now=new Date().toISOString(); let count=0;
-  chks.forEach(chk=>{
+  for(const chk of chks){
     const res=_findUnitBySerial(chk.dataset.serial);
-    if(res?.unit.checkout&&!res.unit.checkout.checkedInAt){res.unit.checkout.checkedInAt=now;count++;}
-  });
-  invSave(); renderCiEventList(); renderCiRecent();
+    if(res?.unit.checkout&&!res.unit.checkout.checkedInAt){
+      res.unit.checkout.checkedInAt=now;
+      const dbUnitId=res.unit.id||res.unit.unitId;
+      await api('PUT','/inventory/units/'+dbUnitId,{
+        itemSerial:res.unit.itemSerial||null,
+        importDate:res.unit.importDate?String(res.unit.importDate).slice(0,10):null,
+        warehouseId:res.unit.warehouseId||null,
+        fcId:res.unit.fcId||res.unit.flightCaseId||null,
+        notes:res.unit.notes||null,
+        checkoutData:res.unit.checkout
+      });
+      count++;
+    }
+  }
+  invItems=await api('GET','/inventory/items')||invItems;
+  renderCiEventList(); renderCiRecent();
   toast(`${count} item${count!==1?'s':''} checked in ✓`);
 }
 
@@ -8965,17 +9011,25 @@ function ciLookup(){
   confirmWrap.style.display='none'; _ciTarget=null;
 }
 
-function doCheckIn(){
+async function doCheckIn(){
   if(!_ciTarget) return;
   const now=new Date().toISOString();
   if(_ciTarget.type==='unit'){
     _ciTarget.unit.checkout.checkedInAt=now;
-    invSave(); toast(`${_ciTarget.unit.serial} checked in ✓`);
+    const dbId=_ciTarget.unit.id||_ciTarget.unit.unitId;
+    await api('PUT','/inventory/units/'+dbId,{itemSerial:_ciTarget.unit.itemSerial||null,importDate:_ciTarget.unit.importDate?String(_ciTarget.unit.importDate).slice(0,10):null,warehouseId:_ciTarget.unit.warehouseId||null,fcId:_ciTarget.unit.fcId||_ciTarget.unit.flightCaseId||null,notes:_ciTarget.unit.notes||null,checkoutData:_ciTarget.unit.checkout});
+    toast(`${_ciTarget.unit.serial} checked in ✓`);
   } else {
     let count=0;
-    _ciTarget.units.forEach(({unit})=>{unit.checkout.checkedInAt=now;count++;});
-    invSave(); toast(`${count} units checked in ✓`);
+    for(const {unit} of _ciTarget.units){
+      unit.checkout.checkedInAt=now;
+      const dbId=unit.id||unit.unitId;
+      await api('PUT','/inventory/units/'+dbId,{itemSerial:unit.itemSerial||null,importDate:unit.importDate?String(unit.importDate).slice(0,10):null,warehouseId:unit.warehouseId||null,fcId:unit.fcId||unit.flightCaseId||null,notes:unit.notes||null,checkoutData:unit.checkout});
+      count++;
+    }
+    toast(`${count} units checked in ✓`);
   }
+  invItems=await api('GET','/inventory/items')||invItems;
   document.getElementById('ciItemPreview').style.display='none';
   document.getElementById('ciConfirmWrap').style.display='none';
   document.getElementById('ciSearchInput').value='';

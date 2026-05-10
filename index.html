@@ -5997,18 +5997,53 @@ function _equipItemsHtml(){
   return _equipItems.map((item,i)=>`
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px" id="eqitem_${item.id}">
       <div style="width:24px;height:24px;background:var(--accent-bg);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0">${i+1}</div>
-      <input type="text" placeholder="Item name (e.g. Microphone, Speaker)" value="${item.name||''}"
-        oninput="updateEquipItem(${item.id},'name',this.value)"
-        style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'Inter',sans-serif;font-size:13px">
+      <div style="flex:1;position:relative">
+        <input type="text" placeholder="Search inventory item..." value="${item.name||''}"
+          oninput="filterEquipItemSearch('${item.id}',this.value)"
+          onfocus="filterEquipItemSearch('${item.id}',this.value)"
+          onblur="setTimeout(()=>{const dd=document.getElementById('eqdd_${item.id}');if(dd)dd.style.display='none'},200)"
+          style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;box-sizing:border-box">
+        <div id="eqdd_${item.id}" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--white);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);max-height:160px;overflow-y:auto;z-index:100"></div>
+      </div>
       <input type="number" placeholder="Qty" value="${item.qty||1}" min="1"
-        oninput="updateEquipItem(${item.id},'qty',this.value)"
+        oninput="updateEquipItem('${item.id}','qty',this.value)"
         style="width:70px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;text-align:center">
       ${_equipItems.length>1?`<button onclick="removeEquipItem('${item.id}')" style="background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center">×</button>`:'<div style="width:28px"></div>'}
     </div>`).join('');
 }
 
+function filterEquipItemSearch(itemId, q){
+  const dd = document.getElementById('eqdd_'+itemId); if(!dd) return;
+  const query = (q||'').toLowerCase();
+  const matches = invItems.filter(x=>!query||x.name.toLowerCase().includes(query)||(x.model||'').toLowerCase().includes(query)).slice(0,8);
+  if(!matches.length){ dd.style.display='none'; return; }
+  dd.style.display='block';
+  dd.innerHTML = matches.map(x=>`
+    <div onclick="selectEquipItem('${itemId}','${x.name.replace(/'/g,"\\'")}',event)"
+      style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)"
+      onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
+      <div style="font-weight:600">${x.name}</div>
+      ${x.model?`<div style="font-size:11px;color:var(--text3)">${x.model}${x.manufacturer?' · '+x.manufacturer:''}</div>`:''}
+    </div>`).join('');
+}
+
+function selectEquipItem(itemId, name, e){
+  if(e) e.preventDefault();
+  const item = _equipItems.find(x=>x.id===itemId);
+  if(item){ item.name=name; }
+  // Update the input value
+  const wrap = document.getElementById('eqitem_'+itemId);
+  if(wrap){
+    const input = wrap.querySelector('input[type="text"]');
+    if(input) input.value = name;
+  }
+  // Hide dropdown
+  const dd = document.getElementById('eqdd_'+itemId);
+  if(dd) dd.style.display='none';
+}
+
 function updateEquipItem(id, field, val){
-  const item = _equipItems.find(x=>x.id===id);
+  const item = _equipItems.find(x=>String(x.id)===String(id));
   if(item) item[field] = field==='qty' ? (parseInt(val)||1) : val;
 }
 
@@ -6019,7 +6054,7 @@ function addEquipItem(){
 }
 
 function removeEquipItem(id){
-  _equipItems = _equipItems.filter(x=>x.id!==id);
+  _equipItems = _equipItems.filter(x=>String(x.id)!==String(id));
   const wrap = document.getElementById('eq_items_wrap');
   if(wrap) wrap.innerHTML = _equipItemsHtml();
 }

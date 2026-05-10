@@ -6439,7 +6439,7 @@ function renderInventory(){
     if(fCat&&String(item.catId)!==String(fCat)) return false;
     if(search&&!((item.name||'').toLowerCase().includes(search)||(item.model||'').toLowerCase().includes(search)||(item.manufacturer||'').toLowerCase().includes(search))) return false;
     if(fStatus){ const units=item.units||[]; if(!units.some(u=>u.status===fStatus)) return false; }
-    if(fWh){ const units=item.units||[]; if(!units.some(u=>String(u.warehouseId)===String(fWh)||String(u.flightCaseId)===String(fWh))) return false; }
+    if(fWh){ const units=item.units||[]; if(!units.some(u=>String(u.warehouseId)===String(fWh)||String(u.fcId||u.flightCaseId)===String(fWh))) return false; }
     return true;
   });
   const el=document.getElementById('invList'); if(!el) return;
@@ -6607,8 +6607,8 @@ function openUnitDetail(parentId, unitId, tab='info'){
 }
 function renderUnitDetailModal(){
   const item=invItems.find(x=>String(x.id)===String(_detailParentId)); if(!item) return;
-  const unit=(item.units||[]).find(u=>u.unitId===_detailUnitId); if(!unit) return;
-  const fc=invFlightCases.find(w=>String(w.id)===String(unit.flightCaseId));
+  const unit=(item.units||[]).find(u=>String(u.unitId||u.id)===String(_detailUnitId)); if(!unit) return;
+  const fc=invFlightCases.find(w=>String(w.id)===String(unit.fcId||unit.flightCaseId));
   const wh=invWarehouses.find(w=>String(w.id)===String(unit.warehouseId));
   const faults=unit.faults||[];
   const openFaults=faults.filter(f=>!f.repairedDate).length;
@@ -8589,7 +8589,7 @@ function selectElParent(parentId){
 
   wrap.style.display='block';
   list.innerHTML=availUnits.map(u=>{
-    const fc=invFlightCases.find(f=>String(f.id)===String(u.flightCaseId));
+    const fc=invFlightCases.find(f=>String(f.id)===String(u.fcId||u.flightCaseId));
     const alreadyAdded=existingSerials.has(u.serial);
     const coEvent=u.checkout&&!u.checkout.checkedInAt?calEvents.find(e=>String(e.id)===String(u.checkout.eventId)):null;
     const isBlocked=alreadyAdded||!!coEvent;

@@ -1208,7 +1208,9 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div id="lvPanel-balances" style="display:none">
                 <div class="toolbar">
                   <select id="lvBalYear" onchange="renderLeaveBalances()">
-                    ${[new Date().getFullYear(), new Date().getFullYear()-1].map(y=>`<option value="${y}">${y}</option>`).join('')}
+                    <option value="2026" selected>2026</option>
+                    <option value="2025">2025</option>
+                    <option value="2024">2024</option>
                   </select>
                 </div>
                 <div id="leaveBalancesList"></div>
@@ -5332,7 +5334,7 @@ async function saveLeave(){
   if(!empId||!from||!to)return toast('Fill all required fields');
   const days=Math.round((new Date(to)-new Date(from))/86400000)+1;
   if(days<=0)return toast('Invalid date range');
-  const res=await api('POST','/hr/leave',{empId,leaveType:type,fromDate:from,toDate:to,days,reason:notes});
+  const res=await api('POST','/hr/leave',{empId,leaveType:type,type,fromDate:from,from,toDate:to,to,days,reason:notes});
   if(!res)return;
   hrLeave=await api('GET','/hr/leave')||hrLeave;
   closeUserModal();renderLeave();toast('Leave request submitted ✓');
@@ -5377,7 +5379,7 @@ function renderLeave(){
   el.innerHTML=list.map(lv=>{
     const emp=hrEmployees.find(e=>String(e.id)===String(lv.empId))||{name:'Unknown'};
     const sc={pending:'badge-amber',approved:'badge-green',rejected:'badge-red'}[lv.status]||'badge-amber';
-    const lvType=hrLeaveTypes.find(t=>t.name===lv.type);
+    const lvType=hrLeaveTypes.find(t=>t.name===(lv.leave_type||lv.leaveType||lv.type));
     const dotColor=lvType?.color||'#6b7280';
     return`<div class="card" style="margin-bottom:10px">
       <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 18px">
@@ -5386,9 +5388,9 @@ function renderLeave(){
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <span style="font-size:14px;font-weight:600;color:var(--text)">${emp.name}</span>
             <span class="badge ${sc}" style="font-size:11px">${lv.status.charAt(0).toUpperCase()+lv.status.slice(1)}</span>
-            <span class="badge" style="background:${dotColor}22;color:${dotColor};border:1px solid ${dotColor}44;font-size:11px">${lv.type}</span>
+            <span class="badge" style="background:${dotColor}22;color:${dotColor};border:1px solid ${dotColor}44;font-size:11px">${lv.leave_type||lv.leaveType||lv.type||'—'}</span>
           </div>
-          <div style="font-size:12.5px;color:var(--text2);margin-top:4px">${fmtDate(lv.from)} → ${fmtDate(lv.to)} · <strong>${lv.days}</strong> day${lv.days!==1?'s':''}</div>
+          <div style="font-size:12.5px;color:var(--text2);margin-top:4px">${fmtDate(String(lv.fromDate||lv.from_date||lv.from||"").slice(0,10))} → ${fmtDate(String(lv.toDate||lv.to_date||lv.to||"").slice(0,10))} · <strong>${lv.days}</strong> day${lv.days!==1?'s':''}</div>
           ${lv.notes?`<div style="font-size:12px;color:var(--text3);margin-top:3px">${lv.notes}</div>`:''}
           ${lv.processedDate?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${lv.status==='approved'?'Approved':'Rejected'} on ${lv.processedDate}</div>`:''}
         </div>
@@ -5502,18 +5504,30 @@ function renderLeaveBalances(){
   const el=document.getElementById('leaveBalancesList');if(!el)return;
   const active=hrEmployees.filter(e=>e.status!=='inactive');
   if(!active.length){el.innerHTML='<div class="empty"><div class="empty-title">No active employees</div></div>';return;}
+  const leaveTypesWithDays=hrLeaveTypes.filter(lt=>(lt.days||lt.days_allowed||0)>0);
   el.innerHTML=`<div class="card"><div style="overflow-x:auto"><table class="data-table">
-    <thead><tr><th>Employee</th><th>Dept</th>${hrLeaveTypes.filter(lt=>lt.days>0).map(lt=>`<th>${lt.name} (${lt.days}d)</th>`).join('')}<th>Total Used</th></tr></thead>
+    <thead><tr><th>Employee</th><th>Dept</th>${leaveTypesWithDays.map(lt=>`<th>${lt.name} (${lt.days||lt.days_allowed||0}d)</th>`).join('')}<th>Total Used</th></tr></thead>
     <tbody>${active.map(emp=>{
-      const empLeave=hrLeave.filter(l=>String(l.empId)===String(emp.id)&&l.status==='approved'&&l.from.startsWith(yr));
+      const empLeave=hrLeave.filter(l=>{
+        const lEmpId=String(l.empId||l.emp_id);
+        const lFrom=String(l.fromDate||l.from_date||l.from||'');
+        return lEmpId===String(emp.id)&&l.status==='approved'&&lFrom.startsWith(yr);
+      });
       const usedByType={};
-      hrLeaveTypes.forEach(lt=>{ usedByType[lt.name]=empLeave.filter(l=>l.type===lt.name).reduce((s,l)=>s+l.days,0); });
-      const total=empLeave.reduce((s,l)=>s+l.days,0);
+      leaveTypesWithDays.forEach(lt=>{
+        usedByType[lt.name]=empLeave
+          .filter(l=>(l.leave_type||l.leaveType||l.type)===lt.name)
+          .reduce((s,l)=>s+(parseInt(l.days)||0),0);
+      });
+      const total=empLeave.reduce((s,l)=>s+(parseInt(l.days)||0),0);
       return`<tr><td class="td-primary">${emp.name}</td><td>${emp.dept||'—'}</td>
-        ${hrLeaveTypes.filter(lt=>lt.days>0).map(lt=>{
+        ${leaveTypesWithDays.map(lt=>{
+          const alloc=lt.days||lt.days_allowed||0;
           const used=usedByType[lt.name]||0;
-          const over=used>lt.days;
-          return`<td><span style="font-weight:600;color:${over?'var(--red)':used>lt.days*0.8?'var(--amber)':'var(--green)'}">${used}/${lt.days}</span></td>`;
+          const remaining=alloc-used;
+          const over=remaining<0;
+          const color=over?'var(--red)':used===0?'var(--green)':remaining<alloc*0.2?'var(--amber)':'var(--green)';
+          return`<td><span style="font-weight:600;color:${color}" title="Used: ${used} · Remaining: ${Math.max(0,remaining)}">${used}/${alloc}</span></td>`;
         }).join('')}
         <td style="font-weight:700">${total}</td></tr>`;
     }).join('')}

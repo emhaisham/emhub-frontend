@@ -4043,7 +4043,7 @@ async function runPayroll(){
     const allow=parseFloat(emp.allowance)||0;
     const empPension=emp.pensionEligible!=='no'?+(basic*0.075).toFixed(2):0;
     const currency=emp.salaryCurrency||'MVR';
-    batch.push({empId:emp.id,month,basic,allowances:allow,loanDeduction:loanDeduct,netPay:basic+allow-loanDeduct-empPension,currency});
+    batch.push({empId:emp.id,month,basic,allowances:allow,deductions:empPension,loanDeduction:loanDeduct,netPay:basic+allow-loanDeduct-empPension,currency,isOnProbation});
     created++;
   }
   if(batch.length>0){
@@ -4059,7 +4059,7 @@ function deletePayslip(prId){
   if(!pr) return;
   const emp=hrEmployees.find(e=>String(e.id)===String(pr.empId));
   const label=emp?emp.name:`EmpID ${pr.empId}`;
-  openConfirm('Delete this payslip?',`${label} · ${monthLabel(pr.month)} · ${fmtMVR(pr.net)}. This cannot be undone.`,'Delete',()=>{
+  openConfirm('Delete this payslip?',`${label} · ${monthLabel(pr.month)} · ${fmtMVR(pr.net_pay||pr.net||0)}. This cannot be undone.`,'Delete',()=>{
     hrPayrolls=hrPayrolls.filter(p=>String(p.id)!==String(prId));
     api('GET','/hr/payroll').then(r=>{if(r)hrPayrolls=r;}); renderPayroll(); toast('Payslip deleted');
   });
@@ -4071,9 +4071,9 @@ function renderPayroll(){
   let prs=month?hrPayrolls.filter(p=>p.month===month):hrPayrolls;
   if(dept) prs=prs.filter(p=>{ const e=hrEmployees.find(x=>String(x.id)===String(p.empId)); return e&&e.dept===dept; });
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
-  set('prStatGross',fmtMVR(prs.reduce((s,p)=>s+p.basic+p.allowance,0)));
-  set('prStatDed',fmtMVR(prs.reduce((s,p)=>s+p.loanDeduction+p.empPension,0)));
-  set('prStatNet',fmtMVR(prs.reduce((s,p)=>s+p.net,0)));
+  set('prStatGross',fmtMVR(prs.reduce((s,p)=>s+(parseFloat(p.basic)||0)+(parseFloat(p.allowances)||0),0)));
+  set('prStatDed',fmtMVR(prs.reduce((s,p)=>s+(parseFloat(p.loan_deduction)||0)+(parseFloat(p.deductions)||0),0)));
+  set('prStatNet',fmtMVR(prs.reduce((s,p)=>s+(parseFloat(p.net_pay)||0),0)));
 
   // Show/hide Generate button based on whether payroll exists for this month
   const genBtn=document.getElementById('prGenerateBtn');
@@ -4124,17 +4124,17 @@ function renderPayslipCard(pr,emp,showBtn){
   return`<div class="payslip-card" id="ps_${pr.id}">
     <div class="payslip-hdr" onclick="this.parentElement.classList.toggle('expanded')">
       <div><div style="font-size:14px;font-weight:600;color:var(--text)">${emp.name}</div><div style="font-size:12px;color:var(--text3)">${emp.dept||'—'} · ${monthLabel(pr.month)} · ${isBank?' Bank':'Cash'}${pr.isOnProbation?' · <span style="color:var(--amber);font-weight:600">Probation</span>':''}${curr==='USD'?' · <span style="color:var(--accent);font-weight:600">USD</span>':''}</div></div>
-      <span class="badge badge-blue" style="font-size:11px">Basic: ${fmt(pr.basic)}</span>
+      <span class="badge badge-blue" style="font-size:11px">Basic: ${fmt(parseFloat(pr.basic)||0)}</span>
       <span class="badge ${pr.status==='paid'?'badge-green':'badge-amber'}" style="font-size:11px">${pr.status==='paid'?'Paid':'⏳ Pending'}</span>
-      <div style="font-size:16px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace;min-width:100px;text-align:right">${fmt(pr.net)}</div>
+      <div style="font-size:16px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace;min-width:100px;text-align:right">${fmt(parseFloat(pr.net_pay)||0)}</div>
       <span class="payslip-hdr-chevron">▼</span>
     </div>
     <div class="payslip-body">
-      <div class="payslip-row"><span class="payslip-row-label">Basic Salary</span><span class="payslip-row-val">${fmt(pr.basic)}</span></div>
-      <div class="payslip-row"><span class="payslip-row-label">Allowance</span><span class="payslip-row-val">${fmt(pr.allowance)}</span></div>
-      ${pr.loanDeduction>0?`<div class="payslip-row deduction"><span class="payslip-row-label">Loan Deduction</span><span class="payslip-row-val">- ${fmt(pr.loanDeduction)}</span></div>`:''}
-      ${pr.empPension>0?`<div class="payslip-row pension-row"><span class="payslip-row-label">Pension (Employee 7.5%)</span><span class="payslip-row-val">- ${fmt(pr.empPension)}</span></div>`:''}
-      <div class="payslip-row total-row"><span class="payslip-row-label">Net Payable</span><span class="payslip-row-val">${fmt(pr.net)}</span></div>
+      <div class="payslip-row"><span class="payslip-row-label">Basic Salary</span><span class="payslip-row-val">${fmt(parseFloat(pr.basic)||0)}</span></div>
+      <div class="payslip-row"><span class="payslip-row-label">Allowance</span><span class="payslip-row-val">${fmt(parseFloat(pr.allowances)||0)}</span></div>
+      ${(parseFloat(pr.loan_deduction)||0)>0?`<div class="payslip-row deduction"><span class="payslip-row-label">Loan Deduction</span><span class="payslip-row-val">- ${fmt(parseFloat(pr.loan_deduction)||0)}</span></div>`:''}
+      ${(parseFloat(pr.deductions)||0)>0?`<div class="payslip-row pension-row"><span class="payslip-row-label">Pension (Employee 7.5%)</span><span class="payslip-row-val">- ${fmt(parseFloat(pr.deductions)||0)}</span></div>`:''}
+      <div class="payslip-row total-row"><span class="payslip-row-label">Net Payable</span><span class="payslip-row-val">${fmt(parseFloat(pr.net_pay)||0)}</span></div>
       ${pr.emprPension>0?`<div class="payslip-row" style="background:var(--purple-bg)"><span class="payslip-row-label" style="color:var(--purple)">Employer Pension (7.5%)</span><span class="payslip-row-val" style="color:var(--purple)">${fmt(pr.emprPension)}</span></div>`:''}
       ${isBank?`<div class="payslip-row"><span class="payslip-row-label" style="color:var(--accent)">Bank: ${emp.bankName||'—'} · ${emp.bankAcct||'—'}</span></div>`:`<div class="payslip-row"><span class="payslip-row-label" style="color:var(--amber)">Payment by Cash</span></div>`}
       <div style="padding:12px 18px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;align-items:center">
@@ -4177,8 +4177,8 @@ function getPayslipHTML(pr,emp){
   </div><div class="divider"></div>
   <table><thead><tr><th>Description</th><th>Amount (MVR)</th></tr></thead><tbody>
     <tr><td>Basic Salary</td><td>${fmtMVR(pr.basic)}</td></tr>
-    <tr><td>Allowance</td><td>${fmtMVR(pr.allowance)}</td></tr>
-    <tr><td style="color:#6b7280;font-style:italic">Gross</td><td style="color:#6b7280;font-style:italic">${fmtMVR(pr.basic+pr.allowance)}</td></tr>
+    <tr><td>Allowance</td><td>${fmtMVR(pr.allowances||0)}</td></tr>
+    <tr><td style="color:#6b7280;font-style:italic">Gross</td><td style="color:#6b7280;font-style:italic">${fmtMVR((parseFloat(pr.basic)||0)+(parseFloat(pr.allowances)||0))}</td></tr>
     ${pr.loanDeduction>0?`<tr><td class="ded">Loan Deduction</td><td class="ded">− ${fmtMVR(pr.loanDeduction)}</td></tr>`:''}
     ${pr.empPension>0?`<tr><td class="pens">Pension (Employee 7.5%)</td><td class="pens">− ${fmtMVR(pr.empPension)}</td></tr>`:''}
     <tr class="total-row"><td>NET PAYABLE</td><td>${fmtMVR(pr.net)}</td></tr>

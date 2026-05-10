@@ -5906,9 +5906,18 @@ function loanEquipNav(page){
   const navMap = {inventory:0, categories:1, warehouses:2, flightcases:3, faultreports:4, eventlists:5, checkout:6, checkin:7, dashboard:8, requests:9, overdue:10};
   const items = document.querySelectorAll('#mod-loans .nav-item');
   if(items[navMap[page]] !== undefined) items[navMap[page]].classList.add('active');
-  if(page==='dashboard') renderEquipDashboard();
-  else if(page==='requests') renderEquipRequests();
-  else if(page==='overdue') renderEquipOverdue();
+  if(page==='dashboard'){
+    api('GET','/crewpay/equip-requests').then(r=>{if(r)equipRequests=r; renderEquipDashboard(); renderEquipRequests(); renderEquipOverdue();});
+    return;
+  }
+  else if(page==='requests'){
+    api('GET','/crewpay/equip-requests').then(r=>{if(r)equipRequests=r; renderEquipRequests();});
+    return;
+  }
+  else if(page==='overdue'){
+    api('GET','/crewpay/equip-requests').then(r=>{if(r)equipRequests=r; renderEquipOverdue();});
+    return;
+  }
   else if(page==='inventory'){ populateInvCatFilter(); populateInvWhFilter(); renderInventory(); }
   else if(page==='categories'){ renderInvCats(); renderInvSubCats(); }
   else if(page==='warehouses'){ renderWarehouses(); }
@@ -5929,7 +5938,9 @@ function loanEquipNav(page){
 function equipIsOverdue(req){
   if(req.status==='returned') return false;
   if(!req.returnDate) return false;
-  return new Date(req.returnDate) < new Date(new Date().toDateString());
+  const returnDs = String(req.returnDate).slice(0,10);
+  const todayDs = calDateStr(new Date());
+  return returnDs < todayDs;
 }
 
 function renderEquipDashboard(){
@@ -5973,7 +5984,7 @@ function equipCardHtml(r){
   const statusHtml = r.status==='returned'
     ? `<span class="eq-status-returned">✅ Returned ${r.returnedDate||''}</span>`
     : overdue
-      ? `<span class="eq-status-overdue">⚠️ Overdue since ${r.returnDate}</span>`
+      ? `<span class="eq-status-overdue">⚠️ Overdue since ${fmtDate(String(r.returnDate).slice(0,10))}</span>`
       : `<span class="eq-status-out">🔴 Out</span>`;
 
   // Build items list — support both new (items[]) and old (itemName/quantity) format
@@ -5999,7 +6010,7 @@ function equipCardHtml(r){
       <div class="eq-meta">
         <span> Requested by: <strong>${r.requestedBy}</strong></span><br>
         <span>Handed to: <strong>${r.handedTo}</strong>${r.contact?' · '+r.contact:''}</span><br>
-        <span> Given: <strong>${r.requestDate}</strong>${r.returnDate?' ·  Return by: <strong>'+r.returnDate+'</strong>':''}</span>
+        <span> Given: <strong>${fmtDate(String(r.requestDate||'').slice(0,10))}</strong>${r.returnDate?' &nbsp;·&nbsp; Return by: <strong>'+fmtDate(String(r.returnDate).slice(0,10))+'</strong>':''}</span>
         ${r.notes?`<br><span>${r.notes}</span>`:''}
       </div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">

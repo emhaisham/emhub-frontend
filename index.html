@@ -4059,9 +4059,10 @@ function deletePayslip(prId){
   if(!pr) return;
   const emp=hrEmployees.find(e=>String(e.id)===String(pr.empId));
   const label=emp?emp.name:`EmpID ${pr.empId}`;
-  openConfirm('Delete this payslip?',`${label} · ${monthLabel(pr.month)} · ${fmtMVR(pr.net_pay||pr.net||0)}. This cannot be undone.`,'Delete',()=>{
-    hrPayrolls=hrPayrolls.filter(p=>String(p.id)!==String(prId));
-    api('GET','/hr/payroll').then(r=>{if(r)hrPayrolls=r;}); renderPayroll(); toast('Payslip deleted');
+  openConfirm('Delete this payslip?',`${label} · ${monthLabel(pr.month)} · ${fmtMVR(pr.net_pay||pr.net||0)}. This cannot be undone.`,'Delete',async()=>{
+    await api('DELETE','/hr/payroll/'+prId);
+    hrPayrolls=await api('GET','/hr/payroll')||hrPayrolls;
+    renderPayroll(); toast('Payslip deleted ✓');
   });
 }
 
@@ -4075,12 +4076,13 @@ function renderPayroll(){
   set('prStatDed',fmtMVR(prs.reduce((s,p)=>s+(parseFloat(p.loan_deduction)||0)+(parseFloat(p.deductions)||0),0)));
   set('prStatNet',fmtMVR(prs.reduce((s,p)=>s+(parseFloat(p.net_pay)||0),0)));
 
-  // Show/hide Generate button based on whether payroll exists for this month
+  // Show/hide Generate button based on whether ALL active staff already have payroll for this month
   const genBtn=document.getElementById('prGenerateBtn');
   const genMsg=document.getElementById('prGenerateMsg');
   if(genBtn&&genMsg){
-    const monthExists=month&&hrPayrolls.some(p=>p.month===month);
-    if(monthExists){
+    const active=hrEmployees.filter(e=>e.status==='active'||e.status==='probation');
+    const allGenerated=month&&active.length>0&&active.every(e=>hrPayrolls.some(p=>p.month===month&&String(p.empId)===String(e.id)));
+    if(allGenerated){
       genBtn.disabled=true;
       genBtn.style.opacity='0.4';
       genBtn.style.cursor='not-allowed';
@@ -4090,7 +4092,8 @@ function renderPayroll(){
       genBtn.disabled=false;
       genBtn.style.opacity='';
       genBtn.style.cursor='';
-      genMsg.style.display='none';
+      genMsg.style.display=month&&hrPayrolls.some(p=>p.month===month)?'inline':'none';
+      if(month&&hrPayrolls.some(p=>p.month===month)) genMsg.textContent=`Partial payroll for ${monthLabel(month)} — click to generate missing`;
     }
   }
 

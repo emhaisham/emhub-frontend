@@ -6000,7 +6000,7 @@ function _equipItemsHtml(){
       <div style="flex:1;position:relative">
         <input type="text" placeholder="Search inventory item..." value="${item.name||''}"
           oninput="filterEquipItemSearch('${item.id}',this.value)"
-          onfocus="filterEquipItemSearch('${item.id}',this.value)"
+          onfocus="if(this.value.length>0)filterEquipItemSearch('${item.id}',this.value)"
           onblur="setTimeout(()=>{const dd=document.getElementById('eqdd_${item.id}');if(dd)dd.style.display='none'},200)"
           style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;box-sizing:border-box">
         <div id="eqdd_${item.id}" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--white);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);max-height:160px;overflow-y:auto;z-index:100"></div>
@@ -6023,6 +6023,7 @@ function filterEquipItemSearch(itemId, q){
     const units = (item.units||[]).filter(u=>!u.discarded);
     const availableUnits = units.filter(u=>!u.checkout||u.checkout.checkedInAt);
     const totalAvailable = availableUnits.reduce((s,u)=>s+(u.qty||1),0);
+    const totalAvailableQty = totalAvailable;
     const unitMatch = units.some(u=>u.serial.toLowerCase().includes(query)||(u.itemSerial||'').toLowerCase().includes(query));
     if(itemMatch || unitMatch){
       units.forEach(u=>{
@@ -6030,11 +6031,12 @@ function filterEquipItemSearch(itemId, q){
         const wh = invWarehouses.find(w=>String(w.id)===String(u.warehouseId));
         const alreadyOut = u.checkout&&!u.checkout.checkedInAt;
         if(!query || itemMatch || u.serial.toLowerCase().includes(query) || (u.itemSerial||'').toLowerCase().includes(query)){
+          const unitAvailQty = (!u.checkout||u.checkout.checkedInAt) ? (u.qty||1) : 0;
           results.push({
             itemName: item.name, model: item.model||'',
             serial: u.serial, itemSerial: u.itemSerial||'',
             location: fc ? fc.fcSerial+' — '+fc.name : wh ? wh.name : '',
-            alreadyOut, availableQty: availableUnits.length,
+            alreadyOut, availableQty: unitAvailQty, unitQty: u.qty||1,
             displayName: `${item.name} · ${u.serial}`
           });
         }
@@ -6045,7 +6047,7 @@ function filterEquipItemSearch(itemId, q){
   if(!matches.length){ dd.style.display='none'; return; }
   dd.style.display='block';
   dd.innerHTML = matches.map(x=>`
-    <div onclick="${x.alreadyOut?'':("selectEquipItem('"+itemId+"','"+x.displayName.replace(/'/g,"\\'")+"',"+x.availableQty+",event)")}"
+    <div onclick="${x.alreadyOut?'':("selectEquipItem('"+itemId+"','"+x.displayName.replace(/'/g,"\\'")+"',"+(x.unitQty||x.availableQty)+",event)")}"
       style="padding:7px 12px;cursor:${x.alreadyOut?'not-allowed':'pointer'};font-size:12px;border-bottom:1px solid var(--border);opacity:${x.alreadyOut?'0.5':'1'}"
       onmouseover="this.style.background='${x.alreadyOut?'':'var(--surface)'}'" onmouseout="this.style.background=''">
       <div style="display:flex;align-items:center;gap:6px">
@@ -6053,7 +6055,7 @@ function filterEquipItemSearch(itemId, q){
         <span style="font-family:monospace;color:var(--accent);font-size:11px;font-weight:700">${x.serial}</span>
         ${x.alreadyOut
           ?'<span style="font-size:10px;background:var(--red-bg);color:var(--red);border-radius:4px;padding:1px 5px;font-weight:600">Checked Out</span>'
-          :`<span style="font-size:10px;background:var(--green-bg);color:var(--green);border-radius:4px;padding:1px 5px;font-weight:600">Avail: ${x.availableQty}</span>`}
+          :`<span style="font-size:10px;background:var(--green-bg);color:var(--green);border-radius:4px;padding:1px 5px;font-weight:600">Avail: ${x.unitQty||x.availableQty}</span>`}
       </div>
       <div style="font-size:11px;color:var(--text3)">${[x.model,x.itemSerial?'S/N: '+x.itemSerial:'',x.location].filter(Boolean).join(' · ')}</div>
     </div>`).join('');
@@ -6587,9 +6589,10 @@ function invParentRowHtml(item){
   const sub=invSubCats.find(s=>String(s.id)===String(item.subCatId));
   const units=item.units||[];
   const activeUnits=units.filter(u=>!u.discarded);
-  const working=activeUnits.filter(u=>u.status!=='faulty').length;
-  const faulty=activeUnits.filter(u=>u.status==='faulty').length;
-  const discarded=units.filter(u=>u.discarded).length;
+  const working=activeUnits.filter(u=>u.status!=='faulty').reduce((s,u)=>s+(u.qty||1),0);
+  const faulty=activeUnits.filter(u=>u.status==='faulty').reduce((s,u)=>s+(u.qty||1),0);
+  const discarded=units.filter(u=>u.discarded).reduce((s,u)=>s+(u.qty||1),0);
+  const totalActiveQty=activeUnits.reduce((s,u)=>s+(u.qty||1),0);
   const photoHtml=item.photoUrl
     ?`<div class="inv-row-thumb"><img data-key="${item.photoUrl}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:7px;display:none" onload="this.style.display='block'" onerror="this.parentElement.innerHTML='<svg width=\\'20\\' height=\\'20\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><path d=\\'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z\\'/></svg>'"></div>`
     :`<div class="inv-row-thumb"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`;
@@ -6601,7 +6604,7 @@ function invParentRowHtml(item){
       <div class="inv-row-sub">${[item.model,item.manufacturer].filter(Boolean).join(' · ')||''}</div>
     </div>
     <div class="inv-row-cell">${catLabel}</div>
-    <div class="inv-row-cell" style="font-weight:700;color:var(--text)">${activeUnits.length}${discarded>0?` <span style="font-size:10px;color:var(--text3)">(+${discarded} discarded)</span>`:''}</div>
+    <div class="inv-row-cell" style="font-weight:700;color:var(--text)">${totalActiveQty}${discarded>0?` <span style="font-size:10px;color:var(--text3)">(+${discarded} disc.)</span>`:''}</div>
     <div><span class="inv-badge-working">✅ ${working}</span></div>
     <div>${faulty>0?`<span class="inv-badge-faulty">⚠️ ${faulty}</span>`:'-'}</div>
     <div class="inv-row-actions" onclick="event.stopPropagation()">
@@ -6723,7 +6726,12 @@ function refreshUnitsPanel(){
   const ul=document.getElementById('unitsList'); if(ul) ul.innerHTML=renderUnitsHtml(item);
   const units=item.units||[];
   const hdrEl=document.getElementById('unitsPanelHdr');
-  if(hdrEl) hdrEl.innerHTML=`${units.length} Unit${units.length!==1?'s':''} &nbsp;·&nbsp; <span style="color:var(--green)">${units.filter(u=>!u.discarded&&u.status!=='faulty').length} Working</span> &nbsp;·&nbsp; <span style="color:var(--red)">${units.filter(u=>!u.discarded&&u.status==='faulty').length} Faulty</span> &nbsp;·&nbsp; <span style="color:var(--text3)">${units.filter(u=>u.discarded).length} Discarded</span>`;
+  const _totalQty=units.reduce((s,u)=>s+(u.qty||1),0);
+  const _activeQty=units.filter(u=>!u.discarded).reduce((s,u)=>s+(u.qty||1),0);
+  const _workingQty=units.filter(u=>!u.discarded&&u.status!=='faulty').reduce((s,u)=>s+(u.qty||1),0);
+  const _faultyQty=units.filter(u=>!u.discarded&&u.status==='faulty').reduce((s,u)=>s+(u.qty||1),0);
+  const _discardedQty=units.filter(u=>u.discarded).reduce((s,u)=>s+(u.qty||1),0);
+  if(hdrEl) hdrEl.innerHTML=`${units.length} Record${units.length!==1?'s':''} (${_activeQty} units) &nbsp;·&nbsp; <span style="color:var(--green)">${_workingQty} Working</span> &nbsp;·&nbsp; <span style="color:var(--red)">${_faultyQty} Faulty</span> &nbsp;·&nbsp; <span style="color:var(--text3)">${_discardedQty} Discarded</span>`;
 }
 
 // ── Unit Detail (tabbed view: Info + Faults) ──────────────────────────────────
@@ -7125,7 +7133,7 @@ async function openAddUnit(parentId){
         <input type="text" id="unit_fc_search" placeholder="Type to search flight cases…" autocomplete="off" oninput="filterUnitFC()" onfocus="if(this.value.length>0)filterUnitFC()" onblur="setTimeout(()=>{const dd=document.getElementById('unit_fc_dd');if(dd)dd.style.display='none'},200)" style="width:100%">
       </div>
       <div id="unit_fc_dd" style="display:none;border:1px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;background:var(--white);box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:4px"></div>
-      <div id="unit_fc_sel" style="display:none;background:var(--accent-bg);border:1px solid var(--accent-bd);border-radius:8px;padding:7px 12px;margin-top:5px;font-size:12.5px;display:flex;align-items:center;justify-content:space-between">
+      <div id="unit_fc_sel" style="display:none;background:var(--accent-bg);border:1px solid var(--accent-bd);border-radius:8px;padding:7px 12px;margin-top:5px;font-size:12.5px;align-items:center;justify-content:space-between">
         <span id="unit_fc_sel_label" style="font-weight:600;color:var(--accent)"></span>
         <button onclick="clearUnitFC()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px">✕</button>
       </div>
@@ -7611,7 +7619,7 @@ function renderFlightCases(){
   el.innerHTML=invFlightCases.map(fc=>{
     // Count units assigned to this case
     let unitCount=0;
-    invItems.forEach(item=>{(item.units||[]).forEach(u=>{if(String(u.fcId||u.flightCaseId)===String(fc.id))unitCount++;});});
+    invItems.forEach(item=>{(item.units||[]).forEach(u=>{if(String(u.fcId||u.flightCaseId)===String(fc.id))unitCount+=(u.qty||1);});});
     return`<div class="cat-row" style="cursor:default">
       <div>
         <div style="display:flex;align-items:center;gap:8px">
@@ -7713,7 +7721,7 @@ function deleteFlightCase(id){
   const fc=invFlightCases.find(x=>String(x.id)===String(id)); if(!fc) return;
   // Check how many units are packed in it
   let unitCount=0;
-  invItems.forEach(item=>{(item.units||[]).forEach(u=>{if(String(u.fcId||u.flightCaseId)===String(id))unitCount++;});});
+  invItems.forEach(item=>{(item.units||[]).forEach(u=>{if(String(u.fcId||u.flightCaseId)===String(id))unitCount+=(u.qty||1);});});
   const warn=unitCount>0?` ${unitCount} unit${unitCount!==1?'s are':' is'} assigned to this case (they will be unassigned).`:'';
   openConfirm('Delete flight case?',`${fc.fcSerial} — ${fc.name}.${warn}`,'Delete',async()=>{
     await api('DELETE','/inventory/flightcases/'+id);

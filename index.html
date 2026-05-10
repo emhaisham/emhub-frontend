@@ -1974,7 +1974,16 @@ let invFlightCases = [];
 let _editInvId = null;
 let _invPhotoData = null;
 
-function saveAll(){ localStorage.setItem('em_pays', JSON.stringify(payments)); }
+function saveAll(){
+  localStorage.setItem('em_pays', JSON.stringify(payments));
+  // Also sync to API
+  crewEvents.forEach(ev=>{
+    api('PUT','/crewpay/events/'+ev.id,{
+      name:ev.name, date:ev.date,
+      groups:ev.groups||[], payments:payments[ev.id]||{}
+    });
+  });
+}
 
 // ══ AUTH ══════════════════════════════════════════════
 async function doLogin(){
@@ -2193,7 +2202,17 @@ function switchModule(name){
   const tab=document.getElementById('tab-'+name);
   if(tab) tab.classList.add('active');
   requestAnimationFrame(()=>{
-    if(name==='crewpay') renderAll();
+    if(name==='crewpay'){
+      api('GET','/crewpay/events').then(evts=>{
+        if(evts){
+          crewEvents=evts;
+          events=evts.map(e=>({...e,groups:e.groups||[]}));
+          evts.forEach(e=>{ if(e.payments) Object.assign(payments,{[e.id]:e.payments}); });
+          populateMonths();
+        }
+        renderAll();
+      });
+    }
     if(name==='users'){ renderUsers(); usrNav('userslist'); }
     if(name==='hr'){
       // Show loading while fetching
@@ -2417,8 +2436,14 @@ function saveEvent(){
     groups.push({id:uid(),label:fg.label,days});
   }
   const eid=uid();
-  events.unshift({id:eid,name,date,groups,createdBy:currentUser?.username});
+  const newEv={id:eid,name,date,groups,createdBy:currentUser?.username};
+  events.unshift(newEv);
+  crewEvents.unshift(newEv);
   ensurePay(eid,groups);
+  // Save to API
+  api('POST','/crewpay/events',{name,date,groups,payments:payments[eid]||{}}).then(res=>{
+    if(res?.id){ newEv.id=res.id; }
+  });
   saveAll();
   document.getElementById('newName').value='';
   document.getElementById('newDate').valueAsDate=new Date();
@@ -2712,11 +2737,15 @@ function deleteGroup(eid,gid){
   if(ev.groups.length===1){if(!confirm('Only one group — delete the whole event?'))return;return deleteEvent(eid)}
   ev.groups=ev.groups.filter(g=>g.id!==gid);
   if(payments[eid])delete payments[eid].groups[gid];
+  api('PUT','/crewpay/events/'+eid,{name:ev.name,date:ev.date,groups:ev.groups,payments:payments[eid]||{}});
   saveAll();renderAll();toast('Group removed');
 }
 function deleteEvent(id){
   if(!confirm('Delete this event?'))return;
-  events=events.filter(e=>e.id!==id);delete payments[id];
+  api('DELETE','/crewpay/events/'+id);
+  events=events.filter(e=>e.id!==id);
+  crewEvents=crewEvents.filter(e=>e.id!==id);
+  delete payments[id];
   saveAll();populateMonths();renderAll();toast('Event deleted');
 }
 
@@ -6058,7 +6087,7 @@ function openEditEquipRequest(id){
   document.getElementById('userModal').classList.add('open');
 }
 
-function saveEquipRequest(){
+async function saveEquipRequest(){
   const requestedBy = document.getElementById('eq_requestedBy')?.value.trim();
   const requestDate = document.getElementById('eq_requestDate')?.value;
   const handedTo = document.getElementById('eq_handedTo')?.value.trim();
@@ -6071,48 +6100,45 @@ function saveEquipRequest(){
   const validItems = _equipItems.filter(x=>x.name.trim());
   if(!validItems.length) return toast('Add at least one item');
 
-  // Summary label for display (first item + more)
   const itemSummary = validItems.length===1
     ? `${validItems[0].name} ×${validItems[0].qty}`
     : `${validItems[0].name} ×${validItems[0].qty} +${validItems.length-1} more`;
 
+  const data = {
+    requestedBy, requestDate, handedTo, contact, returnDate, notes,
+    items: validItems.map(x=>({id:x.id,name:x.name.trim(),qty:x.qty})),
+    itemName: itemSummary,
+    quantity: validItems.reduce((s,x)=>s+x.qty,0),
+    status: 'out'
+  };
+
+  let res;
   if(_editEquipId){
-    const r=equipRequests.find(x=>String(x.id)===String(_editEquipId)); if(!r) return;
-    Object.assign(r,{requestedBy,requestDate,handedTo,contact,returnDate,notes,
-      items:validItems.map(x=>({id:x.id,name:x.name.trim(),qty:x.qty})),
-      itemName:itemSummary, quantity:validItems.reduce((s,x)=>s+x.qty,0)});
-    toast('Request updated ✓');
+    res = await api('PUT','/crewpay/equip-requests/'+_editEquipId, data);
+    if(res){ const r=equipRequests.find(x=>String(x.id)===String(_editEquipId)); if(r) Object.assign(r,res); toast('Request updated ✓'); }
   } else {
-    equipRequests.unshift({
-      id:uid(), requestedBy, requestDate, handedTo, contact, returnDate, notes,
-      items: validItems.map(x=>({id:x.id,name:x.name.trim(),qty:x.qty})),
-      itemName: itemSummary,
-      quantity: validItems.reduce((s,x)=>s+x.qty,0),
-      status:'out', createdAt:new Date().toISOString()
-    });
-    toast('Equipment request recorded ✓');
+    res = await api('POST','/crewpay/equip-requests', data);
+    if(res){ equipRequests.unshift(res); toast('Equipment request recorded ✓'); }
   }
-  equipSave(); closeUserModal();
+  if(!res) return;
+  closeUserModal();
   renderEquipDashboard(); renderEquipRequests(); renderEquipOverdue();
 }
 
 function markEquipReturned(id){
   const r=equipRequests.find(x=>String(x.id)===String(id)); if(!r) return;
-  const itemsLabel = r.items&&r.items.length>1
-    ? `${r.items.length} items`
-    : `${r.itemName||'equipment'}`;
-  openConfirm('Mark as Returned?',`Confirm ${itemsLabel} has been returned by ${r.handedTo}.`,'Mark Returned',()=>{
-    r.status='returned'; r.returnedDate=new Date().toISOString().slice(0,10);
-    equipSave(); renderEquipDashboard(); renderEquipRequests(); renderEquipOverdue();
-    toast('Marked as returned ✓');
+  const itemsLabel=r.items&&r.items.length>1?`${r.items.length} items`:`${r.itemName||'equipment'}`;
+  openConfirm('Mark as Returned?',`Confirm ${itemsLabel} has been returned by ${r.handedTo}.`,'Mark Returned',async()=>{
+    await api('PUT','/crewpay/equip-requests/'+id,{...r,status:'returned'});
+    r.status='returned';
+    renderEquipDashboard(); renderEquipRequests(); renderEquipOverdue(); toast('Marked as returned ✓');
   });
 }
-
 function deleteEquipRequest(id){
-  openConfirm('Delete this request?','This cannot be undone.','Delete',()=>{
+  openConfirm('Delete this request?','This cannot be undone.','Delete',async()=>{
+    await api('DELETE','/crewpay/equip-requests/'+id);
     equipRequests=equipRequests.filter(x=>String(x.id)!==String(id));
-    equipSave(); renderEquipDashboard(); renderEquipRequests(); renderEquipOverdue();
-    toast('Request deleted');
+    renderEquipDashboard(); renderEquipRequests(); renderEquipOverdue(); toast('Request deleted');
   });
 }
 

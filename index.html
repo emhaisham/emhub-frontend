@@ -4109,7 +4109,7 @@ function renderPayroll(){
       <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:8px">⚠️ ${orphaned.length} payroll record${orphaned.length>1?'s':''} with no matching employee</div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:10px">These records belong to employees that have been deleted. You can safely remove them.</div>
       ${orphaned.map(pr=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--white);border-radius:7px;margin-bottom:6px;font-size:12px">
-        <span style="color:var(--text3)">EmpID: ${pr.empId} · ${monthLabel(pr.month)} · ${fmtMVR(pr.net)}</span>
+        <span style="color:var(--text3)">EmpID: ${pr.empId} · ${monthLabel(pr.month)} · ${fmtMVR(pr.net_pay||pr.net||0)}</span>
         <button class="btn btn-red btn-xs" onclick="deleteOrphanPayroll('${pr.id}')">Remove</button>
       </div>`).join('')}
     </div>`;
@@ -4152,9 +4152,9 @@ function markPayslipPaid(prId){
   openConfirm('Mark this payslip as paid?','This records the salary payment for this month.','Mark Paid',()=>{
     const pr=hrPayrolls.find(p=>String(p.id)===String(prId)); if(!pr) return;
     pr.status='paid'; pr.paidDate=new Date().toISOString().slice(0,10);
-    if(pr.loanId&&pr.loanDeduction>0){
+    if(pr.loanId&&(parseFloat(pr.loan_deduction)||0)>0){
       const loan=hrLoans.find(l=>String(l.id)===String(pr.loanId));
-      if(loan){ loan.repayments=loan.repayments||{}; loan.repayments[pr.month]='paid'; loan.remaining=Math.max(0,loan.remaining-pr.loanDeduction); if(loan.remaining<=0) loan.status='completed'; }
+      if(loan){ loan.repayments=loan.repayments||{}; loan.repayments[pr.month]='paid'; loan.remaining=Math.max(0,loan.remaining-(parseFloat(pr.loan_deduction)||0)); if(loan.remaining<=0) loan.status='completed'; }
     }
     api('GET','/hr/payroll').then(r=>{if(r)hrPayrolls=r;}); renderPayroll(); toast('Payslip marked as paid ✓');
   });
@@ -4176,12 +4176,12 @@ function getPayslipHTML(pr,emp){
     ${pr.paidDate?`<div><div class="lbl">Paid On</div><div class="val">${pr.paidDate}</div></div>`:''}
   </div><div class="divider"></div>
   <table><thead><tr><th>Description</th><th>Amount (MVR)</th></tr></thead><tbody>
-    <tr><td>Basic Salary</td><td>${fmtMVR(pr.basic)}</td></tr>
+    <tr><td>Basic Salary</td><td>${fmtMVR(parseFloat(pr.basic)||0)}</td></tr>
     <tr><td>Allowance</td><td>${fmtMVR(pr.allowances||0)}</td></tr>
     <tr><td style="color:#6b7280;font-style:italic">Gross</td><td style="color:#6b7280;font-style:italic">${fmtMVR((parseFloat(pr.basic)||0)+(parseFloat(pr.allowances)||0))}</td></tr>
-    ${pr.loanDeduction>0?`<tr><td class="ded">Loan Deduction</td><td class="ded">− ${fmtMVR(pr.loanDeduction)}</td></tr>`:''}
-    ${pr.empPension>0?`<tr><td class="pens">Pension (Employee 7.5%)</td><td class="pens">− ${fmtMVR(pr.empPension)}</td></tr>`:''}
-    <tr class="total-row"><td>NET PAYABLE</td><td>${fmtMVR(pr.net)}</td></tr>
+    ${(parseFloat(pr.loan_deduction)||0)>0?`<tr><td class="ded">Loan Deduction</td><td class="ded">− ${fmtMVR(parseFloat(pr.loan_deduction)||0)}</td></tr>`:''}
+    ${(parseFloat(pr.deductions)||0)>0?`<tr><td class="pens">Pension (Employee 7.5%)</td><td class="pens">− ${fmtMVR(parseFloat(pr.deductions)||0)}</td></tr>`:''}
+    <tr class="total-row"><td>NET PAYABLE</td><td>${fmtMVR(parseFloat(pr.net_pay)||0)}</td></tr>
   </tbody></table>
   ${pr.emprPension>0?`<div class="empr"><span>Employer Pension (7.5%)</span><span>${fmtMVR(pr.emprPension)}</span></div>`:''}
   ${isBank?`<div class="bank-box"><div class="bank-title">Bank Transfer Details</div><b>${emp.bankName||'—'}</b><br>Account: ${emp.bankAcctName||'—'} / ${emp.bankAcct||'—'}</div>`:`<div class="cash-box">Payment by Cash</div>`}
@@ -4236,7 +4236,7 @@ function exportPayrollSheet(){
       <td>${e.empId||'—'}</td>
       <td>${e.name}</td>
       <td>${e.dept||'—'}</td>
-      <td style="font-family:monospace;text-align:right;font-weight:700">${fmtAmt(pr.net,curr)}</td>
+      <td style="font-family:monospace;text-align:right;font-weight:700">${fmtAmt(parseFloat(pr.net_pay)||0,curr)}</td>
       <td>${e.payMethod==='cash'?'Cash':' Bank'}</td>
       <td>${e.payMethod!=='cash'?(e.bankName||'—')+' · '+(e.bankAcct||'—'):'—'}</td>
       <td><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;${pr.status==='paid'?'background:#d1fae5;color:#065f46':'background:#fef3c7;color:#92400e'}">${pr.status==='paid'?'PAID':'PENDING'}</span></td>
@@ -4246,10 +4246,10 @@ function exportPayrollSheet(){
   // Separate totals by currency
   const mvrPrs=prs.filter(p=>{const e=hrEmployees.find(x=>String(x.id)===String(p.empId));return (p.currency||e?.salaryCurrency||'MVR')==='MVR';});
   const usdPrs=prs.filter(p=>{const e=hrEmployees.find(x=>String(x.id)===String(p.empId));return (p.currency||e?.salaryCurrency||'MVR')==='USD';});
-  const mvrGross=mvrPrs.reduce((s,p)=>s+p.basic+p.allowance,0);
-  const mvrNet=mvrPrs.reduce((s,p)=>s+p.net,0);
-  const usdGross=usdPrs.reduce((s,p)=>s+p.basic+p.allowance,0);
-  const usdNet=usdPrs.reduce((s,p)=>s+p.net,0);
+  const mvrGross=mvrPrs.reduce((s,p)=>s+(parseFloat(p.basic)||0)+(parseFloat(p.allowances)||0),0);
+  const mvrNet=mvrPrs.reduce((s,p)=>s+(parseFloat(p.net_pay)||0),0);
+  const usdGross=usdPrs.reduce((s,p)=>s+(parseFloat(p.basic)||0)+(parseFloat(p.allowances)||0),0);
+  const usdNet=usdPrs.reduce((s,p)=>s+(parseFloat(p.net_pay)||0),0);
 
   const totalsHtml=`
     <div class="totals">

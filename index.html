@@ -6062,17 +6062,17 @@ function filterEquipItemSearch(itemId, q){
             .reduce((sum,r)=>{
               const match=(r.items||[]).find(i=>i.name&&(
                 i.name.includes(u.serial) ||
-                i.name.toLowerCase().includes((parent.name).toLowerCase())
+                i.name.toLowerCase().includes(item.name.toLowerCase())
               ));
               return sum + (match ? (parseInt(match.qty)||1) : 0);
             }, 0);
           const unitAvailQty = Math.max(0, (alreadyOut ? 0 : unitQty) - loanedQty);
           results.push({
-            itemName: parent.name, model: parent.model||'',
+            itemName: item.name, model: item.model||'',
             serial: u.serial, itemSerial: u.itemSerial||'',
             location: fc ? fc.fcSerial+' — '+fc.name : wh ? wh.name : '',
             alreadyOut, availableQty: unitAvailQty, unitQty: u.qty||1, unitAvailQty,
-            displayName: `${parent.name} · ${u.serial}`
+            displayName: `${item.name} · ${u.serial}`
           });
         }
       });

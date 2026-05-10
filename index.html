@@ -6055,13 +6055,24 @@ function filterEquipItemSearch(itemId, q){
         const wh = invWarehouses.find(w=>String(w.id)===String(u.warehouseId));
         const alreadyOut = u.checkout&&!u.checkout.checkedInAt;
         if(!query || itemMatch || u.serial.toLowerCase().includes(query) || (u.itemSerial||'').toLowerCase().includes(query)){
-          const unitAvailQty = (!u.checkout||u.checkout.checkedInAt) ? (u.qty||1) : 0;
+          // Calculate loaned qty from equipRequests for this unit
+          const unitQty = u.qty||1;
+          const loanedQty = equipRequests
+            .filter(r=>r.status!=='returned')
+            .reduce((sum,r)=>{
+              const match=(r.items||[]).find(i=>i.name&&(
+                i.name.includes(u.serial) ||
+                i.name.toLowerCase().includes((parent.name).toLowerCase())
+              ));
+              return sum + (match ? (parseInt(match.qty)||1) : 0);
+            }, 0);
+          const unitAvailQty = Math.max(0, (alreadyOut ? 0 : unitQty) - loanedQty);
           results.push({
-            itemName: item.name, model: item.model||'',
+            itemName: parent.name, model: parent.model||'',
             serial: u.serial, itemSerial: u.itemSerial||'',
             location: fc ? fc.fcSerial+' — '+fc.name : wh ? wh.name : '',
-            alreadyOut, availableQty: unitAvailQty, unitQty: u.qty||1,
-            displayName: `${item.name} · ${u.serial}`
+            alreadyOut, availableQty: unitAvailQty, unitQty: u.qty||1, unitAvailQty,
+            displayName: `${parent.name} · ${u.serial}`
           });
         }
       });
@@ -6071,7 +6082,7 @@ function filterEquipItemSearch(itemId, q){
   if(!matches.length){ dd.style.display='none'; return; }
   dd.style.display='block';
   dd.innerHTML = matches.map(x=>`
-    <div onclick="${x.alreadyOut?'':("selectEquipItem('"+itemId+"','"+x.displayName.replace(/'/g,"\\'")+"',"+(x.unitQty||x.availableQty)+",event)")}"
+    <div onclick="${x.alreadyOut||x.unitAvailQty<=0?'':("selectEquipItem('"+itemId+"','"+x.displayName.replace(/'/g,"\\'")+"',"+x.unitAvailQty+",event)")}"
       style="padding:7px 12px;cursor:${x.alreadyOut?'not-allowed':'pointer'};font-size:12px;border-bottom:1px solid var(--border);opacity:${x.alreadyOut?'0.5':'1'}"
       onmouseover="this.style.background='${x.alreadyOut?'':'var(--surface)'}'" onmouseout="this.style.background=''">
       <div style="display:flex;align-items:center;gap:6px">
@@ -6079,7 +6090,7 @@ function filterEquipItemSearch(itemId, q){
         <span style="font-family:monospace;color:var(--accent);font-size:11px;font-weight:700">${x.serial}</span>
         ${x.alreadyOut
           ?'<span style="font-size:10px;background:var(--red-bg);color:var(--red);border-radius:4px;padding:1px 5px;font-weight:600">Checked Out</span>'
-          :`<span style="font-size:10px;background:var(--green-bg);color:var(--green);border-radius:4px;padding:1px 5px;font-weight:600">Avail: ${x.unitQty||x.availableQty}</span>`}
+          :`<span style="font-size:10px;background:${x.unitAvailQty>0?'var(--green-bg)':'var(--amber-bg)'};color:${x.unitAvailQty>0?'var(--green)':'var(--amber)'};border-radius:4px;padding:1px 5px;font-weight:600">Avail: ${x.unitAvailQty}/${x.unitQty}</span>`}
       </div>
       <div style="font-size:11px;color:var(--text3)">${[x.model,x.itemSerial?'S/N: '+x.itemSerial:'',x.location].filter(Boolean).join(' · ')}</div>
     </div>`).join('');

@@ -8896,10 +8896,29 @@ function coLookup(){
     if(linkedEvId){
       const sel=document.getElementById('coEventSel'); if(sel) sel.value=linkedEvId;
       const ev=calEvents.find(e=>String(e.id)===linkedEvId);
+      const fc=invFlightCases.find(f=>String(f.id)===String(unit.fcId||unit.flightCaseId));
+      const wh=invWarehouses.find(w=>String(w.id)===String(unit.warehouseId));
       renderCoEventList();
-      preview.innerHTML=`<div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--green)">✅ Found — auto-selected event: ${ev?.name}</div><div style="font-size:13px;font-family:monospace;color:var(--accent)">${unit.serial}</div></div>`;
+      preview.innerHTML=`<div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:12px 14px">
+        <div style="font-weight:700;color:var(--green);margin-bottom:8px">✅ Found — auto-selected event: ${ev?.name}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Item</div><div style="font-weight:600;font-size:13px">${item.name}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">EM Serial</div><div style="font-family:monospace;font-weight:700;font-size:13px;color:var(--accent)">${unit.serial}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Flight Case</div><div style="font-size:13px">${fc?fc.fcSerial+' — '+fc.name:wh?wh.name:'—'}</div></div>
+        </div>
+      </div>`;
     } else {
-      preview.innerHTML=`<div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--green)">✅ ${item.name} · ${unit.serial}</div><div style="font-size:12px;color:var(--amber)">⚠️ Not in any event list — select an event below to check out</div></div>`;
+      const fc=invFlightCases.find(f=>String(f.id)===String(unit.fcId||unit.flightCaseId));
+      const wh=invWarehouses.find(w=>String(w.id)===String(unit.warehouseId));
+      preview.innerHTML=`<div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:12px 14px">
+        <div style="font-weight:700;color:var(--green);margin-bottom:8px">✅ Found — select an event below to check out</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Item</div><div style="font-weight:600;font-size:13px">${item.name}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">EM Serial</div><div style="font-family:monospace;font-weight:700;font-size:13px;color:var(--accent)">${unit.serial}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Flight Case</div><div style="font-size:13px">${fc?fc.fcSerial+' — '+fc.name:wh?wh.name:'—'}</div></div>
+        </div>
+        <div style="margin-top:8px;font-size:12px;color:var(--amber)">⚠️ Not found in any event equipment list</div>
+      </div>`;
     }
     confirmWrap.style.display='block'; return;
   }

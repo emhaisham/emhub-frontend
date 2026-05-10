@@ -1244,8 +1244,8 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                     <button class="btn btn-ghost btn-sm" onclick="guardAction('crewpay_export',saveReportJpeg2)">Save JPEG</button>
                     <button class="btn btn-ghost btn-sm" onclick="printLetter()">Print / PDF</button>
                   </div>
-                  <div id="letterPreviewWrap" style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
-                    <div id="letterPreview" style="padding:40px;background:#fff;font-family:serif;font-size:14px;line-height:1.8;min-height:600px;color:#1a1a1a">
+                  <div id="letterPreviewWrap" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#e5e7eb;padding:16px">
+                    <div id="letterPreview" style="padding:18mm 20mm;background:#fff;font-family:'Times New Roman',serif;font-size:12pt;line-height:1.7;min-height:257mm;max-width:210mm;margin:0 auto;color:#1a1a1a;box-shadow:0 2px 8px rgba(0,0,0,.15)">
                       <div style="text-align:center;color:var(--text3);padding:80px 20px;font-family:sans-serif">Select a staff member and click Generate Letter</div>
                     </div>
                   </div>
@@ -4563,7 +4563,19 @@ function _printLetterContent(content){
   const doc=frame.contentWindow.document;
   doc.open();
   doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Employment Letter</title>
-  <style>body{font-family:'Times New Roman',serif;font-size:14px;line-height:1.9;color:#1a1a1a;padding:60px 70px;max-width:720px;margin:0 auto}@media print{body{padding:40px}}</style>
+  <style>
+    @page { size: A4 portrait; margin: 18mm 20mm; }
+    html,body { margin:0; padding:0; width:210mm; font-family:'Times New Roman',serif; font-size:12pt; line-height:1.7; color:#1a1a1a; }
+    body { padding: 0; }
+    p { margin: 0 0 8pt 0; }
+    .letter-header { margin-bottom: 18pt; }
+    .letter-footer { margin-top: 24pt; }
+    table { width:100%; border-collapse:collapse; }
+    @media print {
+      html,body { width:210mm; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
   </head><body>${content}</body></html>`);
   doc.close();frame.contentWindow.focus();frame.contentWindow.print();
 }
@@ -5598,54 +5610,53 @@ function updateLetterPreview(){
   const joined=emp.joined?new Date(emp.joined).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
   const lastDayFmt=lastDay?new Date(lastDay).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
 
-  const header=`<div style="max-width:560px;margin:0 auto;font-family:'Times New Roman',serif;font-size:13.5px;line-height:1.9;color:#1a1a1a">
-    <div style="text-align:center;margin-bottom:24px">
-      <div style="font-size:22px;font-weight:700;font-family:sans-serif;color:#0f172a;letter-spacing:-.5px">EM HUB</div>
-      <div style="font-size:12px;color:#6b7280;font-family:sans-serif">Event Management Company</div>
+  const header=`<div style="font-family:'Times New Roman',serif;font-size:11.5pt;line-height:1.55;color:#1a1a1a">
+    <div style="text-align:center;margin-bottom:16pt;border-bottom:2px solid #0f172a;padding-bottom:10pt">
+      <div style="font-size:18pt;font-weight:700;font-family:sans-serif;color:#0f172a;letter-spacing:-.5px">EM HUB</div>
+      <div style="font-size:9pt;color:#6b7280;font-family:sans-serif">Event Management Company · Male', Maldives</div>
     </div>
-    <div style="margin-bottom:20px"><div>${letterDate}</div></div>
-    <div style="margin-bottom:20px"><div style="font-weight:700">To:</div><div>${addressee}</div></div>
-    <div style="margin-bottom:16px"><strong>Re: ${subject} — ${emp.name}</strong></div>
-    <p>To Whom It May Concern,</p><br>`;
+    <div style="margin-bottom:10pt">${letterDate}</div>
+    <div style="margin-bottom:10pt"><strong>To:</strong> ${addressee}</div>
+    <div style="margin-bottom:10pt"><strong>Re: ${subject} — ${emp.name}</strong></div>
+    <p style="margin:0 0 6pt">To Whom It May Concern,</p>`;
 
   let body='';
   if(template==='employment'){
-    body=`<p>This letter is to certify that <strong>${emp.name}</strong>${emp.type==='local'&&emp.nidNo?`, holding National ID No. <strong>${emp.nidNo}</strong>,`:''} is currently employed with our company in the capacity of <strong>${emp.title||emp.dept||'Staff'}</strong> in the <strong>${emp.dept||'—'}</strong> department.</p><br>
-    <p>The details of their employment are as follows:</p>
-    <div style="margin:12px 0 12px 24px;font-size:13.5px">
-      <div style="margin-bottom:4px"><strong>Full Name:</strong> ${emp.name}</div>
-      ${emp.type==='local'&&emp.nidNo?`<div style="margin-bottom:4px"><strong>National ID:</strong> ${emp.nidNo}</div>`:''}
-      ${emp.type==='expat'&&emp.passportNo?`<div style="margin-bottom:4px"><strong>Passport No.:</strong> ${emp.passportNo}</div>`:''}
-      <div style="margin-bottom:4px"><strong>Job Title:</strong> ${emp.title||'—'}</div>
-      <div style="margin-bottom:4px"><strong>Department:</strong> ${emp.dept||'—'}</div>
-      <div style="margin-bottom:4px"><strong>Date of Joining:</strong> ${joined}</div>
-      ${showSalary?`<div style="margin-bottom:4px"><strong>Basic Salary:</strong> ${fmtMVR(emp.basicSalary)}</div>`:''}
-      ${showSalary&&emp.allowance?`<div style="margin-bottom:4px"><strong>Allowance:</strong> ${fmtMVR(emp.allowance)}</div>`:''}
-    </div>
-    <p>This letter is issued upon the request of the employee for whatever purpose it may serve.</p>`;
+    body=`<p style="margin:0 0 6pt">This letter is to certify that <strong>${emp.name}</strong>${emp.type==='local'&&emp.nidNo?`, holding National ID No. <strong>${emp.nidNo}</strong>,`:''} is currently employed with our company in the capacity of <strong>${emp.title||emp.dept||'Staff'}</strong> in the <strong>${emp.dept||'—'}</strong> department.</p>
+    <p style="margin:0 0 6pt">The details of their employment are as follows:</p>
+    <table style="margin:6pt 0 6pt 16pt;font-size:11.5pt;border-collapse:collapse">
+      <tr><td style="padding:2pt 16pt 2pt 0;width:160pt"><strong>Full Name</strong></td><td>${emp.name}</td></tr>
+      ${emp.type==='local'&&emp.nidNo?`<tr><td style="padding:2pt 16pt 2pt 0"><strong>National ID</strong></td><td>${emp.nidNo}</td></tr>`:''}
+      ${emp.type==='expat'&&emp.passportNo?`<tr><td style="padding:2pt 16pt 2pt 0"><strong>Passport No.</strong></td><td>${emp.passportNo}</td></tr>`:''}
+      <tr><td style="padding:2pt 16pt 2pt 0"><strong>Job Title</strong></td><td>${emp.title||'—'}</td></tr>
+      <tr><td style="padding:2pt 16pt 2pt 0"><strong>Department</strong></td><td>${emp.dept||'—'}</td></tr>
+      <tr><td style="padding:2pt 16pt 2pt 0"><strong>Date of Joining</strong></td><td>${joined}</td></tr>
+      ${showSalary?`<tr><td style="padding:2pt 16pt 2pt 0"><strong>Basic Salary</strong></td><td>${fmtMVR(emp.basicSalary)}</td></tr>`:''}
+      ${showSalary&&emp.allowance?`<tr><td style="padding:2pt 16pt 2pt 0"><strong>Allowance</strong></td><td>${fmtMVR(emp.allowance)}</td></tr>`:''}
+    </table>
+    <p style="margin:0 0 6pt">This letter is issued upon the request of the employee for whatever purpose it may serve.</p>`;
   } else {
-    // Experience / Service Letter
-    body=`<p>This is to certify that <strong>${emp.name}</strong>${emp.type==='local'&&emp.nidNo?`, holding National ID No. <strong>${emp.nidNo}</strong>,`:''} has been employed with our company as <strong>${emp.title||emp.dept||'Staff'}</strong> in the <strong>${emp.dept||'—'}</strong> department.</p><br>
-    <p>The details of their service are as follows:</p>
-    <div style="margin:12px 0 12px 24px;font-size:13.5px">
-      <div style="margin-bottom:4px"><strong>Full Name:</strong> ${emp.name}</div>
-      ${emp.type==='local'&&emp.nidNo?`<div style="margin-bottom:4px"><strong>National ID:</strong> ${emp.nidNo}</div>`:''}
-      ${emp.type==='expat'&&emp.passportNo?`<div style="margin-bottom:4px"><strong>Passport No.:</strong> ${emp.passportNo}</div>`:''}
-      <div style="margin-bottom:4px"><strong>Job Title:</strong> ${emp.title||'—'}</div>
-      <div style="margin-bottom:4px"><strong>Department:</strong> ${emp.dept||'—'}</div>
-      <div style="margin-bottom:4px"><strong>Date of Joining:</strong> ${joined}</div>
-      <div style="margin-bottom:4px"><strong>Last Working Day:</strong> ${lastDayFmt}</div>
-      ${reason?`<div style="margin-bottom:4px"><strong>Reason for Leaving:</strong> ${reason}</div>`:''}
-      ${showSalary?`<div style="margin-bottom:4px"><strong>Last Basic Salary:</strong> ${fmtMVR(emp.basicSalary)}</div>`:''}
-    </div>
-    <p>During their tenure, <strong>${emp.name}</strong> has been a dedicated and hardworking member of our team. We wish them all the best in their future endeavours.</p>
-    <br><p>This letter is issued upon request for whatever purpose it may serve.</p>`;
+    body=`<p style="margin:0 0 6pt">This is to certify that <strong>${emp.name}</strong>${emp.type==='local'&&emp.nidNo?`, holding National ID No. <strong>${emp.nidNo}</strong>,`:''} has been employed with our company as <strong>${emp.title||emp.dept||'Staff'}</strong> in the <strong>${emp.dept||'—'}</strong> department.</p>
+    <p style="margin:0 0 6pt">The details of their service are as follows:</p>
+    <table style="margin:6pt 0 6pt 16pt;font-size:11.5pt;border-collapse:collapse">
+      <tr><td style="padding:2pt 16pt 2pt 0;width:160pt"><strong>Full Name</strong></td><td>${emp.name}</td></tr>
+      ${emp.type==='local'&&emp.nidNo?`<tr><td style="padding:2pt 16pt 2pt 0"><strong>National ID</strong></td><td>${emp.nidNo}</td></tr>`:''}
+      ${emp.type==='expat'&&emp.passportNo?`<tr><td style="padding:2pt 16pt 2pt 0"><strong>Passport No.</strong></td><td>${emp.passportNo}</td></tr>`:''}
+      <tr><td style="padding:2pt 16pt 2pt 0"><strong>Job Title</strong></td><td>${emp.title||'—'}</td></tr>
+      <tr><td style="padding:2pt 16pt 2pt 0"><strong>Department</strong></td><td>${emp.dept||'—'}</td></tr>
+      <tr><td style="padding:2pt 16pt 2pt 0"><strong>Date of Joining</strong></td><td>${joined}</td></tr>
+      <tr><td style="padding:2pt 16pt 2pt 0"><strong>Last Working Day</strong></td><td>${lastDayFmt}</td></tr>
+      ${reason?`<tr><td style="padding:2pt 16pt 2pt 0"><strong>Reason for Leaving</strong></td><td>${reason}</td></tr>`:''}
+      ${showSalary?`<tr><td style="padding:2pt 16pt 2pt 0"><strong>Last Basic Salary</strong></td><td>${fmtMVR(emp.basicSalary)}</td></tr>`:''}
+    </table>
+    <p style="margin:0 0 6pt">During their tenure, <strong>${emp.name}</strong> has been a dedicated and hardworking member of our team. We wish them all the best in their future endeavours.</p>
+    <p style="margin:0 0 6pt">This letter is issued upon request for whatever purpose it may serve.</p>`;
   }
 
-  const footer=`<br><p>Should you require any further information, please do not hesitate to contact us.</p><br>
-    <div style="margin-top:36px"><p>Yours sincerely,</p>
-      <div style="margin-top:48px"><div style="border-top:1px solid #1a1a1a;width:200px;margin-bottom:4px"></div>
-      <div><strong>Authorised Signatory</strong></div><div style="font-size:12px;color:#4b5563">EM HUB</div></div>
+  const footer=`<p style="margin:6pt 0 0">Should you require any further information, please do not hesitate to contact us.</p>
+    <div style="margin-top:36pt"><p style="margin:0">Yours sincerely,</p>
+      <div style="margin-top:40pt"><div style="border-top:1px solid #1a1a1a;width:180pt;margin-bottom:4pt"></div>
+      <div><strong>Authorised Signatory</strong></div><div style="font-size:10pt;color:#4b5563">EM HUB · Event Management Company</div></div>
     </div></div>`;
 
   el.innerHTML=header+body+footer;

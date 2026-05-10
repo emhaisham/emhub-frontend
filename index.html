@@ -5350,8 +5350,10 @@ async function updateLeaveStatus(lvId,status){
 }
 
 function deleteLeave(id){
-  openConfirm('Delete this leave record?','This cannot be undone.','Delete',()=>{
-    api('DELETE','/hr/leave/'+id).then(()=>api('GET','/hr/leave').then(r=>{if(r)hrLeave=r;renderLeave();toast('Deleted');}));
+  openConfirm('Delete this leave record?','This cannot be undone.','Delete',async()=>{
+    await api('DELETE','/hr/leave/'+id);
+    hrLeave=await api('GET','/hr/leave')||hrLeave;
+    renderLeave(); toast('Leave record deleted ✓');
   });
 }
 

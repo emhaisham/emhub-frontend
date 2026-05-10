@@ -6584,7 +6584,7 @@ function renderUnitsHtml(item){
       <div style="text-align:right">Actions</div>
     </div>
     ${sorted.map(u=>{
-      const fc=invFlightCases.find(w=>String(w.id)===String(u.flightCaseId||u.fcId));
+      const fc=invFlightCases.find(w=>String(w.id)===String(u.fcId||u.flightCaseId));
       const wh=invWarehouses.find(w=>String(w.id)===String(u.warehouseId));
       const faultCount=(u.faults||[]).filter(f=>!f.repairedDate).length;
       const coEvent=u.checkout&&!u.checkout.checkedInAt?calEvents.find(e=>String(e.id)===String(u.checkout.eventId)):null;
@@ -7507,7 +7507,7 @@ function renderFlightCases(){
   el.innerHTML=invFlightCases.map(fc=>{
     // Count units assigned to this case
     let unitCount=0;
-    invItems.forEach(item=>{(item.units||[]).forEach(u=>{if(String(u.flightCaseId)===String(fc.id))unitCount++;});});
+    invItems.forEach(item=>{(item.units||[]).forEach(u=>{if(String(u.fcId||u.flightCaseId)===String(fc.id))unitCount++;});});
     return`<div class="cat-row" style="cursor:default">
       <div>
         <div style="display:flex;align-items:center;gap:8px">
@@ -7609,7 +7609,7 @@ function deleteFlightCase(id){
   const fc=invFlightCases.find(x=>String(x.id)===String(id)); if(!fc) return;
   // Check how many units are packed in it
   let unitCount=0;
-  invItems.forEach(item=>{(item.units||[]).forEach(u=>{if(String(u.flightCaseId)===String(id))unitCount++;});});
+  invItems.forEach(item=>{(item.units||[]).forEach(u=>{if(String(u.fcId||u.flightCaseId)===String(id))unitCount++;});});
   const warn=unitCount>0?` ${unitCount} unit${unitCount!==1?'s are':' is'} assigned to this case (they will be unassigned).`:'';
   openConfirm('Delete flight case?',`${fc.fcSerial} — ${fc.name}.${warn}`,'Delete',async()=>{
     await api('DELETE','/inventory/flightcases/'+id);
@@ -8763,10 +8763,11 @@ function _findUnitBySerial(serial){
 }
 function _findByFCSerial(fcSerial){
   const fc=invFlightCases.find(f=>f.fcSerial===fcSerial); if(!fc) return null;
-  // Return all units in this flight case
   const units=[];
   invItems.forEach(item=>{
-    (item.units||[]).forEach(u=>{if(String(u.flightCaseId)===String(fc.id)) units.push({unit:u,item,fc});});
+    (item.units||[]).forEach(u=>{
+      if(String(u.fcId||u.flightCaseId)===String(fc.id)) units.push({unit:u,item,fc});
+    });
   });
   return {fc,units};
 }

@@ -2099,7 +2099,7 @@ async function _loadAllData(){
   invWarehouses = wh || [];
   invFlightCases = fc || [];
   users = usrs || [];
-  hrLeaveTypes = lvTypes || [];
+  hrLeaveTypes = (lvTypes||[]).map(lt=>({...lt, days: lt.days_allowed||lt.days||0}));
   crewEvents = crewEvts || [];
   // Restore payments from API events + localStorage fallback
   const localPays = JSON.parse(localStorage.getItem('em_pays')||'{}');
@@ -5475,16 +5475,24 @@ function _openLeaveTypeModal(lt){
 async function saveLeaveType(existingId){
   const name=document.getElementById('lte_name')?.value.trim();
   const days=parseInt(document.getElementById('lte_days')?.value)||0;
-  const color=document.getElementById('lte_color')?.value;
+  const color=document.getElementById('lte_color')?.value||'#6b7280';
   const paid=document.getElementById('lte_paid')?.value==='true';
   if(!name)return toast('Enter leave type name');
+  let res;
   if(existingId&&existingId!=='null'){
-    const lt=hrLeaveTypes.find(x=>String(x.id)===String(existingId));
-    if(lt){Object.assign(lt,{name,days,color,paid});}
+    res=await api('PUT','/hr/leave-types/'+existingId,{name,daysAllowed:days,color,paid});
+    if(res){
+      const lt=hrLeaveTypes.find(x=>String(x.id)===String(existingId));
+      if(lt){lt.name=name;lt.days_allowed=days;lt.days=days;lt.color=color;lt.paid=paid;}
+    }
   } else {
-    hrLeaveTypes.push({id:uid(),name,days,color,paid});
+    res=await api('POST','/hr/leave-types',{name,daysAllowed:days,color,paid});
+    if(res) hrLeaveTypes.push({...res,days:res.days_allowed||days,color,paid});
   }
-  await api('POST','/hr/leave-types',{types:hrLeaveTypes});
+  if(!res){toast('Failed to save leave type');return;}
+  hrLeaveTypes=await api('GET','/hr/leave-types')||hrLeaveTypes;
+  // Map days_allowed to days for frontend use
+  hrLeaveTypes=hrLeaveTypes.map(lt=>({...lt,days:lt.days_allowed||lt.days||0}));
   closeSimpleModal(); renderLeaveTypes(); populateLeaveTypeFilter(); toast('Leave type saved ✓');
 }
 function deleteLeaveType(id){

@@ -3020,8 +3020,9 @@ function userForm(u){
     ${u ? `<div class="field"><label class="field-label">New Password <span style="color:var(--text3);font-weight:400">(leave blank to keep current)</span></label><input type="text" id="uf_pass" placeholder="Enter new password to change"></div>` :
     `<div class="field"><label class="field-label">Temporary Password <span style="font-size:11px;color:var(--green)">(auto-generated)</span></label>
       <div style="display:flex;gap:8px;align-items:center">
-        <input type="text" id="uf_pass" value="${tempPass}" style="font-family:'JetBrains Mono',monospace;font-weight:600" readonly>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('uf_pass').value=generateTempPassword()"></button>
+        <input type="text" id="uf_pass" value="${tempPass}" style="font-family:'JetBrains Mono',monospace;font-weight:600;flex:1" readonly>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('uf_pass').value=generateTempPassword()" title="Generate new password">🔄 New</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('uf_pass').value);toast('Password copied ✓')" title="Copy password">📋 Copy</button>
       </div></div>`}
     <div class="field"><label class="field-label">Account Type</label>
       <select id="uf_role" onchange="toggleRoleSection()">

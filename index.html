@@ -2049,7 +2049,7 @@ function _afterLogin(){
   document.getElementById('screen-login').classList.remove('active');
   document.getElementById('screen-hub').classList.add('active');
   applyPermissions();
-  _loadAllData().then(()=>{ renderAll(); setTimeout(checkForceReset, 500); loadInAppNotifs(); if('Notification' in window && FIREBASE_CONFIG.apiKey !== 'AIzaSyD-REPLACE-WITH-YOUR-KEY') initFirebase().catch(()=>{}); });
+  _loadAllData().then(()=>{ renderAll(); setTimeout(checkForceReset, 500); loadInAppNotifs(); if('Notification' in window) initFirebase().catch(()=>{}); });
 }
 
 async function _loadAllData(){
@@ -5821,14 +5821,14 @@ async function sendMsg(){
 
 // ── FIREBASE PUSH NOTIFICATIONS ───────────────────────────────────────────────
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyD-REPLACE-WITH-YOUR-KEY",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef"
+  apiKey: "AIzaSyDeKXvgFOWtabNagzuaIX4qllLZ8GmrPgA",
+  authDomain: "emhub-ae6b3.firebaseapp.com",
+  projectId: "emhub-ae6b3",
+  storageBucket: "emhub-ae6b3.firebasestorage.app",
+  messagingSenderId: "331800554236",
+  appId: "1:331800554236:web:f4e570bf6b45465e4dc579"
 };
-const FIREBASE_VAPID_KEY = "YOUR_VAPID_KEY_HERE";
+const FIREBASE_VAPID_KEY = "BNwZeNM6h649miKMnUWlrRi3I3th0rkdMs_fyCtJf_YZ05DeTDHFo1k7bfg5MwV9dcKDAqxKX-LpiWsQAuCHBfs";
 
 let _fcmToken = null;
 let _inAppNotifs = [];

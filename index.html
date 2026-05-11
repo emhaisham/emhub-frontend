@@ -1922,10 +1922,12 @@ function tierLabel(h){if(h<=12)return'≤12h';const i=TIERS.findIndex(t=>h<=t.ma
 function calcDay(day){return day.pax*(day.rateOverride||rateFor(day.hours))}
 function calcGroup(g){return g.days.reduce((s,d)=>s+calcDay(d),0)}
 function calcEvent(ev){return (ev.groups||[]).reduce((s,g)=>s+calcGroup(g),0)}
-function fmt(n){return'MVR '+Math.round(n).toLocaleString('en-US')}
+function fmt(n){const v=parseFloat(n)||0;return'MVR '+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtH(h){if(!h)return'0h';const t=Math.round(h*60),hh=Math.floor(t/60),mm=t%60;return mm?hh+'h '+String(mm).padStart(2,'0')+'m':hh+'h'}
 function fmtDate(d){if(!d)return'—';const[y,m,day]=d.split('-');return parseInt(day)+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+y}
 function fmtTime(t){if(!t)return'—';let[h,m]=t.split(':').map(Number);const ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+String(m).padStart(2,'0')+' '+ap}
+function fmtNum(n){return(parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtAmt(n,currency){const v=parseFloat(n)||0;const c=currency||'MVR';return c+' '+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function timeDiff(sd,st,ed,et){
   if(!sd||!st||!ed||!et)return null;
   const s=new Date(sd+'T'+st),e=new Date(ed+'T'+et);
@@ -3301,7 +3303,7 @@ const DEPTS = ['Management','Admin','Technical','Logistics','Production','Studio
 const NATIONALITIES = ['Afghan','Albanian','Algerian','American','Andorran','Angolan','Argentine','Armenian','Australian','Austrian','Azerbaijani','Bahraini','Bangladeshi','Belarusian','Belgian','Belizean','Beninese','Bhutanese','Bolivian','Bosnian','Brazilian','British','Bruneian','Bulgarian','Burkinabe','Burundian','Cambodian','Cameroonian','Canadian','Chilean','Chinese','Colombian','Congolese','Croatian','Cuban','Cypriot','Czech','Danish','Djiboutian','Dominican','Dutch','Ecuadorean','Egyptian','Emirati','Estonian','Ethiopian','Fijian','Finnish','French','Gabonese','Gambian','Georgian','German','Ghanaian','Greek','Guatemalan','Guinean','Haitian','Honduran','Hungarian','Icelandic','Indian','Indonesian','Iranian','Iraqi','Irish','Israeli','Italian','Ivorian','Jamaican','Japanese','Jordanian','Kazakhstani','Kenyan','Korean','Kuwaiti','Kyrgyzstani','Lao','Latvian','Lebanese','Liberian','Libyan','Lithuanian','Luxembourgish','Macedonian','Malagasy','Malawian','Malaysian','Maldivian','Malian','Maltese','Mauritanian','Mauritian','Mexican','Moldovan','Mongolian','Montenegrin','Moroccan','Mozambican','Namibian','Nepalese','New Zealander','Nicaraguan','Nigerien','Nigerian','Norwegian','Omani','Pakistani','Panamanian','Paraguayan','Peruvian','Filipino','Polish','Portuguese','Qatari','Romanian','Russian','Rwandan','Saudi','Senegalese','Serbian','Sierra Leonean','Singaporean','Slovak','Slovenian','Somali','South African','Spanish','Sri Lankan','Sudanese','Swedish','Swiss','Syrian','Tajikistani','Tanzanian','Thai','Togolese','Trinidadian','Tunisian','Turkish','Ugandan','Ukrainian','Uruguayan','Uzbekistani','Venezuelan','Vietnamese','Yemeni','Zambian','Zimbabwean'];
 const AVATAR_HR = ['#1a56db','#0a7c4e','#b45309','#6d28d9','#b91c1c','#0369a1','#7c3aed','#065f46'];
 function hrAvColor(name){ return AVATAR_HR[(name||'?').charCodeAt(0) % AVATAR_HR.length]; }
-function fmtMVR(n){ return 'MVR ' + (n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtMVR(n){ const v=parseFloat(n)||0; return 'MVR '+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function monthLabel(ym){ if(!ym)return'—'; const[y,m]=ym.split('-'); return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+y; }
 function daysUntil(dateStr){ if(!dateStr)return null; const d=new Date(dateStr)-new Date(); return Math.ceil(d/86400000); }
 function nextEmpId(){ const nums=hrEmployees.map(e=>parseInt((e.empId||'EMP-000').replace('EMP-',''))||0); const max=nums.length?Math.max(...nums):0; return 'EMP-'+String(max+1).padStart(3,'0'); }

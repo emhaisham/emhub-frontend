@@ -805,6 +805,10 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
       </div>
       <div class="hub-right">
         <div class="hub-user" id="hubUserInfo">
+          <div id="notifBell" onclick="switchModule('msging')" title="Notifications" style="position:relative;cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);margin-right:8px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            <span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;align-items:center;justify-content:center"></span>
+          </div>
           <div class="hub-avatar" id="hubAvatar">A</div>
           <div><div class="hub-uname" id="hubUname">Admin</div><div class="hub-urole" id="hubUrole">Administrator</div></div>
         </div>
@@ -2045,7 +2049,7 @@ function _afterLogin(){
   document.getElementById('screen-login').classList.remove('active');
   document.getElementById('screen-hub').classList.add('active');
   applyPermissions();
-  _loadAllData().then(()=>{ renderAll(); setTimeout(checkForceReset, 500); });
+  _loadAllData().then(()=>{ renderAll(); setTimeout(checkForceReset, 500); loadInAppNotifs(); if('Notification' in window && FIREBASE_CONFIG.apiKey !== 'AIzaSyD-REPLACE-WITH-YOUR-KEY') initFirebase().catch(()=>{}); });
 }
 
 async function _loadAllData(){
@@ -5814,6 +5818,82 @@ async function sendMsg(){
 }
 // Legacy local notification fallback (unused when API connected)
 
+// ── FIREBASE PUSH NOTIFICATIONS ───────────────────────────────────────────────
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD-REPLACE-WITH-YOUR-KEY",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef"
+};
+const FIREBASE_VAPID_KEY = "YOUR_VAPID_KEY_HERE";
+
+let _fcmToken = null;
+let _inAppNotifs = [];
+
+async function initFirebase(){
+  try {
+    // Dynamically load Firebase SDK
+    await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+    await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    const messaging = firebase.messaging();
+
+    // Request permission
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') { console.log('Notification permission denied'); return; }
+
+    // Get FCM token
+    const token = await messaging.getToken({ vapidKey: FIREBASE_VAPID_KEY });
+    if (token) {
+      _fcmToken = token;
+      await api('POST','/notifications/fcm-token',{ token, device: navigator.userAgent.includes('Mobile')?'mobile':'web' });
+      console.log('FCM token registered ✓');
+    }
+
+    // Handle foreground messages
+    messaging.onMessage(payload=>{
+      const { title, body, data } = payload.notification || payload.data || {};
+      _inAppNotifs.unshift({ id: uid(), title, body, type: data?.type||'info', sentAt: new Date().toISOString(), read: false });
+      updateNotifBell();
+      showInAppToast(title, body, data?.type||'info');
+    });
+  } catch(e) {
+    console.warn('Firebase init failed:', e.message);
+  }
+}
+
+function loadScript(src){
+  return new Promise((resolve,reject)=>{
+    if (document.querySelector(`script[src="${src}"]`)) return resolve();
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+function showInAppToast(title, body, type){
+  const colors = { info:'#3b82f6', event:'#10b981', urgent:'#ef4444', reminder:'#f59e0b' };
+  const el = document.createElement('div');
+  el.style.cssText = `position:fixed;top:20px;right:20px;background:#fff;border:1px solid #e5e7eb;border-left:4px solid ${colors[type]||'#3b82f6'};border-radius:10px;padding:12px 16px;max-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:99999;animation:slideIn .3s ease`;
+  el.innerHTML = `<div style="font-weight:700;font-size:13px;margin-bottom:3px">${title||''}</div><div style="font-size:12px;color:#6b7280">${body||''}</div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 5000);
+}
+
+function updateNotifBell(){
+  const unread = _inAppNotifs.filter(n=>!n.read).length;
+  const badge = document.getElementById('notifBadge');
+  if (badge) { badge.textContent = unread; badge.style.display = unread ? 'flex' : 'none'; }
+}
+
+async function loadInAppNotifs(){
+  const notifs = await api('GET','/notifications') || [];
+  _inAppNotifs = notifs.map(n=>({...n, read:true}));
+  updateNotifBell();
+}
+
 async function renderMsgHistory(){
   const el = document.getElementById('msgHistoryList');
   if(!el) return;
@@ -5822,25 +5902,32 @@ async function renderMsgHistory(){
     el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div><div class="empty-title">No notifications sent yet</div><div class="empty-sub">Compose a message to get started</div></div>';
     return;
   }
-  el.innerHTML = msgs.map(m=>{
-    const typeColors = { info:'#dbeafe', event:'#fef3c7', urgent:'#fee2e2', reminder:'#d1fae5' };
-    const ago = msgTimeAgo(m.sent_at||m.sentAt);
-    return`<div class="msg-card">
-      <div class="msg-icon-wrap ${m.type}" style="background:${typeColors[m.type]||'var(--surface)'}">
-        ${MSG_ICONS[m.type]||''}
+  const typeColors = { info:'#dbeafe', event:'#fef3c7', urgent:'#fee2e2', reminder:'#d1fae5' };
+  const typeLabels = { info:'ℹ️ Info', event:'📅 Event', urgent:'🔴 Urgent', reminder:'⏰ Reminder' };
+  el.innerHTML = msgs.map(m=>`
+    <div style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start">
+      <div style="width:36px;height:36px;border-radius:8px;background:${typeColors[m.type]||'#f3f4f6'};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">
+        ${m.type==='info'?'ℹ️':m.type==='urgent'?'🔴':m.type==='reminder'?'⏰':'📅'}
       </div>
-      <div class="msg-content">
-        <div class="msg-title">${m.title}</div>
-        <div class="msg-body">${m.body}</div>
-        <div class="msg-meta">
-          <span class="msg-recipient-chip">${m.recipient||'All Staff'}</span>
-          <span>${MSG_LABELS[m.type]||'Info'}</span>
-          <span>Sent by ${m.sent_by_name||'Admin'}</span>
-          <span>${ago}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:13px;margin-bottom:2px">${m.title}</div>
+        <div style="font-size:12.5px;color:var(--text2);margin-bottom:6px">${m.body}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--text3)">
+          <span>${typeLabels[m.type]||'Info'}</span>
+          <span>To: ${m.recipient==='all'?'All Staff':m.recipient}</span>
+          <span>By: ${m.sent_by_name||'Admin'}</span>
+          <span>${fmtDate(String(m.created_at||'').slice(0,10))}</span>
+          ${m.fcm_sent?`<span style="color:var(--green)">📱 FCM: ${m.fcm_success} sent${m.fcm_fail>0?', '+m.fcm_fail+' failed':''}</span>`:''}
         </div>
       </div>
-    </div>`;
-  }).join('');
+      <button class="btn btn-red btn-xs" onclick="deleteNotif('${m.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M9 6V4h6v2"/></svg></button>
+    </div>`).join('');
+}
+
+async function deleteNotif(id){
+  await api('DELETE','/notifications/'+id);
+  renderMsgHistory();
+  toast('Notification deleted');
 }
 
 function deleteMsg(id){

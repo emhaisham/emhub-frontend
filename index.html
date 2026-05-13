@@ -2089,19 +2089,20 @@ function _afterLogin(){
 }
 
 async function _loadAllData(){
+  const isAdmin = currentUser?.role === 'admin';
   const [evts, emps, loans, payrolls, pensions, leave, inv, cats, subcats, wh, fc, usrs, lvTypes, crewEvts] = await Promise.all([
     api('GET', '/events'),
     api('GET', '/hr/employees'),
     api('GET', '/hr/loans'),
     api('GET', '/hr/payroll'),
-    api('GET', '/hr/pension'),
+    isAdmin ? api('GET', '/hr/pension') : Promise.resolve([]),
     api('GET', '/hr/leave'),
     api('GET', '/inventory/items'),
     api('GET', '/inventory/categories'),
     api('GET', '/inventory/subcategories'),
     api('GET', '/inventory/warehouses'),
     api('GET', '/inventory/flightcases'),
-    api('GET', '/users'),
+    isAdmin ? api('GET', '/users') : Promise.resolve([]),
     api('GET', '/hr/leave-types'),
     api('GET', '/crewpay/events'),
   ]);

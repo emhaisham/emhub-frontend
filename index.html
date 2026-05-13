@@ -689,7 +689,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 
 /* Event detail popup */
 /* Event detail panel — slides in from right */
-.cal-popup{position:fixed;top:0;right:0;height:100vh;width:420px;max-width:94vw;background:var(--white);border-left:1px solid var(--border);box-shadow:-4px 0 24px rgba(0,0,0,.12);z-index:400;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s cubic-bezier(.4,0,.2,1)}
+.cal-popup{position:fixed;top:0;right:0;height:100dvh;width:420px;max-width:94vw;background:var(--white);border-left:1px solid var(--border);box-shadow:-4px 0 24px rgba(0,0,0,.12);z-index:400;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s cubic-bezier(.4,0,.2,1)}
 .cal-popup.open{transform:translateX(0)}
 .cal-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.18);z-index:399;opacity:0;pointer-events:none;transition:opacity .22s}
 .cal-popup-overlay.open{opacity:1;pointer-events:all}
@@ -804,8 +804,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
     <div class="login-field"><label>Password</label><input type="password" id="loginPass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div class="login-err" id="loginErr">Invalid username or password</div>
     <button class="btn-login" onclick="doLogin()">Sign In</button>
-    <div class="login-hint">Default login: <strong>admin</strong> / <strong>admin123</strong></div>
-    <div style="text-align:center;margin-top:10px"><a href="#" onclick="resetToDefaults()" style="font-size:11px;color:var(--text3);text-decoration:underline">Reset to default users</a></div>
+
   </div>
 </div>
 
@@ -2178,7 +2177,7 @@ function applyPermissions(){
   const isAdmin=currentUser.role==='admin';
   const role=!isAdmin&&currentUser.roleId?appRoles.find(r=>String(r.id)===String(currentUser.roleId)):null;
   // p(key) = true if user has ANY perm starting with key (view or edit)
-  const p=key=>isAdmin||role?.perms?.[key+'_view']===true||role?.perms?.[key+'_edit']===true;
+  const p=key=>isAdmin||role?.perms?.[key+'_view']===true||role?.perms?.[key+'_edit']===true||role?.perms?.[key]===true;
 
   // Update role label in topbar
   const roleEl=document.getElementById('hubUrole');
@@ -2203,7 +2202,7 @@ function applyPerms(){
   if(!role) return;
   const perms=role.perms||{};
   // p(baseKey) = true if user has view OR edit for that feature
-  const p=key=>perms[key+'_view']===true||perms[key+'_edit']===true;
+  const p=key=>perms[key+'_view']===true||perms[key+'_edit']===true||perms[key]===true;
   // pEdit(baseKey) = true only if user has edit right
   const pEdit=key=>perms[key+'_edit']===true;
   const showIf=(el,cond)=>{ if(el) el.style.display=cond?'':'none'; };
@@ -2320,6 +2319,15 @@ function switchModule(name){
           }));
         }
         populateHRFilters(); renderEmployees(); updateHRSidebar(); applyPerms();
+        // Auto-redirect non-admin HR users to own profile
+        if(currentUser?.role!=='admin'){
+          const role=appRoles.find(r=>String(r.id)===String(currentUser?.roleId));
+          const perms=role?.perms||{};
+          if(!perms['hr_view_all_view']&&!perms['hr_view_all_edit']&&!perms['hr_view_all']){
+            const ownEmp=hrEmployees.find(e=>e.name===currentUser?.name);
+            if(ownEmp){ profileActiveTab='info'; hrNav('profile', ownEmp.id); }
+          }
+        }
       });
     }
     if(name==='calendar'){
@@ -3125,8 +3133,9 @@ function checkForceReset(){
   document.getElementById('userModalTitle').textContent='Reset Your Password';
   document.getElementById('userModalForm').innerHTML=`
     <div class="force-reset-banner"><span style="color:var(--accent);display:inline-flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span><span style="display:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span><div><div style="font-weight:600;color:var(--amber)">Password Reset Required</div><div style="font-size:12px;color:var(--text2);margin-top:2px">You must set a new password before continuing.</div></div></div>
-    <div class="field"><label class="field-label">New Password *</label><input type="password" id="nr_pass1" placeholder="Choose a strong password"></div>
-    <div class="field"><label class="field-label">Confirm Password *</label><input type="password" id="nr_pass2" placeholder="Repeat password"></div>
+    <div class="field"><label class="field-label">Temporary Password *</label><input type="password" id="nr_current" placeholder="Enter the temporary password you were given"></div>
+    <div class="field"><label class="field-label">New Password *</label><input type="password" id="nr_pass1" placeholder="At least 8 chars, 1 uppercase, 1 number"></div>
+    <div class="field"><label class="field-label">Confirm New Password *</label><input type="password" id="nr_pass2" placeholder="Repeat new password"></div>
     <div style="display:flex;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--border)">
       <button class="btn btn-primary btn-sm" onclick="doForceReset()">Set Password →</button>
     </div>`;
@@ -3140,7 +3149,9 @@ async function doForceReset(){
   if(!/[A-Z]/.test(p1)) return toast('Password must contain at least one uppercase letter');
   if(!/[0-9]/.test(p1)) return toast('Password must contain at least one number');
   if(p1 !== p2) return toast('Passwords do not match');
-  const res = await api('POST', '/auth/change-password', {current: 'admin123', newPassword: p1});
+  const current = document.getElementById('nr_current')?.value;
+  if(!current) return toast('Enter your temporary password');
+  const res = await api('POST', '/auth/change-password', {current, newPassword: p1});
   if(!res) return;
   currentUser.forceReset = false;
   closeUserModal(); toast('Password updated ✓');
@@ -6126,7 +6137,7 @@ function loanEquipNav(page){
     const permKey=pagePermMap[page];
     const role=currentUser.roleId?appRoles.find(r=>String(r.id)===String(currentUser.roleId)):null;
     const perms=role?.perms||{};
-    if(permKey && perms[permKey+'_view']!==true && perms[permKey+'_edit']!==true){
+    if(permKey && perms[permKey+'_view']!==true && perms[permKey+'_edit']!==true && perms[permKey]!==true){
       toast('You don\'t have permission to access this');
       return;
     }

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="EM HUB">
@@ -26,9 +26,28 @@
   --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
   --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
   --shadow-lg:0 10px 15px rgba(0,0,0,.08),0 4px 6px rgba(0,0,0,.05);
+  --r:10px;
+}
+[data-theme="dark"]{
+  --bg:#0f172a;--white:#1e293b;--surface:#162032;--border:#2d3f55;--border2:#3d5068;
+  --text:#f1f5f9;--text2:#cbd5e1;--text3:#64748b;
+  --accent:#3b82f6;--accent-bg:#1e3a5f;--accent-bd:#2563eb;
+  --accent-hover:#2563eb;
+  --green:#10b981;--green-bg:#052e16;--green-bd:#065f46;
+  --red:#f87171;--red-bg:#2d0a0a;--red-bd:#7f1d1d;
+  --amber:#fbbf24;--amber-bg:#1c1200;--amber-bd:#78350f;
+  --purple:#a78bfa;--purple-bg:#1e1040;
+  --hub:#0f172a;--hub2:#1e293b;--hub3:#334155;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow:0 1px 3px rgba(0,0,0,.4),0 1px 2px rgba(0,0,0,.3);
+  --shadow-md:0 4px 6px rgba(0,0,0,.4),0 2px 4px rgba(0,0,0,.3);
+  --shadow-lg:0 10px 15px rgba(0,0,0,.5),0 4px 6px rgba(0,0,0,.4);
 }
 html{font-size:14px;height:100%;overflow:hidden}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.5;height:100%;overflow:hidden}
+/* Prevent iOS zoom on input focus */
+input,select,textarea{font-size:16px !important}
+@media(min-width:600px){input,select,textarea{font-size:14px !important}}
 
 /* ══ SCREENS ════════════════════════════════════ */
 .screen{display:none;height:100%}
@@ -805,10 +824,11 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
       </div>
       <div class="hub-right">
         <div class="hub-user" id="hubUserInfo">
-          <div id="notifBell" onclick="switchModule('msging')" title="Notifications" style="position:relative;cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);margin-right:8px">
+          <div id="notifBell" onclick="switchModule('msging')" title="Notifications" style="position:relative;cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);margin-right:4px">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
             <span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;align-items:center;justify-content:center"></span>
           </div>
+          <div id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle dark mode" style="cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);margin-right:8px;font-size:16px">🌙</div>
           <div class="hub-avatar" id="hubAvatar">A</div>
           <div><div class="hub-uname" id="hubUname">Admin</div><div class="hub-urole" id="hubUrole">Administrator</div></div>
         </div>
@@ -2050,6 +2070,9 @@ function _afterLogin(){
   document.getElementById('screen-hub').classList.add('active');
   applyPermissions();
   _loadAllData().then(()=>{ renderAll(); setTimeout(checkForceReset, 500); loadInAppNotifs(); if('Notification' in window) initFirebase().catch(()=>{}); });
+  // Reset any mobile zoom after login
+  const mv = document.querySelector('meta[name=viewport]');
+  if(mv) mv.content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
 }
 
 async function _loadAllData(){
@@ -5819,6 +5842,23 @@ async function sendMsg(){
   renderMsgHistory();
 }
 // Legacy local notification fallback (unused when API connected)
+
+// ── DARK MODE ─────────────────────────────────────────────────────────────────
+function initTheme(){
+  const saved = localStorage.getItem('em_theme') || 'light';
+  applyTheme(saved);
+}
+initTheme(); // Apply immediately on load
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('em_theme', theme);
+  const btn = document.getElementById('darkModeToggle');
+  if(btn) btn.textContent = theme==='dark' ? '☀️' : '🌙';
+}
+function toggleDarkMode(){
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  applyTheme(current==='dark' ? 'light' : 'dark');
+}
 
 // ── FIREBASE PUSH NOTIFICATIONS ───────────────────────────────────────────────
 const FIREBASE_CONFIG = {

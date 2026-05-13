@@ -5835,7 +5835,14 @@ let _inAppNotifs = [];
 
 async function initFirebase(){
   try {
-    // Dynamically load Firebase SDK
+    if (!('serviceWorker' in navigator)) { console.warn('Service workers not supported'); return; }
+    if (!('PushManager' in window)) { console.warn('Push not supported on this browser'); return; }
+
+    // Register service worker first
+    const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    console.log('SW registered:', swReg.scope);
+
+    // Load Firebase SDK
     await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
     await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
@@ -5843,25 +5850,36 @@ async function initFirebase(){
 
     // Request permission
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') { console.log('Notification permission denied'); return; }
+    console.log('Notification permission:', permission);
+    if (permission !== 'granted') { console.warn('Permission not granted'); return; }
 
-    // Get FCM token
-    const token = await messaging.getToken({ vapidKey: FIREBASE_VAPID_KEY });
+    // Get FCM token with service worker
+    const token = await messaging.getToken({
+      vapidKey: FIREBASE_VAPID_KEY,
+      serviceWorkerRegistration: swReg
+    });
     if (token) {
       _fcmToken = token;
-      await api('POST','/notifications/fcm-token',{ token, device: navigator.userAgent.includes('Mobile')?'mobile':'web' });
-      console.log('FCM token registered ✓');
+      await api('POST','/notifications/fcm-token',{
+        token, device: /Mobile|Android|iPhone|iPad/.test(navigator.userAgent)?'mobile':'web'
+      });
+      console.log('FCM token registered ✓', token.slice(0,20)+'...');
+    } else {
+      console.warn('No FCM token received');
     }
 
     // Handle foreground messages
     messaging.onMessage(payload=>{
-      const { title, body, data } = payload.notification || payload.data || {};
-      _inAppNotifs.unshift({ id: uid(), title, body, type: data?.type||'info', sentAt: new Date().toISOString(), read: false });
+      console.log('Foreground message:', payload);
+      const title = payload.notification?.title || payload.data?.title || 'EM HUB';
+      const body = payload.notification?.body || payload.data?.body || '';
+      const type = payload.data?.type || 'info';
+      _inAppNotifs.unshift({ id: uid(), title, body, type, sentAt: new Date().toISOString(), read: false });
       updateNotifBell();
-      showInAppToast(title, body, data?.type||'info');
+      showInAppToast(title, body, type);
     });
   } catch(e) {
-    console.warn('Firebase init failed:', e.message);
+    console.error('Firebase init failed:', e.message, e);
   }
 }
 

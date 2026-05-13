@@ -2995,10 +2995,13 @@ function renderUsers(){
   if(!users.length){el.innerHTML='<div class="empty"><div class="empty-title">No users</div></div>';return}
   el.innerHTML=users.map(u=>{
     const perms=[];
+    const uRole=appRoles.find(r=>String(r.id)===String(u.roleId));
+    const uPerms=uRole?.perms||{};
+    const hasAny=(prefix)=>u.role==='admin'||Object.keys(uPerms).some(k=>k.startsWith(prefix)&&uPerms[k]===true);
     if(u.role==='admin')perms.push('<span class="perm-chip perm-admin">Admin</span>');
-    if(u.role==='admin'||u.perms?.crewpay)perms.push('<span class="perm-chip perm-crewpay">CrewPay</span>');
-    if(u.role==='admin'||u.perms?.hr)perms.push('<span class="perm-chip perm-hr">HR</span>');
-    if(u.role==='admin'||u.perms?.calendar)perms.push('<span class="perm-chip perm-calendar">Calendar</span>');
+    if(hasAny('crewpay')||hasAny('msging'))perms.push('<span class="perm-chip perm-crewpay">CrewPay</span>');
+    if(hasAny('hr'))perms.push('<span class="perm-chip perm-hr">HR</span>');
+    if(hasAny('cal')||hasAny('inv')||hasAny('eel')||hasAny('fault'))perms.push('<span class="perm-chip perm-calendar">Events/Equip</span>');
     const isSelf=currentUser&&currentUser.id===u.id;
     return`<div class="user-card">
       <div class="user-avatar" style="background:${avatarColor(u.name)}">${u.name[0].toUpperCase()}</div>
@@ -4105,6 +4108,11 @@ function renderPayroll(){
   const dept=document.getElementById('prDept')?.value||'';
   let prs=month?hrPayrolls.filter(p=>p.month===month):hrPayrolls;
   if(dept) prs=prs.filter(p=>{ const e=hrEmployees.find(x=>String(x.id)===String(p.empId)); return e&&e.dept===dept; });
+  // Non-admin: only show own payslip
+  if(currentUser?.role!=='admin'){
+    const myEmp=hrEmployees.find(e=>e.name===currentUser?.name||e.userId===currentUser?.id);
+    if(myEmp) prs=prs.filter(p=>String(p.empId)===String(myEmp.id));
+  }
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
   set('prStatGross',fmtMVR(prs.reduce((s,p)=>s+(parseFloat(p.basic)||0)+(parseFloat(p.allowances)||0),0)));
   set('prStatDed',fmtMVR(prs.reduce((s,p)=>s+(parseFloat(p.loan_deduction)||0)+(parseFloat(p.deductions)||0),0)));
@@ -4416,7 +4424,12 @@ function renderLoans(){
   set('lnStatActive',hrLoans.filter(l=>l.status==='active').length);
   const fEmp=document.getElementById('lnFilterEmp')?.value||'';
   const fSt=document.getElementById('lnFilterStatus')?.value||'';
+  // Non-admin: only show own loans
   let list=hrLoans.filter(l=>{
+    if(currentUser?.role!=='admin'){
+      const myEmp=hrEmployees.find(e=>e.name===currentUser?.name||e.userId===currentUser?.id);
+      if(myEmp&&String(l.empId)!==String(myEmp.id)) return false;
+    }
     if(fEmp&&String(l.empId)!==String(fEmp))return false;
     if(fSt&&l.status!==fSt)return false;
     return true;
@@ -5411,7 +5424,12 @@ function renderLeave(){
   const lvFrom=l=>String(l.fromDate||l.from_date||l.from||'').slice(0,10);
   const lvTo=l=>String(l.toDate||l.to_date||l.to||'').slice(0,10);
   const lvType=l=>l.leave_type||l.leaveType||l.type||'';
+  // Non-admin: only show own leave
   let list=hrLeave.filter(l=>{
+    if(currentUser?.role!=='admin'){
+      const myEmp=hrEmployees.find(e=>e.name===currentUser?.name||e.userId===currentUser?.id);
+      if(myEmp&&lvEmpId(l)!==String(myEmp.id)) return false;
+    }
     if(fEmp&&lvEmpId(l)!==String(fEmp))return false;
     if(fSt&&l.status!==fSt)return false;
     if(fTy&&lvType(l)!==fTy)return false;

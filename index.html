@@ -5940,8 +5940,20 @@ async function renderMsgHistory(){
           ${m.fcm_sent?`<span style="color:var(--green)">📱 FCM: ${m.fcm_success} sent${m.fcm_fail>0?', '+m.fcm_fail+' failed':''}</span>`:''}
         </div>
       </div>
+      <button class="btn btn-ghost btn-xs" onclick="resendNotif('${m.id}')" title="Resend to all staff">↩ Resend</button>
       <button class="btn btn-red btn-xs" onclick="deleteNotif('${m.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M9 6V4h6v2"/></svg></button>
     </div>`).join('');
+}
+
+async function resendNotif(id){
+  const msgs = await api('GET','/notifications') || [];
+  const m = msgs.find(x=>x.id===id); if(!m) return;
+  openConfirm('Resend Notification?',`"${m.title}" will be sent to all staff again.`,'Resend',async()=>{
+    const res = await api('POST','/notifications',{
+      title: m.title, body: m.body, type: m.type||'info', recipient:'all'
+    });
+    if(res){ renderMsgHistory(); toast('Notification resent ✓'); }
+  });
 }
 
 async function deleteNotif(id){
@@ -6008,50 +6020,31 @@ function skipEventNotify(){
   _pendingEventNotifyId = null;
 }
 
-function sendEventNotify(){
+async function sendEventNotify(){
   const ev = calEvents.find(e=>String(e.id)===String(_pendingEventNotifyId));
   if(!ev){ skipEventNotify(); return; }
 
   const recipType = document.getElementById('enRecipient')?.value || 'all';
   const extraMsg = document.getElementById('enMessage')?.value.trim();
-  let recipientIds = [];
-  let recipientLabel = 'All Staff';
-
-  if(recipType==='specific'){
-    const checked = [...document.querySelectorAll('.en-staff-chk:checked')].map(c=>c.value);
-    if(!checked.length){ toast('Select at least one staff member'); return; }
-    recipientIds = checked;
-    const names = checked.map(id=>{ const e=hrEmployees.find(x=>String(x.id)===String(id)); return e?e.name:''; }).filter(Boolean);
-    recipientLabel = names.slice(0,3).join(', ') + (names.length>3?` +${names.length-3} more`:'');
-  } else {
-    recipientIds = hrEmployees.map(e=>String(e.id));
-  }
 
   const dateRange = ev.eventDateFrom===ev.eventDateTo
-    ? calFmtDate(ev.eventDateFrom)
-    : `${calFmtDate(ev.eventDateFrom)} → ${calFmtDate(ev.eventDateTo)}`;
+    ? fmtDate(ev.eventDateFrom)
+    : `${fmtDate(ev.eventDateFrom)} → ${fmtDate(ev.eventDateTo)}`;
 
-  const body = ` ${dateRange}${extraMsg ? '\n\n'+extraMsg : ''}`;
+  const title = `📅 New Event: ${ev.name}`;
+  const body = `${dateRange}${ev.venue?' · '+ev.venue:''}${extraMsg?'\n\n'+extraMsg:''}`;
 
-  const notif = {
-    id: uid(),
-    title: `New Event: ${ev.name}`,
-    body,
-    type: 'event',
-    recipientType: recipType,
-    recipientIds,
-    recipientLabel,
-    sentBy: currentUser?.name || 'Admin',
-    sentAt: new Date().toISOString(),
-    read: false,
-    linkedEventId: ev.id
-  };
-  msgNotifications.unshift(notif);
-  msgSave(); updateMsgBadge();
+  const res = await api('POST','/notifications',{
+    title, body, type:'event', recipient: recipType
+  });
 
   document.getElementById('eventNotifyModal').classList.remove('open');
   _pendingEventNotifyId = null;
-  toast(`Staff notified about "${ev.name}" ✓`);
+
+  if(res){
+    updateNotifBell();
+    toast(`Staff notified about "${ev.name}" ✓`);
+  }
 }
 
 // ══ EQUIPMENT LOANS MODULE ════════════════════════════

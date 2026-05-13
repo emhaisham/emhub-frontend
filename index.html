@@ -781,8 +781,8 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 
 /* Also target Apple standalone specifically */
 @media screen and (max-width: 768px) {
-  /* Ensure body has correct background color for status bar area */
-  body {
+  /* Only the very top status bar should match the topbar color - use hub-content for this */
+  .mob-menubar {
     background-color: var(--hub);
   }
 }

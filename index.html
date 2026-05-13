@@ -159,22 +159,23 @@ input,select,textarea{font-size:16px !important}
     display:flex;align-items:center;gap:10px;
     padding:10px 14px;
     padding-top:max(10px, calc(env(safe-area-inset-top) + 6px));
-    background:var(--hub);
-    border-bottom:1px solid rgba(255,255,255,.1);
+    background:var(--white);
+    border-bottom:1px solid var(--border);
     flex-shrink:0;position:sticky;top:0;z-index:10;
   }
   .mob-hamburger{
-    background:none;border:1px solid rgba(255,255,255,.2);border-radius:7px;
+    background:none;border:1px solid var(--border);border-radius:7px;
     padding:6px 8px;cursor:pointer;display:flex;flex-direction:column;gap:4px;
     flex-shrink:0;
   }
   .mob-hamburger span{
-    display:block;width:18px;height:2px;background:#fff;border-radius:2px;transition:all .2s;
+    display:block;width:18px;height:2px;background:var(--text);border-radius:2px;transition:all .2s;
   }
-  .mob-module-title{font-size:14px;font-weight:700;color:#fff;letter-spacing:-.01em;flex:1}
+  .mob-module-title{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-.01em;flex:1}
+  .mob-signout-btn{color:var(--text2) !important;border-color:var(--border) !important;}
   .mob-logout{
-    background:none;border:1px solid rgba(255,255,255,.2);border-radius:6px;
-    padding:5px 10px;color:rgba(255,255,255,.7);font-size:12px;
+    background:none;border:1px solid var(--border);border-radius:6px;
+    padding:5px 10px;color:var(--text2);font-size:12px;
     font-family:'Inter',sans-serif;cursor:pointer;flex-shrink:0;
   }
 
@@ -781,9 +782,9 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 
 /* Also target Apple standalone specifically */
 @media screen and (max-width: 768px) {
-  /* Only the very top status bar should match the topbar color - use hub-content for this */
+  /* Light topbar on mobile */
   .mob-menubar {
-    background-color: var(--hub);
+    background-color: var(--white);
   }
 }
 </style>

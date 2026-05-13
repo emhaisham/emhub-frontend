@@ -2066,6 +2066,7 @@ async function doLogin(){
   _authToken = res.token;
   localStorage.setItem('em_auth_token', _authToken);
   currentUser = res.user;
+  if(currentUser.rolePerms && typeof currentUser.rolePerms==='string'){ try{currentUser.rolePerms=JSON.parse(currentUser.rolePerms);}catch(e){currentUser.rolePerms={};} }
   appRoles = await api('GET', '/users/roles') || [];
 
   _afterLogin();
@@ -2176,8 +2177,8 @@ function applyPermissions(){
   if(!currentUser) return;
   const isAdmin=currentUser.role==='admin';
   const role=!isAdmin&&currentUser.roleId?appRoles.find(r=>String(r.id)===String(currentUser.roleId)):null;
-  // p(key) = true if user has ANY perm starting with key (view or edit)
-  const p=key=>isAdmin||role?.perms?.[key+'_view']===true||role?.perms?.[key+'_edit']===true||role?.perms?.[key]===true;
+  const rolePerms=role?.perms||currentUser.rolePerms||{};
+  const p=key=>isAdmin||rolePerms[key+'_view']===true||rolePerms[key+'_edit']===true||rolePerms[key]===true;
 
   // Update role label in topbar
   const roleEl=document.getElementById('hubUrole');
@@ -2199,8 +2200,8 @@ function applyPerms(){
   if(!currentUser) return;
   if(currentUser.role==='admin') return;
   const role=currentUser.roleId?appRoles.find(r=>String(r.id)===String(currentUser.roleId)):null;
-  if(!role) return;
-  const perms=role.perms||{};
+  const perms=role?.perms||currentUser.rolePerms||{};
+  if(!Object.keys(perms).length) return;
   // p(baseKey) = true if user has view OR edit for that feature
   const p=key=>perms[key+'_view']===true||perms[key+'_edit']===true||perms[key]===true;
   // pEdit(baseKey) = true only if user has edit right
@@ -2322,7 +2323,7 @@ function switchModule(name){
         // Auto-redirect non-admin HR users to own profile
         if(currentUser?.role!=='admin'){
           const role=appRoles.find(r=>String(r.id)===String(currentUser?.roleId));
-          const perms=role?.perms||{};
+          const perms=role?.perms||currentUser?.rolePerms||{};
           if(!perms['hr_view_all_view']&&!perms['hr_view_all_edit']&&!perms['hr_view_all']){
             const ownEmp=hrEmployees.find(e=>e.name===currentUser?.name);
             if(ownEmp){ profileActiveTab='info'; setTimeout(()=>hrNav('profile', ownEmp.id),100); }
@@ -3377,7 +3378,7 @@ function hrNav(page, extra){
     };
     const permKey=pagePermMap[page];
     const role=currentUser.roleId?appRoles.find(r=>String(r.id)===String(currentUser.roleId)):null;
-    const perms=role?.perms||{};
+    const perms=role?.perms||currentUser.rolePerms||{};
     const hasViewOwn=perms['hr_view_own_view']===true||perms['hr_view_own']===true;
     const hasViewAll=perms['hr_view_all_view']===true||perms['hr_view_all']===true;
     if(page==='profile'){
@@ -6133,7 +6134,7 @@ function loanEquipNav(page){
     };
     const permKey=pagePermMap[page];
     const role=currentUser.roleId?appRoles.find(r=>String(r.id)===String(currentUser.roleId)):null;
-    const perms=role?.perms||{};
+    const perms=role?.perms||currentUser.rolePerms||{};
     if(permKey && perms[permKey+'_view']!==true && perms[permKey+'_edit']!==true && perms[permKey]!==true){
       toast('You don\'t have permission to access this');
       return;

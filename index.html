@@ -2502,8 +2502,8 @@ function ensurePay(eid,groups){
   (groups||[]).forEach(g=>{if(!payments[eid].groups[g.id])payments[eid].groups[g.id]=false});
 }
 function isEventPaid(eid){
-  const ev=events.find(e=>String(e.id)===String(eid));if(!ev)return false;
-  return ev.groups.every(g=>payments[eid]?.groups[g.id]);
+  const ev=events.find(e=>String(e.id)===String(eid));if(!ev||!ev.groups?.length)return false;
+  return ev.groups.every(g=>payments[eid]?.groups?.[g.id]);
 }
 function isGroupPaid(eid,gid){return!!(payments[eid]?.groups[gid])}
 function toggleGroupPaid(eid,gid){
@@ -2530,7 +2530,7 @@ function markEventPaid(eid,paid){
   const sub=paid?'This will record payment for the entire event.':'This will reset payment status for all groups.';
   openConfirm(msg,sub,paid?'Mark All Paid':'Mark All Unpaid',()=>{
     if(!payments[eid])payments[eid]={groups:{}};
-    ev.groups.forEach(g=>{payments[eid].groups[g.id]=paid});
+    (ev.groups||[]).forEach(g=>{if(!payments[eid])payments[eid]={groups:{}};payments[eid].groups[g.id]=paid});
     saveAll();renderAll();toast(paid?'Event marked as paid ✓':'Event marked as unpaid');
   });
 }
@@ -2545,12 +2545,12 @@ function saveDialogPDF(){
 function openReport(eid){
   const ev=events.find(e=>String(e.id)===String(eid));if(!ev)return;
   const totPay=calcEvent(ev);
-  const totH=ev.groups.reduce((s,g)=>s+g.days.reduce((ss,d)=>ss+d.pax*d.hours,0),0);
-  const totPax=ev.groups.reduce((s,g)=>s+g.days.reduce((ss,d)=>ss+d.pax,0),0);
+  const totH=(ev.groups||[]).reduce((s,g)=>s+(g.days||[]).reduce((ss,d)=>ss+(d.pax||0)*(d.hours||0),0),0);
+  const totPax=(ev.groups||[]).reduce((s,g)=>s+(g.days||[]).reduce((ss,d)=>ss+(d.pax||0),0),0);
   const paid=isEventPaid(ev.id);
   document.getElementById('reportModalTitle').textContent=ev.name+' — Report';
 
-  const groupRows=ev.groups.map((g,gi)=>{
+  const groupRows=(ev.groups||[]).map((g,gi)=>{
     const gTotal=calcGroup(g);
     const rows=g.days.map(d=>`<tr>
       <td>${d.pax}</td>
@@ -2578,7 +2578,7 @@ function openReport(eid){
     <div class="report-summary">
       <div class="rs-box"><div class="rs-val">${totPax}</div><div class="rs-lbl">Total Pax</div></div>
       <div class="rs-box"><div class="rs-val">${fmtH(totH)}</div><div class="rs-lbl">Total Hours</div></div>
-      <div class="rs-box"><div class="rs-val">${ev.groups.length}</div><div class="rs-lbl">Groups</div></div>
+      <div class="rs-box"><div class="rs-val">${(ev.groups||[]).length}</div><div class="rs-lbl">Groups</div></div>
       <div class="rs-box"><div class="rs-val" style="color:var(--green)">${fmt(totPay)}</div><div class="rs-lbl">Total Amount</div></div>
     </div>
     <div class="report-section-title">Detailed Breakdown</div>
@@ -2671,7 +2671,7 @@ function exportReportPDF(){
     const a=calcEvent(ev);
     const h=ev.groups.reduce((s,g)=>s+g.days.reduce((ss,d)=>ss+d.pax*d.hours,0),0);
     tot+=a;totH+=h;
-    byEvent.push({name:ev.name,date:ev.date,a,h,groups:ev.groups.length,pax:ev.groups.reduce((s,g)=>s+g.days.reduce((ss,d)=>ss+d.pax,0),0),paid:isEventPaid(ev.id)});
+    byEvent.push({name:ev.name,date:ev.date,a,h,groups:(ev.groups||[]).length,pax:(ev.groups||[]).reduce((s,g)=>s+(g.days||[]).reduce((ss,d)=>ss+(d.pax||0),0),0),paid:isEventPaid(ev.id)});
   });
   byEvent.sort((a,b)=>b.a-a.a);
 
@@ -2777,7 +2777,7 @@ function exportReportExcel(){
 // ══ DELETE ════════════════════════════════════════════
 function deleteGroup(eid,gid){
   const ev=events.find(e=>String(e.id)===String(eid));if(!ev)return;
-  if(ev.groups.length===1){if(!confirm('Only one group — delete the whole event?'))return;return deleteEvent(eid)}
+  if((ev.groups||[]).length===1){if(!confirm('Only one group — delete the whole event?'))return;return deleteEvent(eid)}
   ev.groups=ev.groups.filter(g=>g.id!==gid);
   if(payments[eid])delete payments[eid].groups[gid];
   api('PUT','/crewpay/events/'+eid,{name:ev.name,date:ev.date,groups:ev.groups,payments:payments[eid]||{}});
@@ -2897,7 +2897,7 @@ function renderPayments(){
   if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg></div><div class="empty-title">No events</div></div>';return}
   el.innerHTML=list.map(ev=>{
     const totA=calcEvent(ev);const evPaid=isEventPaid(ev.id);const isExp=payExpanded.has(ev.id);
-    const gRows=ev.groups.map((g,gi)=>{
+    const gRows=(ev.groups||[]).map((g,gi)=>{
       const gPaid=isGroupPaid(ev.id,g.id);const gAmt=calcGroup(g);
       const daysSummary=g.days.map(d=>`${d.pax} pax · ${fmtDate(d.startDate)} ${fmtTime(d.startTime)}`).join(', ');
       return`<div class="pay-group-row">
@@ -2935,7 +2935,7 @@ function renderLaborLog(){
   const mf=document.getElementById('llMonth')?.value||'';
   let rows=[];
   events.forEach(ev=>{
-    ev.groups.forEach((g,gi)=>{
+    (ev.groups||[]).forEach((g,gi)=>{
       g.days.forEach(d=>{
         if(search&&!(ev.name.toLowerCase().includes(search)||(g.label||'').toLowerCase().includes(search)))return;
         if(mf&&!d.startDate.startsWith(mf))return;
@@ -5684,7 +5684,7 @@ function renderReports(){
     tot+=a;totH+=h;
     const m=ev.date?.slice(0,7)||'Unknown';
     byMonth[m]=(byMonth[m]||0)+a;
-    byEvent.push({name:ev.name,date:ev.date,a,h,groups:ev.groups.length,pax:ev.groups.reduce((s,g)=>s+g.days.reduce((ss,d)=>ss+d.pax,0),0),paid:isEventPaid(ev.id)});
+    byEvent.push({name:ev.name,date:ev.date,a,h,groups:(ev.groups||[]).length,pax:(ev.groups||[]).reduce((s,g)=>s+(g.days||[]).reduce((ss,d)=>ss+(d.pax||0),0),0),paid:isEventPaid(ev.id)});
   });
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
   set('rptEv',filteredEvents.length);set('rptPay',fmt(tot));set('rptHrs',fmtH(totH));

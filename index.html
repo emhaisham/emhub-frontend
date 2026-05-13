@@ -1937,6 +1937,18 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 }
 </style>
 <iframe id="psFrame" style="display:none"></iframe>
+<script>
+function _mobilePrint(html){
+  // Use window.open for mobile compatibility
+  const w = window.open('','_blank','width=800,height=600');
+  if(!w){ alert('Please allow popups for this site to print/export'); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>{ w.print(); setTimeout(()=>w.close(), 1000); }, 500);
+}
+</script>
 <iframe id="printFrame" style="display:none"></iframe>
 
 <script>
@@ -2642,9 +2654,7 @@ function printReport(){
     .rg-val{font-size:20px;font-weight:700;color:#0a7c4e;font-family:monospace}
     .report-footer{margin-top:18px;padding-top:12px;border-top:1px solid #e3e6ea;font-size:10.5px;color:#9aa3af;text-align:center}
   </style></head><body>${content}</body></html>`);
-  doc.close();
-  frame.contentWindow.focus();
-  frame.contentWindow.print();
+  _mobilePrint(html);
 }
 
 function saveReportPDF(){printReport()}
@@ -2738,10 +2748,7 @@ function exportReportPDF(){
     <div class="footer">Confidential · EM HUB CrewPay · Event Maldives</div>
   </body></html>`;
 
-  const frame=document.getElementById('printFrame');
-  const doc=frame.contentWindow.document;
-  doc.open();doc.write(html);doc.close();
-  frame.contentWindow.focus();frame.contentWindow.print();
+  _mobilePrint(html);
 }
 
 // ── CrewPay Reports: Export Excel ────────────────────────────────────────────
@@ -4237,10 +4244,7 @@ function getPayslipHTML(pr,emp){
 function printPayslip(prId){
   const pr=hrPayrolls.find(p=>String(p.id)===String(prId));if(!pr)return toast('Payslip not found');
   const emp=hrEmployees.find(e=>String(e.id)===String(pr.empId));if(!emp)return toast('Employee not found');
-  const frame=document.getElementById('psFrame');
-  const doc=frame.contentWindow.document;
-  doc.open();doc.write(getPayslipHTML(pr,emp));doc.close();
-  frame.contentWindow.focus();frame.contentWindow.print();
+  _mobilePrint(getPayslipHTML(pr,emp));
 }
 
 function savePayslipJpeg(prId){
@@ -4332,7 +4336,7 @@ function exportPayrollSheet(){
 
   const frame=document.getElementById('psFrame');
   const doc=frame.contentWindow.document;
-  doc.open();doc.write(html);doc.close();frame.contentWindow.focus();frame.contentWindow.print();
+  _mobilePrint(html);
 }
 
 let loanExpanded=new Set();
@@ -4622,7 +4626,7 @@ function _printLetterContent(content){
     }
   </style>
   </head><body>${content}</body></html>`);
-  doc.close();frame.contentWindow.focus();frame.contentWindow.print();
+  _mobilePrint(html);
 }
 
 function saveReportJpeg2(){
@@ -9153,7 +9157,7 @@ function exportListPDF(evId, li){
   frame.id='printFrame'; frame.style.display='none'; document.body.appendChild(frame);
   const doc=frame.contentWindow.document;
   doc.open(); doc.write(html); doc.close();
-  setTimeout(()=>frame.contentWindow.print(),400);
+  _mobilePrint(html);
 }
 
 function exportAllListsPDF(evId){
@@ -9165,7 +9169,7 @@ function exportAllListsPDF(evId){
   frame.id='printFrame'; frame.style.display='none'; document.body.appendChild(frame);
   const doc=frame.contentWindow.document;
   doc.open(); doc.write(html); doc.close();
-  setTimeout(()=>frame.contentWindow.print(),400);
+  _mobilePrint(html);
 }
 
 // ── Helper ────────────────────────────────────────────────────────────────────

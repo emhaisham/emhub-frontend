@@ -2325,7 +2325,7 @@ function switchModule(name){
           const perms=role?.perms||{};
           if(!perms['hr_view_all_view']&&!perms['hr_view_all_edit']&&!perms['hr_view_all']){
             const ownEmp=hrEmployees.find(e=>e.name===currentUser?.name);
-            if(ownEmp){ profileActiveTab='info'; hrNav('profile', ownEmp.id); }
+            if(ownEmp){ profileActiveTab='info'; setTimeout(()=>hrNav('profile', ownEmp.id),100); }
           }
         }
       });
@@ -3373,33 +3373,30 @@ function hrNav(page, extra){
       'disciplinary':'hr_disc',
       'staff-assets':'hr_assets',
       'employees':'hr_view_all',
-      'profile':'hr_view_all',
+      'profile':'hr_view_own',
     };
     const permKey=pagePermMap[page];
     const role=currentUser.roleId?appRoles.find(r=>String(r.id)===String(currentUser.roleId)):null;
     const perms=role?.perms||{};
-    // Special case: profile page — allow if hr_view_own AND viewing own profile
-    if(page==='profile' && perms['hr_view_own_view']===true){
-      // Find the employee linked to the current user (matched by name or username)
-      const ownEmp=hrEmployees.find(e=>e.name===currentUser.name||(e.username&&e.username===currentUser.username));
-      if(ownEmp&&String(ownEmp.id)===String(extra)){
-        // Allow — viewing own profile
-      } else if(permKey && perms[permKey+'_view']!==true && perms[permKey+'_edit']!==true){
-        toast('You can only view your own profile');
-        return;
-      }
-    } else if(page==='employees' && !perms['hr_view_all_view']){
-      // Has hr_view_own only — redirect to own profile
-      if(perms['hr_view_own_view']===true){
+    const hasViewOwn=perms['hr_view_own_view']===true||perms['hr_view_own']===true;
+    const hasViewAll=perms['hr_view_all_view']===true||perms['hr_view_all']===true;
+    if(page==='profile'){
+      // Allow if: has hr_view_all, OR has hr_view_own and viewing own profile
+      const ownEmp=hrEmployees.find(e=>e.name===currentUser.name);
+      if(hasViewAll){ /* allow */ }
+      else if(hasViewOwn && ownEmp && String(ownEmp.id)===String(extra)){ /* allow own */ }
+      else if(hasViewOwn && !extra){ /* allow - will redirect to own */ }
+      else { toast('You can only view your own profile'); return; }
+    } else if(page==='employees'){
+      if(hasViewAll){ /* allow */ }
+      else if(hasViewOwn){
         const ownEmp=hrEmployees.find(e=>e.name===currentUser.name);
-        if(ownEmp){ profileActiveTab='info'; hrNav('profile', ownEmp.id); } 
+        if(ownEmp){ profileActiveTab='info'; hrNav('profile', ownEmp.id); }
         else toast('⛔ No employee profile linked to your account');
         return;
-      }
-      toast('You don\'t have permission to access this');
-      return;
-    } else if(permKey && perms[permKey+'_view']!==true && perms[permKey+'_edit']!==true && page!=='employees' && page!=='profile'){
-      toast('You don\'t have permission to access this');
+      } else { toast("You don't have permission to access this"); return; }
+    } else if(permKey && perms[permKey+'_view']!==true && perms[permKey+'_edit']!==true && perms[permKey]!==true){
+      toast("You don't have permission to access this");
       return;
     }
   }

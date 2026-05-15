@@ -5434,6 +5434,14 @@ async function saveLeave(){
   const to=document.getElementById('lv_to')?.value;
   const notes=document.getElementById('lv_notes')?.value.trim();
   if(!empId||!from||!to)return toast('Fill all required fields');
+  // Re-verify: view-only users can only submit leave for themselves
+  const lvPerms=appRoles.find(r=>String(r.id)===String(currentUser?.roleId))?.perms||currentUser?.rolePerms||{};
+  const canPickAny=currentUser?.role==='admin'||lvPerms['hr_leave_edit']===true;
+  if(!canPickAny){
+    const ownEmp=hrEmployees.find(e=>e.name===currentUser?.name||String(e.userId||e.user_id)===String(currentUser?.id));
+    if(!ownEmp) return toast('No employee record linked to your account');
+    if(String(empId)!==String(ownEmp.id)) return toast('You can only submit leave for yourself');
+  }
   const days=Math.round((new Date(to)-new Date(from))/86400000)+1;
   if(days<=0)return toast('Invalid date range');
   const res=await api('POST','/hr/leave',{empId,leaveType:type,type,fromDate:from,from,toDate:to,to,days,reason:notes});
@@ -5672,7 +5680,21 @@ function openAddLeave(preEmpId){
   const typeOptions=hrLeaveTypes.map(lt=>`<option value="${lt.name}">${lt.name}</option>`).join('');
   document.getElementById('userModalTitle').textContent='New Leave Request';
   document.getElementById('userModalForm').innerHTML=`
-    <div class="field"><label class="field-label">Employee *</label><select id="lv_emp">${(()=>{const lvPerms=appRoles.find(r=>String(r.id)===String(currentUser?.roleId))?.perms||currentUser?.rolePerms||{};const isAdm=currentUser?.role==='admin';const canAll=isAdm||lvPerms['hr_leave_edit']===true;const ownEmp=hrEmployees.find(e=>e.name===currentUser?.name||String(e.userId||e.user_id)===String(currentUser?.id));const emps=canAll?hrEmployees.filter(e=>e.status!=='inactive'):(ownEmp?[ownEmp]:[]);return'<option value="">Select employee...</option>'+emps.map(e=>`<option value="${e.id}"${ownEmp&&String(e.id)===String(ownEmp?.id)?' selected':''}>${e.name}</option>`).join('');})()}</select></div>
+    <div class="field"><label class="field-label">Employee *</label><select id="lv_emp">${(()=>{
+      const lvPerms=appRoles.find(r=>String(r.id)===String(currentUser?.roleId))?.perms||currentUser?.rolePerms||{};
+      const isAdm=currentUser?.role==='admin';
+      const canPickAny=isAdm||lvPerms['hr_leave_edit']===true;
+      const ownEmp=hrEmployees.find(e=>e.name===currentUser?.name||String(e.userId||e.user_id)===String(currentUser?.id));
+      if(!canPickAny){
+        // View-only users: locked to own employee record
+        if(!ownEmp) return '<option value="">No employee record linked to your account</option>';
+        return `<option value="${ownEmp.id}" selected>${ownEmp.name}</option>`;
+      }
+      // Admin or hr_leave_edit: full picker, pre-select preEmpId or own record
+      const emps=hrEmployees.filter(e=>e.status!=='inactive');
+      const preSelectId=preEmpId||ownEmp?.id;
+      return '<option value="">Select employee...</option>'+emps.map(e=>`<option value="${e.id}"${preSelectId&&String(e.id)===String(preSelectId)?' selected':''}>${e.name}</option>`).join('');
+    })()}</select></div>
     <div class="field"><label class="field-label">Leave Type *</label><select id="lv_type">${typeOptions}</select></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="field"><label class="field-label">From Date *</label><input type="date" id="lv_from" oninput="calcLeaveDays()"></div>

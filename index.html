@@ -2226,6 +2226,7 @@ function applyPerms(){
   // pEdit(baseKey) = true only if user has edit right
   const pEdit=key=>perms[key+'_edit']===true;
   const showIf=(el,cond)=>{ if(el) el.style.display=cond?'':'none'; };
+  const show=(id,cond)=>{ const el=document.getElementById(id); if(el) el.style.display=cond?'':'none'; };
   const showAll=(sel,cond)=>document.querySelectorAll(sel).forEach(el=>el.style.display=cond?'':'none');
 
   // ── HR SIDEBAR nav items (by position) ───────────────

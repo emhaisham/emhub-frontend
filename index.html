@@ -3707,9 +3707,9 @@ function saveEmployee(){
     if(dup) return toast(`NID ${nidNo} already exists for ${dup.name}`);
   }
   // Linked user uniqueness
-  const linkedUserId = parseInt(document.getElementById('ef_user')?.value)||null;
+  const linkedUserId = document.getElementById('ef_user')?.value?.trim() || null;
   if(linkedUserId){
-    const dup=hrEmployees.find(e=>e.linkedUserId===linkedUserId&&String(e.id)!==String(editingEmpId));
+    const dup=hrEmployees.find(e=>String(e.linkedUserId)===String(linkedUserId)&&String(e.id)!==String(editingEmpId));
     if(dup) return toast(`This user is already linked to ${dup.name}`);
   }
   const payMethod = document.getElementById('ef_paymethod')?.value||'bank';

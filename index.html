@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://emhub-backend-production.up.railway.app https://fcm.googleapis.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -8288,16 +8289,21 @@ function _openQRScanner(callback){
   // Try to start camera immediately, load jsQR in parallel
   _startCamera();
   if(!window.jsQR){
-    // Try multiple CDN sources
+    // Try multiple CDN sources (SRI-pinned to jsQR 1.4.0 — a CDN compromise cannot inject other JS)
     const cdns=[
-      'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js',
-      'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'
+      {src:'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js',
+       integrity:'sha384-5MXQT3yrGpx6/FO6Z5JlMsn1xsN/OggV+b88W2CfpNqmvPfmv7JW/O8x78GzptfE'},
+      {src:'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
+       integrity:'sha384-9Q0jWoineiIq95JeIyBsNV90KKLfDsbkj29k/YFxf76a2JwkHDYkMuSbNGN6XJfV'}
     ];
     let tried=0;
     const tryNext=()=>{
       if(tried>=cdns.length) return; // will rely on manual/upload
+      const cdn=cdns[tried++];
       const s=document.createElement('script');
-      s.src=cdns[tried++];
+      s.src=cdn.src;
+      s.integrity=cdn.integrity;
+      s.crossOrigin='anonymous';
       s.onload=()=>{ console.log('jsQR loaded'); };
       s.onerror=tryNext;
       document.head.appendChild(s);

@@ -4134,36 +4134,47 @@ function renderPayroll(){
   const dept=document.getElementById('prDept')?.value||'';
   let prs=month?hrPayrolls.filter(p=>p.month===month):hrPayrolls;
   if(dept) prs=prs.filter(p=>{ const e=hrEmployees.find(x=>String(x.id)===String(p.empId)); return e&&e.dept===dept; });
+
+  // Determine permission level
+  const prRole=appRoles.find(r=>String(r.id)===String(currentUser?.roleId));
+  const prPerms=prRole?.perms||currentUser?.rolePerms||{};
+  const isAdmin=currentUser?.role==='admin';
+  const canEdit=isAdmin||prPerms['hr_payroll_edit']===true;
+  const canView=isAdmin||canEdit||prPerms['hr_payroll_view']===true;
+
   // Non-admin: only show own payslip
-  if(currentUser?.role!=='admin'){
-    const myEmp=hrEmployees.find(e=>e.name===currentUser?.name||e.userId===currentUser?.id);
+  if(!isAdmin){
+    const myEmp=hrEmployees.find(e=>e.name===currentUser?.name);
     if(myEmp) prs=prs.filter(p=>String(p.empId)===String(myEmp.id));
   }
+
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
   set('prStatGross',fmtMVR(prs.reduce((s,p)=>s+(parseFloat(p.basic)||0)+(parseFloat(p.allowances)||0),0)));
   set('prStatDed',fmtMVR(prs.reduce((s,p)=>s+(parseFloat(p.loan_deduction)||0)+(parseFloat(p.deductions)||0),0)));
   set('prStatNet',fmtMVR(prs.reduce((s,p)=>s+(parseFloat(p.net_pay)||0),0)));
 
-  // Show/hide Generate button based on whether ALL active staff already have payroll for this month
+  // Show/hide Generate & Export buttons based on edit permission
   const genBtn=document.getElementById('prGenerateBtn');
+  const expBtn=document.getElementById('prExportBtn');
   const genMsg=document.getElementById('prGenerateMsg');
-  if(genBtn&&genMsg){
+  if(genBtn) genBtn.style.display=canEdit?'':'none';
+  if(expBtn) expBtn.style.display=canEdit?'':'none';
+  if(genBtn&&genMsg&&canEdit){
     const active=hrEmployees.filter(e=>e.status==='active'||e.status==='probation');
     const allGenerated=month&&active.length>0&&active.every(e=>hrPayrolls.some(p=>p.month===month&&String(p.empId)===String(e.id)));
     if(allGenerated){
-      genBtn.disabled=true;
-      genBtn.style.opacity='0.4';
-      genBtn.style.cursor='not-allowed';
-      genMsg.style.display='inline';
-      genMsg.textContent=`Payroll already generated for ${monthLabel(month)}`;
+      genBtn.disabled=true; genBtn.style.opacity='0.4'; genBtn.style.cursor='not-allowed';
+      genMsg.style.display='inline'; genMsg.textContent=`Payroll already generated for ${monthLabel(month)}`;
     } else {
-      genBtn.disabled=false;
-      genBtn.style.opacity='';
-      genBtn.style.cursor='';
+      genBtn.disabled=false; genBtn.style.opacity=''; genBtn.style.cursor='';
       genMsg.style.display=month&&hrPayrolls.some(p=>p.month===month)?'inline':'none';
       if(month&&hrPayrolls.some(p=>p.month===month)) genMsg.textContent=`Partial payroll for ${monthLabel(month)} — click to generate missing`;
     }
   }
+
+  // Orphan records - only admins
+  const orphanSect=document.querySelector('.orphan-payroll-section');
+  if(orphanSect) orphanSect.style.display=isAdmin?'':'none';
 
   const el=document.getElementById('payrollList'); if(!el) return;
   if(!prs.length){ el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="empty-title">No payroll records</div><div class="empty-sub">Select a month and click Generate Payroll</div></div>'; return; }
@@ -4172,11 +4183,11 @@ function renderPayroll(){
   prs.forEach(pr=>{
     const emp=hrEmployees.find(e=>String(e.id)===String(pr.empId));
     if(emp) known.push({pr,emp});
-    else orphaned.push(pr);
+    else if(isAdmin) orphaned.push(pr);
   });
-  let html = known.map(({pr,emp})=>renderPayslipCard(pr,emp,true)).join('');
-  if(orphaned.length){
-    html += `<div style="margin-top:16px;padding:14px 16px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:10px">
+  let html = known.map(({pr,emp})=>renderPayslipCard(pr,emp,canEdit)).join('');
+  if(isAdmin&&orphaned.length){
+    html += `<div class="orphan-payroll-section" style="margin-top:16px;padding:14px 16px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:10px">
       <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:8px">⚠️ ${orphaned.length} payroll record${orphaned.length>1?'s':''} with no matching employee</div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:10px">These records belong to employees that have been deleted. You can safely remove them.</div>
       ${orphaned.map(pr=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--white);border-radius:7px;margin-bottom:6px;font-size:12px">
@@ -4210,7 +4221,7 @@ function renderPayslipCard(pr,emp,showBtn){
       ${isBank?`<div class="payslip-row"><span class="payslip-row-label" style="color:var(--accent)">Bank: ${emp.bankName||'—'} · ${emp.bankAcct||'—'}</span></div>`:`<div class="payslip-row"><span class="payslip-row-label" style="color:var(--amber)">Payment by Cash</span></div>`}
       <div style="padding:12px 18px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;align-items:center">
         <button class="btn btn-ghost btn-sm" onclick="printPayslip('${pr.id}')">Print/PDF</button>
-      ${_prCanEdit?`<button class="btn btn-ghost btn-sm" onclick="savePayslipJpeg('${pr.id}')">JPEG</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="savePayslipJpeg('${pr.id}')">JPEG</button>
         ${showBtn&&pr.status!=='paid'?`<button class="btn btn-green btn-sm" onclick="markPayslipPaid('${pr.id}')">✓ Mark Paid</button>`:''}
         ${pr.status==='paid'?`<span style="font-size:12px;color:var(--green);font-weight:600">✅ Paid ${pr.paidDate||''}</span>`:''}
         ${showBtn?`<button class="btn btn-red btn-sm" onclick="deletePayslip('${pr.id}')">Delete</button>`:''}

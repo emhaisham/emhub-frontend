@@ -1119,9 +1119,9 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               </div>
               <!-- Staff list -->
               <div class="toolbar">
-                <input type="text" id="hrSearch" placeholder="Search staff…" oninput="renderEmployees()">
-                <select id="hrFilterType" onchange="renderEmployees()"><option value="">All types</option><option value="local">Local</option><option value="expat">Expat</option></select>
-                <select id="hrFilterDept" onchange="renderEmployees()"><option value="">All departments</option></select>
+                <input type="text" id="hrSearch" placeholder="Search staff…" oninput="_pages.emp=1;renderEmployees()">
+                <select id="hrFilterType" onchange="_pages.emp=1;renderEmployees()"><option value="">All types</option><option value="local">Local</option><option value="expat">Expat</option></select>
+                <select id="hrFilterDept" onchange="_pages.emp=1;renderEmployees()"><option value="">All departments</option></select>
                 <input type="hidden" id="hrFilterStatus" value="active">
                 <span class="toolbar-count" id="hrCount"></span>
               </div>
@@ -1150,7 +1150,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="card" style="margin-bottom:16px">
                 <div class="card-body" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
                   <div class="field" style="max-width:180px"><label class="field-label">Payroll Month</label><input type="month" id="prMonth" oninput="renderPayroll()"></div>
-                  <div class="field" style="max-width:200px"><label class="field-label">Department</label><select id="prDept" onchange="renderPayroll()"><option value="">All Departments</option></select></div>
+                  <div class="field" style="max-width:200px"><label class="field-label">Department</label><select id="prDept" onchange="_pages.payroll=1;renderPayroll()"><option value="">All Departments</option></select></div>
                   <div style="margin-top:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                     <button class="btn btn-primary btn-sm" id="prGenerateBtn" onclick="guardAction('hr_payroll', runPayroll)">Generate Payroll</button>
                     <span id="prGenerateMsg" style="display:none;font-size:12px;color:var(--amber);font-weight:600"></span>
@@ -1173,8 +1173,8 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <div class="stat-card"><div class="stat-top"><span class="stat-label">Active Loans</span><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span></div><div class="stat-val amber" id="lnStatActive">0</div></div>
               </div>
               <div class="toolbar">
-                <select id="lnFilterEmp" onchange="renderLoans()"><option value="">All Staff</option></select>
-                <select id="lnFilterStatus" onchange="renderLoans()"><option value="">All Status</option><option value="active">Active</option><option value="completed">Completed</option></select>
+                <select id="lnFilterEmp" onchange="_pages.loans=1;renderLoans()"><option value="">All Staff</option></select>
+                <select id="lnFilterStatus" onchange="_pages.loans=1;renderLoans()"><option value="">All Status</option><option value="active">Active</option><option value="completed">Completed</option></select>
                 <span class="toolbar-count" id="lnCount"></span>
               </div>
               <div id="loansList"></div>
@@ -1224,9 +1224,9 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                   <div class="stat-card"><div class="stat-top"><span class="stat-label">Days Used (YTD)</span><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div><div class="stat-val" id="lvStatDays">0</div></div>
                 </div>
                 <div class="toolbar">
-                  <select id="lvFilterEmp" onchange="renderLeave()"><option value="">All Staff</option></select>
-                  <select id="lvFilterStatus" onchange="renderLeave()"><option value="">All Status</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
-                  <select id="lvFilterType" onchange="renderLeave()"><option value="">All Types</option></select>
+                  <select id="lvFilterEmp" onchange="_pages.leave=1;renderLeave()"><option value="">All Staff</option></select>
+                  <select id="lvFilterStatus" onchange="_pages.leave=1;renderLeave()"><option value="">All Status</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
+                  <select id="lvFilterType" onchange="_pages.leave=1;renderLeave()"><option value="">All Types</option></select>
                   <span class="toolbar-count" id="lvCount"></span>
                 </div>
                 <div id="leaveList"></div>
@@ -1570,12 +1570,12 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div id="invImportFeedback" style="display:none;margin-bottom:12px"></div>
               <div class="toolbar" style="margin-bottom:14px">
                 <div style="display:flex;gap:6px;align-items:center;flex:1;min-width:180px">
-                  <input type="text" id="invSearch" placeholder="Search by name, model, serial…" oninput="renderInventory()" style="flex:1">
+                  <input type="text" id="invSearch" placeholder="Search by name, model, serial…" oninput="_pages.inv=1;renderInventory()" style="flex:1">
                   <button class="btn btn-ghost btn-sm" onclick="_openQRScanner(_handleInvQRScan)" style="white-space:nowrap;flex-shrink:0">Scan QR</button>
                 </div>
-                <select id="invFilterCat" onchange="renderInventory()"><option value="">All Categories</option></select>
-                <select id="invFilterWh" onchange="renderInventory()"><option value="">All Locations</option></select>
-                <select id="invFilterStatus" onchange="renderInventory()">
+                <select id="invFilterCat" onchange="_pages.inv=1;renderInventory()"><option value="">All Categories</option></select>
+                <select id="invFilterWh" onchange="_pages.inv=1;renderInventory()"><option value="">All Locations</option></select>
+                <select id="invFilterStatus" onchange="_pages.inv=1;renderInventory()">
                   <option value="">All Status</option>
                   <option value="working">✅ Working units</option>
                   <option value="faulty">⚠️ Has Faulty</option>
@@ -1992,6 +1992,12 @@ function uid(){return Date.now()+Math.floor(Math.random()*9999)}
 const API_BASE = 'https://emhub-backend-production.up.railway.app/api';
 let _authToken = localStorage.getItem('em_auth_token') || null;
 
+// Register service worker early for asset caching (idempotent — initFirebase
+// will reuse this registration later when push notifications are wired up).
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(err => console.warn('SW register failed:', err));
+}
+
 async function api(method, path, body){
   try {
     const res = await fetch(API_BASE + path, {
@@ -2012,6 +2018,21 @@ async function api(method, path, body){
     console.error('API error:', err);
     return null;
   }
+}
+
+// ══ LIST PAGINATION ═══════════════════════════════════
+const PAGE_SIZE = 50;
+const _pages = {emp:1, payroll:1, leave:1, loans:1, inv:1};
+function _resetPage(key){ if(_pages[key]!==undefined) _pages[key]=1; }
+function _bumpPage(key, rerenderFn){ _pages[key]=(_pages[key]||1)+1; if(typeof window[rerenderFn]==='function') window[rerenderFn](); }
+function _paginate(list, key, rerenderFn){
+  const limit = PAGE_SIZE * (_pages[key]||1);
+  const shown = list.slice(0, limit);
+  const hidden = list.length - shown.length;
+  const footer = hidden>0
+    ? `<div style="text-align:center;padding:14px 0"><button class="btn btn-ghost btn-sm" onclick="_bumpPage('${key}','${rerenderFn}')">Show ${Math.min(hidden,PAGE_SIZE)} more (${hidden} hidden)</button></div>`
+    : '';
+  return {shown, footer};
 }
 
 // ══ DATA GLOBALS (loaded from API) ════════════════════
@@ -2108,21 +2129,31 @@ function _afterLogin(){
 
 async function _loadAllData(){
   const isAdmin = currentUser?.role === 'admin';
+  // Gate each fetch on what the user actually has permission to see.
+  // A view-only user with one perm now downloads ~10x less data on login.
+  const role = currentUser?.roleId ? appRoles.find(r=>String(r.id)===String(currentUser.roleId)) : null;
+  const perms = role?.perms || currentUser?.rolePerms || {};
+  const has = key => isAdmin || perms[key+'_view']===true || perms[key+'_edit']===true || perms[key]===true;
+  const anyHR  = isAdmin || has('hr_view_all')||has('hr_view_own')||has('hr_add_emp')||has('hr_edit_emp')||has('hr_payroll')||has('hr_leave')||has('hr_loans')||has('hr_pension')||has('hr_disc')||has('hr_assets')||has('hr_letters');
+  const anyInv = isAdmin || has('inv_list')||has('cat_page')||has('wh_page')||has('fc_page')||has('fault_page')||has('eel_page')||has('checkout_page')||has('checkin_page')||has('loan_dash')||has('loan_all');
+  const anyCal = isAdmin || has('events_view');
+  const anyCrew= isAdmin || has('crewpay_view')||has('crewpay_edit')||has('crewpay_export');
+  const needsUsers = isAdmin || has('hr_add_emp') || has('hr_edit_emp') || has('users_manage') || has('roles_manage');
   const [evts, emps, loans, payrolls, pensions, leave, inv, cats, subcats, wh, fc, usrs, lvTypes, crewEvts] = await Promise.all([
-    api('GET', '/events'),
-    api('GET', '/hr/employees'),
-    api('GET', '/hr/loans'),
-    api('GET', '/hr/payroll'),
-    isAdmin ? api('GET', '/hr/pension') : Promise.resolve([]),
-    api('GET', '/hr/leave'),
-    api('GET', '/inventory/items'),
-    api('GET', '/inventory/categories'),
-    api('GET', '/inventory/subcategories'),
-    api('GET', '/inventory/warehouses'),
-    api('GET', '/inventory/flightcases'),
-    isAdmin ? api('GET', '/users') : Promise.resolve([]),
-    api('GET', '/hr/leave-types'),
-    api('GET', '/crewpay/events'),
+    (anyCal||anyInv)             ? api('GET', '/events')                : Promise.resolve([]),
+    anyHR                        ? api('GET', '/hr/employees')          : Promise.resolve([]),
+    has('hr_loans')              ? api('GET', '/hr/loans')              : Promise.resolve([]),
+    has('hr_payroll')            ? api('GET', '/hr/payroll')            : Promise.resolve([]),
+    isAdmin || has('hr_pension') ? api('GET', '/hr/pension')            : Promise.resolve([]),
+    has('hr_leave')              ? api('GET', '/hr/leave')              : Promise.resolve([]),
+    anyInv                       ? api('GET', '/inventory/items')       : Promise.resolve([]),
+    anyInv                       ? api('GET', '/inventory/categories')  : Promise.resolve([]),
+    anyInv                       ? api('GET', '/inventory/subcategories'): Promise.resolve([]),
+    anyInv                       ? api('GET', '/inventory/warehouses')  : Promise.resolve([]),
+    anyInv                       ? api('GET', '/inventory/flightcases') : Promise.resolve([]),
+    needsUsers                   ? api('GET', '/users')                 : Promise.resolve([]),
+    has('hr_leave')              ? api('GET', '/hr/leave-types')        : Promise.resolve([]),
+    anyCrew                      ? api('GET', '/crewpay/events')        : Promise.resolve([]),
   ]);
   calEvents = (evts||[]).map(e=>({
     ...e,
@@ -3919,7 +3950,8 @@ function renderEmployees(){
     el.innerHTML=`<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="empty-title">${emptyMsg}</div><div class="empty-sub">${tab==='former'?'Resigned and terminated staff will appear here':'Click "Add Employee" to get started'}</div></div>`;
     return;
   }
-  el.innerHTML=list.map(emp=>{
+  const _p = _paginate(list, 'emp', 'renderEmployees');
+  el.innerHTML=_p.shown.map(emp=>{
     const photoHtml=emp.name[0].toUpperCase(); // photo loaded async below
     const statusBadge = formerStatuses.includes(emp.status)
       ? `<span class="tag" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);font-size:11px">${emp.status==='resigned'?'Resigned':emp.status==='terminated'?'Terminated':'Inactive'}</span>`
@@ -3940,7 +3972,7 @@ function renderEmployees(){
         <button class="btn btn-red btn-xs" onclick="deleteEmployee('${emp.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
       </div>
     </div>`;
-  }).join('');
+  }).join('')+_p.footer;
 }
 
 function deleteEmployee(id){
@@ -4207,7 +4239,8 @@ function renderPayroll(){
     if(emp) known.push({pr,emp});
     else if(isAdmin) orphaned.push(pr);
   });
-  let html = known.map(({pr,emp})=>renderPayslipCard(pr,emp,canEdit)).join('');
+  const _p = _paginate(known, 'payroll', 'renderPayroll');
+  let html = _p.shown.map(({pr,emp})=>renderPayslipCard(pr,emp,canEdit)).join('')+_p.footer;
   if(isAdmin&&orphaned.length){
     html += `<div class="orphan-payroll-section" style="margin-top:16px;padding:14px 16px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:10px">
       <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:8px">⚠️ ${orphaned.length} payroll record${orphaned.length>1?'s':''} with no matching employee</div>
@@ -4499,11 +4532,12 @@ function renderLoans(){
   const cnt=document.getElementById('lnCount');if(cnt)cnt.textContent=`${list.length} loan${list.length!==1?'s':''}`;
   const el=document.getElementById('loansList'); if(!el) return;
   if(!list.length){ el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v1a3 3 0 006 0V7m0 1a3 3 0 006 0V7m0 1a3 3 0 006 0V7L12 2 3 7z"/></svg></div><div class="empty-title">No loans found</div><div class="empty-sub">Click "+ New Loan" to record a staff loan</div></div>'; return; }
-  el.innerHTML=list.map(l=>{
+  const _p = _paginate(list, 'loans', 'renderLoans');
+  el.innerHTML=_p.shown.map(l=>{
     const emp=hrEmployees.find(e=>String(e.id)===String(l.empId));
     const empName=emp?emp.name:'Unknown Employee';
     return renderLoanCard(l,emp||{name:empName,id:l.empId});
-  }).join('');
+  }).join('')+_p.footer;
 }
 
 function renderLoanCard(loan,emp){
@@ -5515,7 +5549,8 @@ function renderLeave(){
   set('lvCount',`${list.length} record${list.length!==1?'s':''}`);
   const el=document.getElementById('leaveList');if(!el)return;
   if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div><div class="empty-title">No leave records</div><div class="empty-sub">Click "+ New Request" to submit a leave request</div></div>';return;}
-  el.innerHTML=list.map(lv=>{
+  const _p = _paginate(list, 'leave', 'renderLeave');
+  el.innerHTML=_p.shown.map(lv=>{
     const emp=hrEmployees.find(e=>String(e.id)===lvEmpId(lv))||{name:'Unknown'};
     const sc={pending:'badge-amber',approved:'badge-green',rejected:'badge-red'}[lv.status]||'badge-amber';
     const lt=hrLeaveTypes.find(t=>t.name===lvType(lv));
@@ -5542,7 +5577,7 @@ function renderLeave(){
         </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('')+_p.footer;
 }
 
 // Letters populate
@@ -6972,9 +7007,8 @@ function renderInventory(){
   });
   const el=document.getElementById('invList'); if(!el) return;
   if(!list.length){ el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div><div class="empty-title">No items found</div><div class="empty-sub">Click "Add Item" to create a parent item, then add individual units to it</div></div>'; return; }
-  // Android: limit to 50 items to prevent freeze
-  const isMobile=/Android|iPhone|iPad/i.test(navigator.userAgent);
-  if(isMobile && list.length > 50) list = list.slice(0, 50);
+  // Pagination (replaces former hard-coded 50-item mobile cap)
+  const _p = _paginate(list, 'inv', 'renderInventory');
   el.innerHTML=`
     <div class="inv-list-header">
       <div></div>
@@ -6985,7 +7019,7 @@ function renderInventory(){
       <div>Faulty</div>
       <div style="text-align:right">Actions</div>
     </div>
-    ${list.map(item=>invParentRowHtml(item)).join('')}`;
+    ${_p.shown.map(item=>invParentRowHtml(item)).join('')}${_p.footer}`;
 }
 
 function invParentRowHtml(item){

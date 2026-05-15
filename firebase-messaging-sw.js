@@ -1,5 +1,65 @@
 // firebase-messaging-sw.js
 // Place this file at the ROOT of your frontend repo (same level as index.html)
+//
+// This service worker handles two things:
+//   1. Firebase Cloud Messaging (background push notifications)
+//   2. Static-asset caching for faster repeat visits
+//
+// CACHE STRATEGY:
+//   - HTML pages: network-first (always try latest; fall back to cache offline)
+//   - Other same-origin GETs (icons, manifest): cache-first
+//   - API calls and third-party (Firebase, gstatic, googleapis): bypassed entirely
+//
+// Bump CACHE_VERSION to force all clients to drop the old cache on next activate.
+const CACHE_VERSION = 'emhub-v1';
+
+self.addEventListener('install', () => self.skipWaiting());
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k.startsWith('emhub-') && k !== CACHE_VERSION).map(k => caches.delete(k))
+    )).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  // Only handle same-origin requests — let the network handle API/CDN traffic directly
+  if (url.origin !== self.location.origin) return;
+  // Never cache API responses (they would go through if we let them, but be explicit)
+  if (url.pathname.startsWith('/api/')) return;
+
+  const isHTML = event.request.destination === 'document'
+              || url.pathname === '/'
+              || url.pathname.endsWith('.html');
+
+  if (isHTML) {
+    // Network-first: always try fresh, fall back to cache offline
+    event.respondWith(
+      fetch(event.request).then(res => {
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE_VERSION).then(c => c.put(event.request, copy));
+        }
+        return res;
+      }).catch(() => caches.match(event.request))
+    );
+  } else {
+    // Cache-first for static assets (icons, manifest, etc.)
+    event.respondWith(
+      caches.match(event.request).then(cached => cached || fetch(event.request).then(res => {
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE_VERSION).then(c => c.put(event.request, copy));
+        }
+        return res;
+      }))
+    );
+  }
+});
+
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 

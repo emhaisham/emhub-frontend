@@ -3478,14 +3478,7 @@ function renderEmpForm(empId){
       </div>
       <div style="flex:1">
         <div class="emp-form-grid">
-          <div class="field"><label class="field-label">Full Name *</label>
-      <select id="uf_name" style="width:100%" onchange="if(this.value==='__custom')document.getElementById('uf_name_custom_wrap').style.display='';else document.getElementById('uf_name_custom_wrap').style.display='none'">
-        <option value="">Select from HR staff...</option>
-        ${hrEmployees.map(e=>`<option value="${e.name}">${e.name}${e.title?' ('+e.title+')':''}</option>`).join('')}
-        <option value="__custom">+ Enter custom name...</option>
-      </select>
-    </div>
-    <div class="field" id="uf_name_custom_wrap" style="display:none"><label class="field-label">Custom Name</label><input type="text" id="uf_name_custom" placeholder="Enter name"></div>
+          <div class="field"><label class="field-label">Full Name *</label><input type="text" id="ef_name" value="${emp?.name||''}" placeholder="e.g. John Smith"></div>
           <div class="field"><label class="field-label">Employee ID</label><input type="text" id="ef_empid" value="${autoId}" placeholder="Auto-generated"></div>
           <div class="field"><label class="field-label">Department *</label><select id="ef_dept">${DEPTS.map(d=>`<option value="${d}" ${emp?.dept===d?'selected':''}>${d}</option>`).join('')}</select></div>
           <div class="field"><label class="field-label">Job Title</label><input type="text" id="ef_title" value="${emp?.title||''}" placeholder="e.g. Event Coordinator"></div>

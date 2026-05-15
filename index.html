@@ -3418,7 +3418,10 @@ function hrNav(page, extra){
   if(page==='add-employee')  { renderEmpForm(extra||null); }
   if(page==='disciplinary')  { renderDisciplinaryPage(); }
   if(page==='staff-assets')  { renderAllStaffAssets(); }
-  if(page==='payroll')       { populatePayrollDept(); renderPayroll(); }
+  if(page==='payroll'){
+    api('GET','/hr/payroll').then(r=>{ if(r) hrPayrolls=r; populatePayrollDept(); renderPayroll(); });
+    return;
+  }
   if(page==='loans')         { populateLoanFilter(); renderLoans(); }
   if(page==='pension')       { renderPension(); }
   if(page==='profile')       { renderProfile(extra); }

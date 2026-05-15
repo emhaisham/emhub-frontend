@@ -3013,9 +3013,11 @@ function renderUsers(){
   el.innerHTML=users.map(u=>{
     const perms=[];
     const uRole=appRoles.find(r=>String(r.id)===String(u.roleId));
+    const uRoleName=uRole?.name||'';
     const uPerms=uRole?.perms||{};
     const hasAny=(prefix)=>u.role==='admin'||Object.keys(uPerms).some(k=>k.startsWith(prefix)&&uPerms[k]===true);
     if(u.role==='admin')perms.push('<span class="perm-chip perm-admin">Admin</span>');
+    else if(uRoleName) perms.push(`<span class="perm-chip" style="background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd)">${uRoleName}</span>`);
     if(hasAny('crewpay')||hasAny('msging'))perms.push('<span class="perm-chip perm-crewpay">CrewPay</span>');
     if(hasAny('hr'))perms.push('<span class="perm-chip perm-hr">HR</span>');
     if(hasAny('cal')||hasAny('inv')||hasAny('eel')||hasAny('fault'))perms.push('<span class="perm-chip perm-calendar">Events/Equip</span>');
@@ -4201,7 +4203,7 @@ function renderPayslipCard(pr,emp,showBtn){
       ${isBank?`<div class="payslip-row"><span class="payslip-row-label" style="color:var(--accent)">Bank: ${emp.bankName||'—'} · ${emp.bankAcct||'—'}</span></div>`:`<div class="payslip-row"><span class="payslip-row-label" style="color:var(--amber)">Payment by Cash</span></div>`}
       <div style="padding:12px 18px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;align-items:center">
         <button class="btn btn-ghost btn-sm" onclick="printPayslip('${pr.id}')">Print/PDF</button>
-        <button class="btn btn-ghost btn-sm" onclick="savePayslipJpeg('${pr.id}')">JPEG</button>
+      ${window._canEditPayroll?`<button class="btn btn-ghost btn-sm" onclick="savePayslipJpeg('${pr.id}')">JPEG</button>`:''}
         ${showBtn&&pr.status!=='paid'?`<button class="btn btn-green btn-sm" onclick="markPayslipPaid('${pr.id}')">✓ Mark Paid</button>`:''}
         ${pr.status==='paid'?`<span style="font-size:12px;color:var(--green);font-weight:600">✅ Paid ${pr.paidDate||''}</span>`:''}
         ${showBtn?`<button class="btn btn-red btn-sm" onclick="deletePayslip('${pr.id}')">Delete</button>`:''}
@@ -6873,6 +6875,9 @@ function renderInventory(){
   });
   const el=document.getElementById('invList'); if(!el) return;
   if(!list.length){ el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div><div class="empty-title">No items found</div><div class="empty-sub">Click "Add Item" to create a parent item, then add individual units to it</div></div>'; return; }
+  // Android: limit to 50 items to prevent freeze
+  const isMobile=/Android|iPhone|iPad/i.test(navigator.userAgent);
+  if(isMobile && list.length > 50) list = list.slice(0, 50);
   el.innerHTML=`
     <div class="inv-list-header">
       <div></div>
@@ -9614,6 +9619,7 @@ const PERM_TREE = [
     { label:'Pension', key:'hr_pension', actions:['view','edit'] },
     { label:'Leave', key:'hr_leave', actions:['view','edit'] },
     { label:'Leave Approve / Reject', key:'hr_leave_approve', actions:['edit'] },
+    { label:'Leave Types (View/Edit)', key:'hr_leave_types', actions:['view','edit'] },
     { label:'Staff Letters', key:'hr_letters', actions:['view','edit'] },
   ]},
   { module:'Push Notification', key:'msging', pages:[

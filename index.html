@@ -5689,21 +5689,31 @@ function openAddLeave(preEmpId){
   const typeOptions=hrLeaveTypes.map(lt=>`<option value="${lt.name}">${lt.name}</option>`).join('');
   document.getElementById('userModalTitle').textContent='New Leave Request';
   document.getElementById('userModalForm').innerHTML=`
-    <div class="field"><label class="field-label">Employee *</label><select id="lv_emp">${(()=>{
+    ${(()=>{
       const lvPerms=appRoles.find(r=>String(r.id)===String(currentUser?.roleId))?.perms||currentUser?.rolePerms||{};
       const isAdm=currentUser?.role==='admin';
       const canPickAny=isAdm||lvPerms['hr_leave_edit']===true;
       const ownEmp=hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||'')||(!e.linkedUserId&&e.name===currentUser?.name));
+      console.log('[openAddLeave] canPickAny=', canPickAny, '| isAdmin=', isAdm, '| hr_leave_edit=', lvPerms['hr_leave_edit'], '| ownEmp=', ownEmp?.name||'(none)');
       if(!canPickAny){
-        // View-only users: locked to own employee record
-        if(!ownEmp) return '<option value="">No employee record linked to your account</option>';
-        return `<option value="${ownEmp.id}" selected>${ownEmp.name}</option>`;
+        // View-only users: locked to own employee record, dropdown disabled
+        if(!ownEmp){
+          return `<div class="field"><label class="field-label">Employee *</label>
+            <select id="lv_emp" disabled><option value="">No employee record linked to your account</option></select>
+            <div style="font-size:11px;color:var(--red);margin-top:4px">Ask an admin to link your user account to your employee profile in HR.</div></div>`;
+        }
+        return `<div class="field"><label class="field-label">Employee *</label>
+          <select id="lv_emp" disabled style="background:var(--surface);cursor:not-allowed"><option value="${ownEmp.id}" selected>${ownEmp.name}</option></select>
+          <input type="hidden" id="lv_emp_hidden" value="${ownEmp.id}">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">🔒 Locked to your profile (view-only permission)</div></div>`;
       }
-      // Admin or hr_leave_edit: full picker, pre-select preEmpId or own record
+      // Admin or hr_leave_edit: full picker
       const emps=hrEmployees.filter(e=>e.status!=='inactive');
       const preSelectId=preEmpId||ownEmp?.id;
-      return '<option value="">Select employee...</option>'+emps.map(e=>`<option value="${e.id}"${preSelectId&&String(e.id)===String(preSelectId)?' selected':''}>${e.name}</option>`).join('');
-    })()}</select></div>
+      return `<div class="field"><label class="field-label">Employee *</label>
+        <select id="lv_emp"><option value="">Select employee...</option>${emps.map(e=>`<option value="${e.id}"${preSelectId&&String(e.id)===String(preSelectId)?' selected':''}>${e.name}</option>`).join('')}</select>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">${isAdm?'Admin':'Manage on behalf'} — you can submit leave for any employee</div></div>`;
+    })()}
     <div class="field"><label class="field-label">Leave Type *</label><select id="lv_type">${typeOptions}</select></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="field"><label class="field-label">From Date *</label><input type="date" id="lv_from" oninput="calcLeaveDays()"></div>

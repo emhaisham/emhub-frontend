@@ -4163,10 +4163,11 @@ function renderPayroll(){
   const canEdit=isAdmin||prPerms['hr_payroll_edit']===true;
   const canView=isAdmin||canEdit||prPerms['hr_payroll_view']===true;
 
-  // Non-admin: only show own payslip
-  if(!isAdmin){
+  // View-only users see only their own payslips and own-only stats;
+  // admin and hr_payroll_edit see all
+  if(!isAdmin&&!canEdit){
     const myEmp=hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||'')||(!e.linkedUserId&&e.name===currentUser?.name));
-    if(myEmp) prs=prs.filter(p=>String(p.empId)===String(myEmp.id));
+    prs=myEmp?prs.filter(p=>String(p.empId)===String(myEmp.id)):[];
   }
 
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
@@ -4474,17 +4475,23 @@ async function saveLoan(){
 
 function renderLoans(){
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
-  set('lnStatTotal',fmtMVR(hrLoans.reduce((s,l)=>s+l.amount,0)));
-  set('lnStatOwed',fmtMVR(hrLoans.filter(l=>l.status==='active').reduce((s,l)=>s+l.remaining,0)));
-  set('lnStatActive',hrLoans.filter(l=>l.status==='active').length);
+  // Permission scope: admin or hr_loans_edit sees all; view-only sees own
+  const lnRole=appRoles.find(r=>String(r.id)===String(currentUser?.roleId));
+  const lnPerms=lnRole?.perms||currentUser?.rolePerms||{};
+  const isAdmin=currentUser?.role==='admin';
+  const canSeeAll=isAdmin||lnPerms['hr_loans_edit']===true;
+  let visibleLoans=hrLoans;
+  if(!canSeeAll){
+    const myEmp=hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||'')||(!e.linkedUserId&&e.name===currentUser?.name));
+    visibleLoans=myEmp?hrLoans.filter(l=>String(l.empId)===String(myEmp.id)):[];
+  }
+  // Stats reflect only the loans this user can see
+  set('lnStatTotal',fmtMVR(visibleLoans.reduce((s,l)=>s+l.amount,0)));
+  set('lnStatOwed',fmtMVR(visibleLoans.filter(l=>l.status==='active').reduce((s,l)=>s+l.remaining,0)));
+  set('lnStatActive',visibleLoans.filter(l=>l.status==='active').length);
   const fEmp=document.getElementById('lnFilterEmp')?.value||'';
   const fSt=document.getElementById('lnFilterStatus')?.value||'';
-  // Non-admin: only show own loans
-  let list=hrLoans.filter(l=>{
-    if(currentUser?.role!=='admin'){
-      const myEmp=hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||'')||(!e.linkedUserId&&e.name===currentUser?.name));
-      if(myEmp&&String(l.empId)!==String(myEmp.id)) return false;
-    }
+  let list=visibleLoans.filter(l=>{
     if(fEmp&&String(l.empId)!==String(fEmp))return false;
     if(fSt&&l.status!==fSt)return false;
     return true;

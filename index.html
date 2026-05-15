@@ -3517,7 +3517,7 @@ function renderEmpForm(empId){
             <option value="resignation" ${emp?.exitType==='resignation'?'selected':''}>Resignation</option>
             <option value="termination" ${emp?.exitType==='termination'?'selected':''}>Termination</option>
           </select></div>
-        <div class="field"><label class="field-label">Last Working Day</label><input type="date" id="ef_exitdate" value="${emp?.exitDate||''}"></div>
+        <div class="field"><label class="field-label">Last Working Day</label><input type="date" id="ef_exitdate" value="${(emp?.exitDate||'').toString().slice(0,10)}"></div>
         <div class="field emp-form-full"><label class="field-label">Reason / Notes</label><input type="text" id="ef_exitreason" value="${emp?.exitReason||''}" placeholder="e.g. Personal reasons / Contract breach"></div>
       </div>
     </div>
@@ -3525,7 +3525,7 @@ function renderEmpForm(empId){
     <div id="probationSection" style="display:${emp&&(emp.status==='probation'||emp.probationStart)?'block':'none'}">
       <div class="form-section" style="margin-top:8px">Probation Period</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
-        <div class="field"><label class="field-label">Probation Start Date</label><input type="date" id="ef_probstart" value="${emp?.probationStart||emp?.joined||''}"></div>
+        <div class="field"><label class="field-label">Probation Start Date</label><input type="date" id="ef_probstart" value="${(emp?.probationStart||emp?.joined||'').toString().slice(0,10)}"></div>
         <div class="field"><label class="field-label">Duration (months)</label><input type="number" id="ef_probmonths" value="${emp?.probationMonths||3}" min="1" max="12" placeholder="3"></div>
         <div class="field"><label class="field-label">Probation Basic Salary (<span class="sal-curr-label">${emp?.salaryCurrency||'MVR'}</span>)</label><input type="number" id="ef_probsalary" value="${emp?.probationSalary||''}" placeholder="Salary during probation"></div>
       </div>
@@ -3603,7 +3603,7 @@ function renderEmpForm(empId){
       <div class="emp-form-grid">
         <div class="field"><label class="field-label">National ID Number *</label><input type="text" id="ef_nid" value="${emp?.nidNo||''}" placeholder="A-number"></div>
         <div class="field"><label class="field-label">NID Expiry</label><input type="date" id="ef_nidexp" value="${emp?.nidExpiry||''}"></div>
-        <div class="field"><label class="field-label">Date of Birth</label><input type="date" id="ef_dob" value="${emp?.dob||''}"></div>
+        <div class="field"><label class="field-label">Date of Birth</label><input type="date" id="ef_dob" value="${(emp?.dob||'').toString().slice(0,10)}"></div>
       </div>
     </div>
 

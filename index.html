@@ -2331,7 +2331,7 @@ function switchModule(name){
           const role=appRoles.find(r=>String(r.id)===String(currentUser?.roleId));
           const perms=role?.perms||currentUser?.rolePerms||{};
           if(!perms['hr_view_all_view']&&!perms['hr_view_all_edit']&&!perms['hr_view_all']){
-            const ownEmp=hrEmployees.find(e=>e.name===currentUser?.name);
+            const ownEmp=hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||'')||(!e.linkedUserId&&e.name===currentUser?.name));
             if(ownEmp){ profileActiveTab='info'; setTimeout(()=>hrNav('profile', ownEmp.id),100); }
           }
         }
@@ -3391,7 +3391,7 @@ function hrNav(page, extra){
     const hasViewAll=perms['hr_view_all_view']===true||perms['hr_view_all']===true;
     if(page==='profile'){
       // Allow if: has hr_view_all, OR has hr_view_own and viewing own profile
-      const ownEmp=hrEmployees.find(e=>e.name===currentUser.name);
+      const ownEmp=hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||'')||(!e.linkedUserId&&e.name===currentUser?.name));
       if(hasViewAll){ /* allow */ }
       else if(hasViewOwn && ownEmp && String(ownEmp.id)===String(extra)){ /* allow own */ }
       else if(hasViewOwn && !extra){ /* allow - will redirect to own */ }
@@ -3399,7 +3399,7 @@ function hrNav(page, extra){
     } else if(page==='employees'){
       if(hasViewAll){ /* allow */ }
       else if(hasViewOwn){
-        const ownEmp=hrEmployees.find(e=>e.name===currentUser.name);
+        const ownEmp=hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||'')||(!e.linkedUserId&&e.name===currentUser?.name));
         if(ownEmp){ profileActiveTab='info'; hrNav('profile', ownEmp.id); }
         else toast('⛔ No employee profile linked to your account');
         return;
@@ -3794,7 +3794,8 @@ function saveEmployee(){
     extraDocs: Object.entries(empDocs)
       .filter(([k,v]) => k !== 'photo' && v?.key)
       .map(([k,v]) => ({type:k, name:v.name, key:v.key, mimeType:v.mimeType})),
-    assetRecords: emp.assetRecords||[]
+    assetRecords: emp.assetRecords||[],
+    linkedUserId: emp.linkedUserId||null
   };
   (async()=>{
     let res;
@@ -4155,7 +4156,7 @@ function renderPayroll(){
 
   // Non-admin: only show own payslip
   if(!isAdmin){
-    const myEmp=hrEmployees.find(e=>e.name===currentUser?.name);
+    const myEmp=hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||'')||(!e.linkedUserId&&e.name===currentUser?.name));
     if(myEmp) prs=prs.filter(p=>String(p.empId)===String(myEmp.id));
   }
 
@@ -4472,7 +4473,7 @@ function renderLoans(){
   // Non-admin: only show own loans
   let list=hrLoans.filter(l=>{
     if(currentUser?.role!=='admin'){
-      const myEmp=hrEmployees.find(e=>e.name===currentUser?.name||e.userId===currentUser?.id);
+      const myEmp=hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||'')||(!e.linkedUserId&&e.name===currentUser?.name));
       if(myEmp&&String(l.empId)!==String(myEmp.id)) return false;
     }
     if(fEmp&&String(l.empId)!==String(fEmp))return false;
@@ -5438,7 +5439,7 @@ async function saveLeave(){
   const lvPerms=appRoles.find(r=>String(r.id)===String(currentUser?.roleId))?.perms||currentUser?.rolePerms||{};
   const canPickAny=currentUser?.role==='admin'||lvPerms['hr_leave_edit']===true;
   if(!canPickAny){
-    const ownEmp=hrEmployees.find(e=>e.name===currentUser?.name||String(e.userId||e.user_id)===String(currentUser?.id));
+    const ownEmp=hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||'')||(!e.linkedUserId&&e.name===currentUser?.name));
     if(!ownEmp) return toast('No employee record linked to your account');
     if(String(empId)!==String(ownEmp.id)) return toast('You can only submit leave for yourself');
   }
@@ -5480,7 +5481,7 @@ function renderLeave(){
   // Non-admin: only show own leave
   let list=hrLeave.filter(l=>{
     if(currentUser?.role!=='admin'){
-      const myEmp=hrEmployees.find(e=>e.name===currentUser?.name||e.userId===currentUser?.id);
+      const myEmp=hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||'')||(!e.linkedUserId&&e.name===currentUser?.name));
       if(myEmp&&lvEmpId(l)!==String(myEmp.id)) return false;
     }
     if(fEmp&&lvEmpId(l)!==String(fEmp))return false;
@@ -5684,7 +5685,7 @@ function openAddLeave(preEmpId){
       const lvPerms=appRoles.find(r=>String(r.id)===String(currentUser?.roleId))?.perms||currentUser?.rolePerms||{};
       const isAdm=currentUser?.role==='admin';
       const canPickAny=isAdm||lvPerms['hr_leave_edit']===true;
-      const ownEmp=hrEmployees.find(e=>e.name===currentUser?.name||String(e.userId||e.user_id)===String(currentUser?.id));
+      const ownEmp=hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||'')||(!e.linkedUserId&&e.name===currentUser?.name));
       if(!canPickAny){
         // View-only users: locked to own employee record
         if(!ownEmp) return '<option value="">No employee record linked to your account</option>';

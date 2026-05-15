@@ -1139,7 +1139,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                     <button class="btn btn-primary btn-sm" id="prGenerateBtn" onclick="guardAction('hr_payroll', runPayroll)">Generate Payroll</button>
                     <span id="prGenerateMsg" style="display:none;font-size:12px;color:var(--amber);font-weight:600"></span>
                   </div>
-                  <button class="btn btn-ghost btn-sm" style="margin-top:20px" onclick="guardAction('crewpay_export',exportPayrollSheet)">Export Finance Sheet</button>
+                  <button class="btn btn-ghost btn-sm" id="prExportBtn" style="margin-top:20px" onclick="guardAction('hr_payroll',exportPayrollSheet)">Export Finance Sheet</button>
                 </div>
               </div>
               <div id="payrollList"></div>
@@ -3470,7 +3470,14 @@ function renderEmpForm(empId){
       </div>
       <div style="flex:1">
         <div class="emp-form-grid">
-          <div class="field"><label class="field-label">Full Name *</label><input type="text" id="ef_name" value="${emp?.name||''}" placeholder="Full legal name"></div>
+          <div class="field"><label class="field-label">Full Name *</label>
+      <select id="uf_name" style="width:100%" onchange="if(this.value==='__custom')document.getElementById('uf_name_custom_wrap').style.display='';else document.getElementById('uf_name_custom_wrap').style.display='none'">
+        <option value="">Select from HR staff...</option>
+        ${hrEmployees.map(e=>`<option value="${e.name}">${e.name}${e.title?' ('+e.title+')':''}</option>`).join('')}
+        <option value="__custom">+ Enter custom name...</option>
+      </select>
+    </div>
+    <div class="field" id="uf_name_custom_wrap" style="display:none"><label class="field-label">Custom Name</label><input type="text" id="uf_name_custom" placeholder="Enter name"></div>
           <div class="field"><label class="field-label">Employee ID</label><input type="text" id="ef_empid" value="${autoId}" placeholder="Auto-generated"></div>
           <div class="field"><label class="field-label">Department *</label><select id="ef_dept">${DEPTS.map(d=>`<option value="${d}" ${emp?.dept===d?'selected':''}>${d}</option>`).join('')}</select></div>
           <div class="field"><label class="field-label">Job Title</label><input type="text" id="ef_title" value="${emp?.title||''}" placeholder="e.g. Event Coordinator"></div>
@@ -5634,7 +5641,7 @@ function openAddLeave(preEmpId){
   const typeOptions=hrLeaveTypes.map(lt=>`<option value="${lt.name}">${lt.name}</option>`).join('');
   document.getElementById('userModalTitle').textContent='New Leave Request';
   document.getElementById('userModalForm').innerHTML=`
-    <div class="field"><label class="field-label">Employee *</label><select id="lv_emp">${empOptions}</select></div>
+    <div class="field"><label class="field-label">Employee *</label><select id="lv_emp">${(()=>{const lvPerms=appRoles.find(r=>String(r.id)===String(currentUser?.roleId))?.perms||currentUser?.rolePerms||{};const canAll=currentUser?.role==='admin'||lvPerms['hr_leave_edit']===true||lvPerms['hr_view_all_view']===true||lvPerms['hr_view_all']===true;const emps=canAll?hrEmployees:hrEmployees.filter(e=>e.name===currentUser?.name);return'<option value="">Select employee...</option>'+emps.map(e=>`<option value="${e.id}"${e.name===currentUser?.name?' selected':''}>${e.name}</option>`).join('');})()}</select></div>
     <div class="field"><label class="field-label">Leave Type *</label><select id="lv_type">${typeOptions}</select></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="field"><label class="field-label">From Date *</label><input type="date" id="lv_from" oninput="calcLeaveDays()"></div>
@@ -6717,7 +6724,7 @@ function renderWarehouses(){
     return;
   }
   el.innerHTML=invWarehouses.map(w=>{
-    const itemCount=invItems.filter(i=>String(i.warehouseId)===String(w.id)).length;
+    const itemCount=invItems.filter(i=>(i.units||[]).some(u=>String(u.warehouseId||u.warehouse_id)===String(w.id))).length;
     return`<div class="cat-row">
       <div>
         <div class="cat-name">${w.name}</div>
@@ -9644,7 +9651,7 @@ function renderRoles(){
   el.innerHTML=appRoles.map(role=>{
     const permCount=Object.values(role.perms||{}).filter(v=>v).length;
     const totalPerms=PERM_TREE.reduce((s,m)=>s+m.pages.reduce((ps,p)=>ps+p.actions.length,0),0);
-    const usersWithRole=users.filter(u=>String(u.roleId)===String(role.id)).length;
+    const usersWithRole=users.filter(u=>String(u.role_id||u.roleId)===String(role.id)).length;
     return`<div style="border:1px solid var(--border);border-radius:12px;margin-bottom:10px;background:var(--white);overflow:hidden">
       <div style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px">
         <div style="flex:1">

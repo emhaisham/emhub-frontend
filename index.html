@@ -1187,7 +1187,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between">
                 <div><div class="page-title">Leave Management</div><div class="page-sub">Manage leave types, requests and approvals</div></div>
                 <div style="display:flex;gap:8px">
-                  <button class="btn btn-ghost btn-sm" onclick="hrLeaveSubNav('types')">Leave Types</button>
+                  <button class="btn btn-ghost btn-sm leave-types-btn" onclick="hrLeaveSubNav('types')">Leave Types</button>
                   <button class="btn btn-primary btn-sm" onclick="guardAction('hr_leave', openAddLeave)">＋ New Request</button>
                 </div>
               </div>
@@ -2227,6 +2227,8 @@ function applyPerms(){
   showAll('#hr-page-staff-assets .page-hdr .btn-primary', pEdit('hr_assets'));
   // Hide leave approve/reject buttons if no approve permission
   showAll('.leave-approve-btn', pEdit('hr_leave_approve'));
+  show('lvTab-types', p('hr_leave_types'));
+  showAll('.leave-types-btn', p('hr_leave_types'));
 
   // ── EQUIPMENT SIDEBAR nav items (by position) ─────────
   const eqNavItems=document.querySelectorAll('#mod-loans .nav-wrap .nav-item');
@@ -5657,7 +5659,7 @@ function openAddLeave(preEmpId){
   const typeOptions=hrLeaveTypes.map(lt=>`<option value="${lt.name}">${lt.name}</option>`).join('');
   document.getElementById('userModalTitle').textContent='New Leave Request';
   document.getElementById('userModalForm').innerHTML=`
-    <div class="field"><label class="field-label">Employee *</label><select id="lv_emp">${(()=>{const lvPerms=appRoles.find(r=>String(r.id)===String(currentUser?.roleId))?.perms||currentUser?.rolePerms||{};const canAll=currentUser?.role==='admin'||lvPerms['hr_leave_edit']===true||lvPerms['hr_view_all_view']===true||lvPerms['hr_view_all']===true;const emps=canAll?hrEmployees:hrEmployees.filter(e=>e.name===currentUser?.name);return'<option value="">Select employee...</option>'+emps.map(e=>`<option value="${e.id}"${e.name===currentUser?.name?' selected':''}>${e.name}</option>`).join('');})()}</select></div>
+    <div class="field"><label class="field-label">Employee *</label><select id="lv_emp">${(()=>{const lvPerms=appRoles.find(r=>String(r.id)===String(currentUser?.roleId))?.perms||currentUser?.rolePerms||{};const isAdm=currentUser?.role==='admin';const canAll=isAdm||lvPerms['hr_leave_edit']===true;const ownEmp=hrEmployees.find(e=>e.name===currentUser?.name||String(e.userId||e.user_id)===String(currentUser?.id));const emps=canAll?hrEmployees.filter(e=>e.status!=='inactive'):(ownEmp?[ownEmp]:[]);return'<option value="">Select employee...</option>'+emps.map(e=>`<option value="${e.id}"${ownEmp&&String(e.id)===String(ownEmp?.id)?' selected':''}>${e.name}</option>`).join('');})()}</select></div>
     <div class="field"><label class="field-label">Leave Type *</label><select id="lv_type">${typeOptions}</select></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="field"><label class="field-label">From Date *</label><input type="date" id="lv_from" oninput="calcLeaveDays()"></div>
@@ -5950,6 +5952,12 @@ async function initFirebase(){
     // Request permission
     const permission = await Notification.requestPermission();
     console.log('Notification permission:', permission);
+    if (permission === 'denied') {
+      console.warn('Permission not granted');
+      // Show a gentle toast to guide the user
+      showInAppToast('Notifications Blocked', 'Enable notifications in your browser settings to receive push alerts.', 'reminder');
+      return;
+    }
     if (permission !== 'granted') { console.warn('Permission not granted'); return; }
 
     // Get FCM token with service worker

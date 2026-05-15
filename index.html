@@ -788,6 +788,21 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
     background-color: var(--white);
   }
 }
+
+/* ── UNITS LIST inside item-detail modal ─────────── */
+.units-grid-hdr,.units-grid-row{display:grid;grid-template-columns:90px 90px 110px 110px 110px 80px auto;gap:6px;align-items:center}
+.units-grid-hdr{padding:7px 14px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);border-bottom:2px solid var(--border);margin-bottom:6px}
+.units-grid-row{padding:9px 14px;border-radius:8px;margin-bottom:5px}
+.units-cell-label{display:none}
+.units-stats{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
+
+@media (max-width:700px){
+  .units-grid-hdr{display:none}
+  .units-grid-row{grid-template-columns:1fr;gap:6px;padding:12px 14px}
+  .units-grid-row>div:not(.units-actions-cell){display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;text-align:left!important}
+  .units-cell-label{display:inline-block;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
+  .units-actions-cell{justify-content:flex-end!important;border-top:1px dashed var(--border);padding-top:8px;margin-top:2px}
+}
 </style>
 </head>
 <body>
@@ -7016,8 +7031,11 @@ function openInvParent(parentId){
           <button class="btn btn-ghost btn-sm" onclick="closeUserModal()">Close</button>
         </div>
       </div>
-      <div id="unitsPanelHdr" style="font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">
-        ${units.length} Unit${units.length!==1?'s':''} &nbsp;·&nbsp; <span style="color:var(--green)">${units.filter(u=>!u.discarded&&u.status!=='faulty').length} Working</span> &nbsp;·&nbsp; <span style="color:var(--red)">${units.filter(u=>!u.discarded&&u.status==='faulty').length} Faulty</span> &nbsp;·&nbsp; <span style="color:var(--text3)">${units.filter(u=>u.discarded).length} Discarded</span>
+      <div id="unitsPanelHdr" class="units-stats">
+        <span>${units.length} Unit${units.length!==1?'s':''}</span>
+        <span style="color:var(--green)">${units.filter(u=>!u.discarded&&u.status!=='faulty').length} Working</span>
+        <span style="color:var(--red)">${units.filter(u=>!u.discarded&&u.status==='faulty').length} Faulty</span>
+        <span>${units.filter(u=>u.discarded).length} Discarded</span>
       </div>
       <div id="unitsList">${renderUnitsHtml(item)}</div>
     </div>`;
@@ -7044,7 +7062,7 @@ function renderUnitsHtml(item){
   if(!sorted.length) return '<div style="color:var(--text3);font-size:13px;padding:20px 0;text-align:center">No units yet. Click "＋ Add Unit" to add individual items.</div>';
 
   return`<div>
-    <div style="display:grid;grid-template-columns:90px 90px 110px 110px 110px 80px auto;gap:6px;padding:7px 14px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);border-bottom:2px solid var(--border);margin-bottom:6px;align-items:center">
+    <div class="units-grid-hdr">
       <div>EM Serial</div>
       <div>Item Serial</div>
       <div>Status</div>
@@ -7075,14 +7093,14 @@ function renderUnitsHtml(item){
           <button class="btn btn-ghost btn-xs" onclick="guardAction('inv_edit',()=>openEditUnit('${item.id}','${u.unitId||u.id}'))">✏️</button>
           <button class="btn btn-ghost btn-xs" onclick="showUnitQR('${item.id}','${u.unitId||u.id}')">QR</button>
           <button class="btn btn-red btn-xs" onclick="deleteUnit('${item.id}','${u.unitId||u.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`;
-      return`<div style="display:grid;grid-template-columns:90px 90px 110px 110px 110px 80px auto;gap:6px;padding:9px 14px;background:${u.discarded?'#f9fafb':u.status==='faulty'?'var(--red-bg)':'var(--white)'};border:1px solid ${u.discarded?'#e5e7eb':u.status==='faulty'?'var(--red-bd)':'var(--border)'};border-radius:8px;margin-bottom:5px;align-items:center;opacity:${u.discarded?'0.6':'1'}">
-        <div style="font-family:monospace;font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.serial}</div>
-        <div style="font-size:12px;color:var(--text2);font-family:monospace;overflow:hidden;text-overflow:ellipsis">${u.itemSerial||'—'}${(u.qty||1)>1?` <span style="background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700">×${u.qty}</span>`:''}</div>
-        <div>${statusBadge}</div>
-        <div style="min-width:0">${fcHtml}</div>
-        <div style="min-width:0">${whHtml}</div>
-        <div style="font-size:12px;color:var(--text3);white-space:nowrap">${u.importDate?fmtDate(u.importDate):'—'}</div>
-        <div style="display:flex;gap:4px;justify-content:flex-end;align-items:center;flex-shrink:0">${actionBtns}</div>
+      return`<div class="units-grid-row" style="background:${u.discarded?'#f9fafb':u.status==='faulty'?'var(--red-bg)':'var(--white)'};border:1px solid ${u.discarded?'#e5e7eb':u.status==='faulty'?'var(--red-bd)':'var(--border)'};opacity:${u.discarded?'0.6':'1'}">
+        <div style="font-family:monospace;font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span class="units-cell-label">EM Serial</span>${u.serial}</div>
+        <div style="font-size:12px;color:var(--text2);font-family:monospace;overflow:hidden;text-overflow:ellipsis"><span class="units-cell-label">Item Serial</span>${u.itemSerial||'—'}${(u.qty||1)>1?` <span style="background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700">×${u.qty}</span>`:''}</div>
+        <div><span class="units-cell-label">Status</span>${statusBadge}</div>
+        <div style="min-width:0"><span class="units-cell-label">Flight Case</span><span style="min-width:0">${fcHtml}</span></div>
+        <div style="min-width:0"><span class="units-cell-label">Location</span><span>${whHtml}</span></div>
+        <div style="font-size:12px;color:var(--text3);white-space:nowrap"><span class="units-cell-label">Imported</span>${u.importDate?fmtDate(u.importDate):'—'}</div>
+        <div class="units-actions-cell" style="display:flex;gap:4px;justify-content:flex-end;align-items:center;flex-shrink:0">${actionBtns}</div>
       </div>`;
     }).join('')}
   </div>`;

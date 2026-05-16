@@ -6234,6 +6234,68 @@ function auditDebouncedRender(){
   _auditDebounceTimer = setTimeout(()=>loadAudit(1), 300);
 }
 
+// Map a raw audit row to {verb, resource, color}.
+// Falls back gracefully for unknown actions so nothing is silently dropped.
+function _friendlyAudit(log){
+  const raw = log.action || '';
+  // Resource label map — keyed on the path segment (or pseudo-segment for
+  // semantic events like LEAVE_APPROVED).
+  const RESOURCE_LABEL = {
+    'hr/employees':'Employee', 'hr/loans':'Loan', 'hr/payroll':'Payslip',
+    'hr/leave':'Leave request', 'hr/leave-types':'Leave type',
+    'hr/pension':'Pension record',
+    'events':'Event', 'events/equip-lists':'Event equipment list',
+    'crewpay/events':'Labor Payment event',
+    'crewpay/local-crew':'Local Crew event',
+    'crewpay/equip-requests':'Equipment request',
+    'inventory/items':'Inventory item',
+    'inventory/categories':'Inventory category',
+    'inventory/subcategories':'Inventory subcategory',
+    'inventory/warehouses':'Warehouse',
+    'inventory/flightcases':'Flight case',
+    'inventory/units':'Inventory unit',
+    'users':'User account', 'users/roles':'Role',
+    'notifications':'Notification',
+    'auth':'Account',
+    'files':'File',
+  };
+  // Semantic action verbs (passed through auditLog() directly, not auto-captured)
+  const SEMANTIC = {
+    LOGIN_SUCCESS:    { verb:'Logged in',                color:'var(--green)' },
+    LOGIN_FAILED:     { verb:'Failed login attempt',     color:'var(--red)'   },
+    LOGOUT:           { verb:'Logged out',               color:'var(--text2)' },
+    PASSWORD_CHANGED: { verb:'Changed password',         color:'var(--amber)' },
+    LEAVE_APPROVED:   { verb:'Approved leave',           color:'var(--green)' },
+    LEAVE_REJECTED:   { verb:'Rejected leave',           color:'var(--red)'   },
+    CREATE_EMPLOYEE:  { verb:'Added employee',           color:'var(--green)' },
+    UPDATE_EMPLOYEE:  { verb:'Updated employee',         color:'var(--amber)' },
+    DELETE_EMPLOYEE:  { verb:'Deleted employee',         color:'var(--red)'   },
+    CREATE_EVENT:     { verb:'Added event',              color:'var(--green)' },
+    UPDATE_EVENT:     { verb:'Updated event',            color:'var(--amber)' },
+    DELETE_EVENT:     { verb:'Deleted event',            color:'var(--red)'   },
+    EVENT_COMPLETED:  { verb:'Marked event completed',   color:'var(--green)' },
+    EVENT_REOPENED:   { verb:'Reopened event',           color:'var(--amber)' },
+    UPDATE_EVENT_EQUIP_LISTS: { verb:'Updated event equipment list', color:'var(--amber)' },
+  };
+  if(SEMANTIC[raw]){
+    const s = SEMANTIC[raw];
+    // resource col already has 'auth' or 'events' from the DB
+    return { verb:s.verb, resource: RESOURCE_LABEL[log.resource]||log.resource||'—', color:s.color };
+  }
+  // Auto-captured HTTP actions: "POST /hr/employees" / "PATCH /events/<id>/equip-lists" etc.
+  const parts = raw.split(' ');
+  const method = parts[0] || '';
+  const path = (parts.slice(1).join(' ') || '').replace(/^\/+/, '');
+  // Strip id segments from the path to derive a clean resource key.
+  // /events/<uuid>/equip-lists → events/equip-lists
+  const cleanPath = path.split('/').filter(p => p && !/^[0-9a-f]{8}-/i.test(p) && !/^\d+$/.test(p)).join('/');
+  const verbMap = { POST:'Added', PUT:'Updated', PATCH:'Updated', DELETE:'Deleted' };
+  const verbWord = verbMap[method] || method;
+  const colorMap = { POST:'var(--green)', PUT:'var(--amber)', PATCH:'var(--amber)', DELETE:'var(--red)' };
+  const resourceLabel = RESOURCE_LABEL[cleanPath] || RESOURCE_LABEL[log.resource] || cleanPath || log.resource || '—';
+  return { verb: `${verbWord} ${resourceLabel.toLowerCase()}`, resource: resourceLabel, color: colorMap[method] || 'var(--text2)' };
+}
+
 function renderAudit(){
   const body = document.getElementById('auditBody');
   const cnt = document.getElementById('auditCount');
@@ -6246,24 +6308,15 @@ function renderAudit(){
     if(pager) pager.innerHTML = '';
     return;
   }
-  // Strip leading HTTP method (e.g. "POST /hr/employees" → "POST" + path), label friendly
   body.innerHTML = _auditState.logs.map(l => {
     const t = l.created_at ? new Date(l.created_at) : null;
     const when = t ? t.toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
-    const actionParts = (l.action || '').split(' ');
-    const verb = actionParts[0] || l.action || '—';
-    const path = actionParts.slice(1).join(' ');
-    const verbColor = verb.startsWith('DELETE') || verb==='DELETE' ? 'var(--red)'
-                    : verb.startsWith('LEAVE_APPROVED') ? 'var(--green)'
-                    : verb.startsWith('LEAVE_REJECTED') ? 'var(--red)'
-                    : verb==='POST' || verb.startsWith('CREATE') ? 'var(--green)'
-                    : verb==='PUT' || verb==='PATCH' || verb.startsWith('UPDATE') ? 'var(--amber)'
-                    : 'var(--text2)';
+    const f = _friendlyAudit(l);
     return `<tr>
       <td class="td-mono" style="white-space:nowrap;color:var(--text3)">${when}</td>
       <td><strong>${l.username||'anonymous'}</strong></td>
-      <td><span style="font-weight:700;color:${verbColor};font-family:'JetBrains Mono',monospace;font-size:11px">${verb}</span>${path?` <span style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:11px">${path}</span>`:''}</td>
-      <td>${l.resource||'—'}</td>
+      <td><span style="font-weight:600;color:${f.color}">${f.verb}</span></td>
+      <td>${f.resource}</td>
       <td class="td-mono" style="font-size:11px;color:var(--text3)">${l.resource_id||'—'}</td>
       <td class="td-mono" style="font-size:11px;color:var(--text3)">${l.ip_address||'—'}</td>
     </tr>`;

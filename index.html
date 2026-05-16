@@ -2902,10 +2902,7 @@ function printReport(){
   const content=document.getElementById('reportContent').innerHTML;
   const titleEl=document.querySelector('.report-event-title');
   const evName=titleEl?titleEl.textContent:'Event Report';
-  const frame=document.getElementById('printFrame');
-  const doc=frame.contentWindow.document;
-  doc.open();
-  doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${evName} — CrewPay Report</title><style>
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${evName} — CrewPay Report</title><style>
     body{font-family:'Inter',sans-serif;font-size:13px;color:#0f1923;padding:24px;line-height:1.5}
     *{box-sizing:border-box;margin:0;padding:0}
     .report-header{text-align:center;margin-bottom:22px;padding-bottom:16px;border-bottom:2px solid #e3e6ea}
@@ -2925,7 +2922,7 @@ function printReport(){
     .rg-label{font-size:13px;font-weight:600;color:#0a7c4e}
     .rg-val{font-size:20px;font-weight:700;color:#0a7c4e;font-family:monospace}
     .report-footer{margin-top:18px;padding-top:12px;border-top:1px solid #e3e6ea;font-size:10.5px;color:#9aa3af;text-align:center}
-  </style></head><body>${content}</body></html>`);
+  </style></head><body>${content}</body></html>`;
   _mobilePrint(html);
 }
 

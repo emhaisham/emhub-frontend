@@ -3053,16 +3053,25 @@ function renderEvents(keep){
 
 // ══ RENDER: PAYMENTS ═════════════════════════════════
 function renderPayments(){
-  // Combined totals from labor payment events + local crew events
-  let tot=0,paid=0,unpaidCnt=0;
-  events.forEach(ev=>{const a=calcEvent(ev);tot+=a;if(isEventPaid(ev.id))paid+=a;else unpaidCnt++});
+  // Combined totals — group by currency since Local Crew staff can be MVR or USD.
+  // Labor Payment events are always MVR.
+  const totMap={}, paidMap={}, owedMap={};
+  let unpaidCnt=0;
+  const addTo=(m,c,v)=>{m[c]=(m[c]||0)+v};
+  events.forEach(ev=>{
+    const a=calcEvent(ev); addTo(totMap,'MVR',a);
+    if(isEventPaid(ev.id)) addTo(paidMap,'MVR',a); else { addTo(owedMap,'MVR',a); unpaidCnt++; }
+  });
   (localCrewEvents||[]).forEach(ev=>{
-    const a=_lcEventTotal(ev); tot+=a;
-    paid+=_lcEventPaidAmount(ev);
+    (ev.staff||[]).forEach(s=>{
+      const c=s.currency||'MVR'; const p=_lcStaffPayout(s);
+      addTo(totMap,c,p);
+      if(s.paid) addTo(paidMap,c,p); else addTo(owedMap,c,p);
+    });
     if(!isLocalCrewEventPaid(ev)) unpaidCnt++;
   });
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
-  set('payTotal',fmt(tot));set('payPaid',fmt(paid));set('payOwed',fmt(tot-paid));set('payUnpaidCnt',unpaidCnt);
+  set('payTotal',fmtCurMap(totMap));set('payPaid',fmtCurMap(paidMap));set('payOwed',fmtCurMap(owedMap));set('payUnpaidCnt',unpaidCnt);
   const filter=document.getElementById('payFilter')?.value||'';
   let list=events;
   if(filter==='paid')list=events.filter(ev=>isEventPaid(ev.id));
@@ -3121,25 +3130,28 @@ function renderPayments(){
         const sPaid=!!s.paid;
         const payout=_lcStaffPayout(s);
         const days=_lcStaffDays(s);
+        const cur=s.currency||'MVR';
         return `<div class="pay-group-row">
-          <div><div class="pg-name">${s.empName||'(unknown)'}</div><div class="pg-detail">${days} day${days!==1?'s':''} · setup ${s.setupDays||0}×${fmtMVR(s.setupRate||0)} · event ${s.eventDays||0}×${fmtMVR(s.eventRate||0)}${(parseFloat(s.adjustment)||0)!==0?' · adj '+((parseFloat(s.adjustment)||0)>0?'+':'')+fmtMVR(parseFloat(s.adjustment)||0):''}</div></div>
+          <div><div class="pg-name">${s.empName||'(unknown)'} <span style="font-size:10px;background:var(--surface);color:var(--text3);border:1px solid var(--border);border-radius:6px;padding:1px 5px;margin-left:4px;font-weight:600">${cur}</span></div><div class="pg-detail">${days} day${days!==1?'s':''} · setup ${s.setupDays||0}×${fmtAmt(s.setupRate||0,cur)} · event ${s.eventDays||0}×${fmtAmt(s.eventRate||0,cur)}${(parseFloat(s.adjustment)||0)!==0?' · adj '+((parseFloat(s.adjustment)||0)>0?'+':'')+fmtAmt(parseFloat(s.adjustment)||0,cur):''}</div></div>
           <div class="pg-right">
-            <div class="pg-amount">${fmtMVR(payout)}</div>
+            <div class="pg-amount">${fmtAmt(payout,cur)}</div>
             <span class="badge ${sPaid?'badge-green':'badge-red'}" style="font-size:11px">${sPaid?'Paid':'Unpaid'}</span>
             <button class="btn ${sPaid?'btn-red':'btn-green'} btn-xs" onclick="toggleLocalCrewStaffPaid('${ev.id}',${i})">${sPaid?'Unmark':'Mark Paid'}</button>
           </div>
         </div>`;
       }).join('') || '<div style="padding:10px;color:var(--text3);font-size:13px">No staff entries</div>';
+      const totMap=_lcGroupByCurrency(ev.staff);
+      const paidMap=_lcGroupByCurrency(ev.staff,{paidOnly:true});
       return `<div class="pay-card ${isExp?'expanded':''}">
         <div class="pay-hdr" onclick="togglePayEv('lc:${ev.id}')">
           <div><div class="ev-name">${ev.name} <span style="font-size:10px;background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd);border-radius:8px;padding:1px 6px;margin-left:4px;font-weight:600">Local Crew</span></div><div class="ev-date">${ev.date?fmtDate(ev.date):'No date'}</div></div>
           <span class="badge ${evPaid?'badge-green':'badge-red'}">${evPaid?'All Paid':'Outstanding'}</span>
-          <div class="ev-total">${fmtMVR(totA)}</div>
+          <div class="ev-total" style="font-size:13px">${fmtCurMap(totMap)}</div>
           <span class="chevron">▼</span>
         </div>
         <div class="pay-body">${sRows}
-          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border);margin-top:4px">
-            <span style="font-size:13px;font-weight:600;color:var(--text2)">Total: ${fmtMVR(totA)} &nbsp;·&nbsp; Paid: ${fmtMVR(_lcEventPaidAmount(ev))}</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border);margin-top:4px;flex-wrap:wrap;gap:8px">
+            <span style="font-size:13px;font-weight:600;color:var(--text2)">Total: ${fmtCurMap(totMap)} &nbsp;·&nbsp; Paid: ${fmtCurMap(paidMap)}</span>
             <div style="display:flex;gap:8px">
               <button class="btn btn-red btn-sm" onclick="markLocalCrewAllPaid('${ev.id}',false)">Mark All Unpaid</button>
               <button class="btn btn-green btn-sm" onclick="markLocalCrewAllPaid('${ev.id}',true)">Mark All Paid</button>
@@ -6061,7 +6073,8 @@ function renderLocalCrewReport(){
   const rFrom=document.getElementById('rptFrom')?.value||'';
   const rTo=document.getElementById('rptTo')?.value||'9999';
   const rows=[];
-  let totDays=0, totSubtotal=0, totAdj=0, totPayout=0;
+  let totDays=0;
+  const adjMap={}, payoutMap={};
   localCrewEvents.forEach(ev=>{
     const d=normalizeDate(ev.date)||'';
     if(rFrom && d<rFrom) return;
@@ -6069,27 +6082,31 @@ function renderLocalCrewReport(){
     (ev.staff||[]).filter(s=>String(s.empId)===String(empId)).forEach(s=>{
       const sub=_lcStaffTotal(s); const adj=parseFloat(s.adjustment)||0;
       const payout=_lcStaffPayout(s); const days=_lcStaffDays(s);
-      rows.push({name:ev.name,date:d,s,sub,adj,payout,days});
-      totDays+=days; totSubtotal+=sub; totAdj+=adj; totPayout+=payout;
+      const cur=s.currency||'MVR';
+      rows.push({name:ev.name,date:d,s,sub,adj,payout,days,currency:cur});
+      totDays+=days;
+      adjMap[cur]=(adjMap[cur]||0)+adj;
+      payoutMap[cur]=(payoutMap[cur]||0)+payout;
     });
   });
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
   set('rptLcEv', rows.length);
   set('rptLcDays', totDays);
-  set('rptLcAdj', fmtMVR(totAdj));
-  set('rptLcPayout', fmtMVR(totPayout));
+  set('rptLcAdj', fmtCurMap(adjMap));
+  set('rptLcPayout', fmtCurMap(payoutMap));
   const body=document.getElementById('rptLcBody'); if(!body) return;
   body.innerHTML = rows.length ? rows.map(r=>{
     const sd=parseFloat(r.s.setupDays)||0, sr=parseFloat(r.s.setupRate)||0;
     const ed=parseFloat(r.s.eventDays)||0, er=parseFloat(r.s.eventRate)||0;
+    const cur=r.currency;
     return `<tr>
-      <td class="td-primary">${r.name}</td>
+      <td class="td-primary">${r.name} <span style="font-size:10px;background:var(--surface);color:var(--text3);border:1px solid var(--border);border-radius:6px;padding:1px 5px;margin-left:4px;font-weight:600">${cur}</span></td>
       <td class="td-mono">${fmtDate(r.date)}</td>
-      <td>${sd} × ${fmtMVR(sr)}</td>
-      <td>${ed} × ${fmtMVR(er)}</td>
-      <td class="td-mono">${fmtMVR(r.sub)}</td>
-      <td class="td-mono" style="color:${r.adj<0?'var(--red)':r.adj>0?'var(--green)':'var(--text3)'}">${r.adj>0?'+':''}${fmtMVR(r.adj)}</td>
-      <td class="td-green td-mono"><strong>${fmtMVR(r.payout)}</strong></td>
+      <td>${sd} × ${fmtAmt(sr,cur)}</td>
+      <td>${ed} × ${fmtAmt(er,cur)}</td>
+      <td class="td-mono">${fmtAmt(r.sub,cur)}</td>
+      <td class="td-mono" style="color:${r.adj<0?'var(--red)':r.adj>0?'var(--green)':'var(--text3)'}">${r.adj>0?'+':''}${fmtAmt(r.adj,cur)}</td>
+      <td class="td-green td-mono"><strong>${fmtAmt(r.payout,cur)}</strong></td>
     </tr>`;
   }).join('') : '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">No Local Crew payouts for this staff in the selected range</td></tr>';
 }
@@ -6151,7 +6168,7 @@ function renderLocalCrew(){
     return;
   }
   el.innerHTML=list.map(ev=>{
-    const total=_lcEventTotal(ev);
+    const totalMap=_lcGroupByCurrency(ev.staff);
     const staffCount=(ev.staff||[]).length;
     return `<div class="card" style="margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap">
@@ -6161,7 +6178,7 @@ function renderLocalCrew(){
         </div>
         <div style="text-align:right">
           <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Total Payout</div>
-          <div style="font-size:15px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace">${fmtMVR(total)}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace">${fmtCurMap(totalMap)}</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-xs" onclick="openLocalCrew('${ev.id}')">View / Edit</button>
@@ -6191,6 +6208,22 @@ function _lcStaffDays(s){
 function _lcEventTotal(ev){
   return (ev.staff||[]).reduce((t,s)=>t+_lcStaffPayout(s),0);
 }
+// Group totals by currency. Returns {MVR: 1000, USD: 200} etc.
+function _lcGroupByCurrency(staffArr, opts){
+  const out = {};
+  (staffArr||[]).forEach(s=>{
+    if(opts && opts.paidOnly && !s.paid) return;
+    const cur = s.currency || 'MVR';
+    out[cur] = (out[cur]||0) + _lcStaffPayout(s);
+  });
+  return out;
+}
+// Render a {MVR: 1000, USD: 200} map as "MVR 1,000.00 · USD 200.00"
+function fmtCurMap(map){
+  const entries = Object.entries(map).filter(([,v])=>v!==0);
+  if(!entries.length) return fmtAmt(0,'MVR');
+  return entries.map(([c,v])=>fmtAmt(v,c)).join(' · ');
+}
 
 function openLocalCrew(id){
   _lcEditing = id ? localCrewEvents.find(e=>String(e.id)===String(id)) : null;
@@ -6208,9 +6241,9 @@ function openLocalCrew(id){
       <button class="btn btn-ghost btn-sm" onclick="addLocalCrewStaff()">＋ Add Staff</button>
     </div>
     <div id="lcStaffRows"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-top:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-top:10px;gap:12px;flex-wrap:wrap">
       <div style="font-size:13px;font-weight:700;color:var(--text)">Event Total Payout</div>
-      <div id="lcEventTotal" style="font-size:16px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace">${fmtMVR(_lcEditing?_lcEventTotal(_lcEditing):0)}</div>
+      <div id="lcEventTotal" style="font-size:14px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace;text-align:right">${fmtCurMap(_lcEditing?_lcGroupByCurrency(_lcEditing.staff):{})}</div>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--border);margin-top:14px">
       <button class="btn btn-ghost btn-sm" onclick="closeUserModal()">Cancel</button>
@@ -6221,7 +6254,7 @@ function openLocalCrew(id){
 }
 
 function addLocalCrewStaff(){
-  _lcStaffRows.push({empId:'',empName:'',setupDays:0,setupRate:0,eventDays:0,eventRate:0,adjustment:0});
+  _lcStaffRows.push({empId:'',empName:'',currency:'MVR',setupDays:0,setupRate:0,eventDays:0,eventRate:0,adjustment:0});
   renderLocalCrewStaffRows();
 }
 
@@ -6240,14 +6273,15 @@ function onLocalCrewFieldChange(idx, field, val){
     s[field] = val;
   }
   // Update only the calculated cells inline for snappiness
+  const cur = s.currency || 'MVR';
   const row=document.getElementById('lc-row-'+idx);
   if(row){
     row.querySelector('.lc-total-days').textContent = _lcStaffDays(s);
-    row.querySelector('.lc-total').textContent = fmtMVR(_lcStaffTotal(s));
-    row.querySelector('.lc-payout').textContent = fmtMVR(_lcStaffPayout(s));
+    row.querySelector('.lc-total').textContent = fmtAmt(_lcStaffTotal(s), cur);
+    row.querySelector('.lc-payout').textContent = fmtAmt(_lcStaffPayout(s), cur);
   }
   const tot=document.getElementById('lcEventTotal');
-  if(tot) tot.textContent = fmtMVR(_lcStaffRows.reduce((t,x)=>t+_lcStaffPayout(x),0));
+  if(tot) tot.textContent = fmtCurMap(_lcGroupByCurrency(_lcStaffRows));
 }
 
 function renderLocalCrewStaffRows(){
@@ -6261,21 +6295,23 @@ function renderLocalCrewStaffRows(){
     const empOpts = ['<option value="">— Select staff —</option>']
       .concat(activeEmps.map(e=>`<option value="${e.id}"${String(e.id)===String(s.empId)?' selected':''}>${e.name}</option>`))
       .join('');
+    const cur = s.currency || 'MVR';
     return `<div id="lc-row-${i}" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:var(--white)">
-      <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:8px">
+      <div style="display:grid;grid-template-columns:2fr 100px 1fr;gap:8px;margin-bottom:8px">
         <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Staff Name *</label><select onchange="onLocalCrewFieldChange(${i},'empId',this.value)">${empOpts}</select></div>
+        <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Currency</label><select onchange="onLocalCrewFieldChange(${i},'currency',this.value)"><option value="MVR"${cur==='MVR'?' selected':''}>MVR</option><option value="USD"${cur==='USD'?' selected':''}>USD</option></select></div>
         <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Adjustment (+/-)</label><input type="number" step="0.01" value="${s.adjustment||0}" oninput="onLocalCrewFieldChange(${i},'adjustment',this.value)"></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px">
         <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Setup Days</label><input type="number" step="0.5" min="0" value="${s.setupDays||0}" oninput="onLocalCrewFieldChange(${i},'setupDays',this.value)"></div>
-        <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Setup Rate</label><input type="number" step="0.01" min="0" value="${s.setupRate||0}" oninput="onLocalCrewFieldChange(${i},'setupRate',this.value)"></div>
+        <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Setup Rate (${cur})</label><input type="number" step="0.01" min="0" value="${s.setupRate||0}" oninput="onLocalCrewFieldChange(${i},'setupRate',this.value)"></div>
         <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Event Days</label><input type="number" step="0.5" min="0" value="${s.eventDays||0}" oninput="onLocalCrewFieldChange(${i},'eventDays',this.value)"></div>
-        <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Event Rate</label><input type="number" step="0.01" min="0" value="${s.eventRate||0}" oninput="onLocalCrewFieldChange(${i},'eventRate',this.value)"></div>
+        <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Event Rate (${cur})</label><input type="number" step="0.01" min="0" value="${s.eventRate||0}" oninput="onLocalCrewFieldChange(${i},'eventRate',this.value)"></div>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:6px 4px;font-size:12px;color:var(--text2);background:var(--surface);border-radius:6px;padding:8px 12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:8px 12px;font-size:12px;color:var(--text2);background:var(--surface);border-radius:6px;flex-wrap:wrap">
         <div>Total Days: <strong class="lc-total-days" style="color:var(--text)">${_lcStaffDays(s)}</strong></div>
-        <div>Total: <strong class="lc-total" style="color:var(--text);font-family:'JetBrains Mono',monospace">${fmtMVR(_lcStaffTotal(s))}</strong></div>
-        <div>Payout: <strong class="lc-payout" style="color:var(--green);font-family:'JetBrains Mono',monospace">${fmtMVR(_lcStaffPayout(s))}</strong></div>
+        <div>Total: <strong class="lc-total" style="color:var(--text);font-family:'JetBrains Mono',monospace">${fmtAmt(_lcStaffTotal(s),cur)}</strong></div>
+        <div>Payout: <strong class="lc-payout" style="color:var(--green);font-family:'JetBrains Mono',monospace">${fmtAmt(_lcStaffPayout(s),cur)}</strong></div>
         <button class="btn btn-red btn-xs" onclick="removeLocalCrewStaff(${i})">Remove</button>
       </div>
     </div>`;
@@ -6289,9 +6325,12 @@ async function saveLocalCrew(){
   // Drop empty/incomplete rows
   const staff = _lcStaffRows.filter(s=>s.empId).map(s=>({
     empId:s.empId, empName:s.empName||'',
+    currency: s.currency==='USD' ? 'USD' : 'MVR',
     setupDays:parseFloat(s.setupDays)||0, setupRate:parseFloat(s.setupRate)||0,
     eventDays:parseFloat(s.eventDays)||0, eventRate:parseFloat(s.eventRate)||0,
-    adjustment:parseFloat(s.adjustment)||0
+    adjustment:parseFloat(s.adjustment)||0,
+    // preserve paid status if present
+    paid: !!s.paid, paidAt: s.paidAt||null
   }));
   const body = { name, date: date||null, staff };
   const res = _lcEditing
@@ -6351,22 +6390,30 @@ async function markLocalCrewAllPaid(eid, paid){
 function openLocalCrewReport(eid){
   const ev=localCrewEvents.find(e=>String(e.id)===String(eid));
   if(!ev) return;
-  const total=_lcEventTotal(ev);
-  const paid=_lcEventPaidAmount(ev);
+  const totalMap=_lcGroupByCurrency(ev.staff);
+  const paidMap=_lcGroupByCurrency(ev.staff,{paidOnly:true});
+  const owedMap={};
+  Object.keys(totalMap).forEach(c=>{ owedMap[c]=(totalMap[c]||0)-(paidMap[c]||0); });
   const totDays=(ev.staff||[]).reduce((s,x)=>s+_lcStaffDays(x),0);
-  const totAdj=(ev.staff||[]).reduce((s,x)=>s+(parseFloat(x.adjustment)||0),0);
+  const adjMap={};
+  (ev.staff||[]).forEach(x=>{
+    const c=x.currency||'MVR'; const a=parseFloat(x.adjustment)||0;
+    if(a) adjMap[c]=(adjMap[c]||0)+a;
+  });
   document.getElementById('reportModalTitle').textContent=ev.name+' — Local Crew Report';
   const rows=(ev.staff||[]).map(s=>{
     const sd=parseFloat(s.setupDays)||0, sr=parseFloat(s.setupRate)||0;
     const ed=parseFloat(s.eventDays)||0, er=parseFloat(s.eventRate)||0;
     const adj=parseFloat(s.adjustment)||0;
+    const cur=s.currency||'MVR';
     return `<tr>
       <td>${s.empName||'(unknown)'}</td>
-      <td>${sd} × ${fmtMVR(sr)}</td>
-      <td>${ed} × ${fmtMVR(er)}</td>
-      <td class="rt-money">${fmtMVR(_lcStaffTotal(s))}</td>
-      <td style="color:${adj<0?'#c0392b':adj>0?'#0a7c4e':'#9aa3af'}">${adj>0?'+':''}${fmtMVR(adj)}</td>
-      <td class="rt-money">${fmtMVR(_lcStaffPayout(s))}</td>
+      <td><span style="font-size:10px;background:#eef2f7;border:1px solid #cbd5e1;border-radius:6px;padding:1px 5px;font-weight:700">${cur}</span></td>
+      <td>${sd} × ${fmtAmt(sr,cur)}</td>
+      <td>${ed} × ${fmtAmt(er,cur)}</td>
+      <td class="rt-money">${fmtAmt(_lcStaffTotal(s),cur)}</td>
+      <td style="color:${adj<0?'#c0392b':adj>0?'#0a7c4e':'#9aa3af'}">${adj>0?'+':''}${fmtAmt(adj,cur)}</td>
+      <td class="rt-money">${fmtAmt(_lcStaffPayout(s),cur)}</td>
       <td>${s.paid?'<span style="color:#0a7c4e;font-weight:700">PAID</span>':'<span style="color:#c0392b;font-weight:700">UNPAID</span>'}</td>
     </tr>`;
   }).join('');
@@ -6379,16 +6426,16 @@ function openLocalCrewReport(eid){
     <div class="report-summary">
       <div class="rs-box"><div class="rs-val">${(ev.staff||[]).length}</div><div class="rs-lbl">Staff</div></div>
       <div class="rs-box"><div class="rs-val">${totDays}</div><div class="rs-lbl">Total Days</div></div>
-      <div class="rs-box"><div class="rs-val" style="color:${totAdj<0?'#c0392b':totAdj>0?'#0a7c4e':'#0f1923'}">${totAdj>0?'+':''}${fmtMVR(totAdj)}</div><div class="rs-lbl">Adjustments</div></div>
-      <div class="rs-box"><div class="rs-val" style="color:var(--green)">${fmtMVR(total)}</div><div class="rs-lbl">Total Payout</div></div>
+      <div class="rs-box"><div class="rs-val" style="font-size:13px">${Object.keys(adjMap).length?fmtCurMap(adjMap):'—'}</div><div class="rs-lbl">Adjustments</div></div>
+      <div class="rs-box"><div class="rs-val" style="color:var(--green);font-size:13px">${fmtCurMap(totalMap)}</div><div class="rs-lbl">Total Payout</div></div>
     </div>
     <div class="report-section-title">Staff Breakdown</div>
     <table class="report-table">
-      <thead><tr><th>Staff</th><th>Setup (d × rate)</th><th>Event (d × rate)</th><th>Subtotal</th><th>Adj</th><th>Payout</th><th>Status</th></tr></thead>
-      <tbody>${rows||'<tr><td colspan="7" style="text-align:center;color:#9aa3af">No staff entries</td></tr>'}</tbody>
+      <thead><tr><th>Staff</th><th>Cur</th><th>Setup (d × rate)</th><th>Event (d × rate)</th><th>Subtotal</th><th>Adj</th><th>Payout</th><th>Status</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="8" style="text-align:center;color:#9aa3af">No staff entries</td></tr>'}</tbody>
     </table>
-    <div class="report-grand"><div class="rg-label">Grand Total — ${ev.name}</div><div class="rg-val">${fmtMVR(total)}</div></div>
-    <div style="margin-top:8px;font-size:11px;color:#6b7280">Paid: ${fmtMVR(paid)} &nbsp;·&nbsp; Outstanding: ${fmtMVR(total-paid)}</div>
+    <div class="report-grand"><div class="rg-label">Grand Total — ${ev.name}</div><div class="rg-val" style="font-size:14px">${fmtCurMap(totalMap)}</div></div>
+    <div style="margin-top:8px;font-size:11px;color:#6b7280">Paid: ${fmtCurMap(paidMap)} &nbsp;·&nbsp; Outstanding: ${fmtCurMap(owedMap)}</div>
     <div class="report-footer">EM HUB · CrewPay Local Crew · ${new Date().toISOString().slice(0,10)} · For finance use only</div>`;
   document.getElementById('reportModal').classList.add('open');
 }
@@ -6414,6 +6461,7 @@ function _bonusVisibleRows(){
       out.push({
         eventId:ev.id, eventName:ev.name, date:normalizeDate(ev.date),
         empId:s.empId, empName:s.empName||(hrEmployees.find(e=>String(e.id)===String(s.empId))?.name)||'(unknown)',
+        currency:s.currency||'MVR',
         days:_lcStaffDays(s), payout:_lcStaffPayout(s),
         setupDays:s.setupDays||0, setupRate:s.setupRate||0,
         eventDays:s.eventDays||0, eventRate:s.eventRate||0,
@@ -6459,12 +6507,17 @@ function renderBonus(){
   if(fPaid==='paid')   rows=rows.filter(r=>r.paid);
   if(fPaid==='unpaid') rows=rows.filter(r=>!r.paid);
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
-  const totPayout=rows.reduce((s,r)=>s+r.payout,0);
-  const totPaid=rows.filter(r=>r.paid).reduce((s,r)=>s+r.payout,0);
+  // Group payouts by currency since each bonus row has its own
+  const paidMap={}, owedMap={};
+  rows.forEach(r=>{
+    const c=r.currency||'MVR';
+    if(r.paid) paidMap[c]=(paidMap[c]||0)+r.payout;
+    else       owedMap[c]=(owedMap[c]||0)+r.payout;
+  });
   set('bnStatEv', rows.length);
   set('bnStatDays', rows.reduce((s,r)=>s+r.days,0));
-  set('bnStatPaid', fmtMVR(totPaid));
-  set('bnStatOutstanding', fmtMVR(totPayout-totPaid));
+  set('bnStatPaid', fmtCurMap(paidMap));
+  set('bnStatOutstanding', fmtCurMap(owedMap));
   set('bnCount', `${rows.length} record${rows.length!==1?'s':''}`);
   const el=document.getElementById('bonusList'); if(!el) return;
   if(!rows.length){
@@ -6478,9 +6531,9 @@ function renderBonus(){
         <div style="font-size:12px;color:var(--text3);margin-top:2px">${r.date?fmtDate(r.date):'No date'} · ${r.empName} · ${r.days} day${r.days!==1?'s':''}</div>
       </div>
       <span class="badge ${r.paid?'badge-green':'badge-red'}" style="font-size:11px">${r.paid?'Paid':'Unpaid'}</span>
-      <div style="text-align:right;min-width:110px">
+      <div style="text-align:right;min-width:120px">
         <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Payout</div>
-        <div style="font-size:15px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace">${fmtMVR(r.payout)}</div>
+        <div style="font-size:15px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace">${fmtAmt(r.payout, r.currency||'MVR')}</div>
       </div>
     </div>
   </div>`).join('');

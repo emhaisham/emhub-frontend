@@ -827,7 +827,33 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
   #userModalForm > div[style*="grid-template-columns:2fr 1fr"] {
     grid-template-columns: 1fr !important;
   }
+
+  /* Labor Payment / CrewPay add-event "workday-row" labels — desktop hides
+     these because the row has a column header table above; mobile loses that
+     table so each input needs an inline label. !important required because
+     the global "display:none" below has the same specificity. */
+  .wday-mlabel {
+    display: block !important;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 3px;
+  }
+  /* Make the bare date / time inputs full-width and consistent height inside
+     their stacked containers */
+  .workday-row input[type="date"],
+  .workday-row input[type="time"] {
+    width: 100% !important;
+    min-width: 0;
+    box-sizing: border-box;
+  }
 }
+/* Default: hide mobile-only labels on desktop (the workday-row table has its
+   own column header). The @media (max-width:700px) block above re-shows them
+   with !important for narrow viewports. */
+.wday-mlabel { display: none; }
 
 /* ── UNITS LIST inside item-detail modal ─────────── */
 .units-grid-hdr,.units-grid-row{display:grid;grid-template-columns:90px 90px 110px 110px 110px 80px auto;gap:6px;align-items:center}
@@ -2679,19 +2705,31 @@ function renderDayRow(gid,d,di){
   const h=timeDiff(d.startDate,d.startTime,d.endDate,d.endTime);
   const rate=d.override&&d.customRate?parseFloat(d.customRate):rateFor(h||0);
   const amt=d.pax>0&&h>0?d.pax*rate:0;
+  // wday-mlabel shows only on mobile (CSS) — supplies the column header that
+  // the desktop table-style layout has but mobile loses.
   return`<div class="workday-row" id="drow_${d.id}">
-    <div><input type="number" min="1" placeholder="Pax" value="${d.pax}" oninput="onFGDay(${gid},${d.id},'pax',this.value)" style="width:100%"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-      <input type="date" value="${d.startDate}" oninput="onFGDay(${gid},${d.id},'startDate',this.value)" title="Date In">
-      <input type="time" value="${d.startTime}" oninput="onFGDay(${gid},${d.id},'startTime',this.value)" title="Time In">
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-      <input type="date" value="${d.endDate}" oninput="onFGDay(${gid},${d.id},'endDate',this.value)" title="Date Out">
-      <input type="time" value="${d.endTime}" oninput="onFGDay(${gid},${d.id},'endTime',this.value)" title="Time Out">
-    </div>
-    <div id="dhours_${d.id}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent)">${h&&h>0?fmtH(h):'—'}</div>
-    <div id="drate_${d.id}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--amber)">${h&&h>0?'MVR '+rate.toLocaleString():'—'}</div>
     <div>
+      <div class="wday-mlabel">Pax</div>
+      <input type="number" min="1" placeholder="Pax" value="${d.pax}" oninput="onFGDay(${gid},${d.id},'pax',this.value)" style="width:100%">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+      <div><div class="wday-mlabel">Date In</div><input type="date" value="${d.startDate}" oninput="onFGDay(${gid},${d.id},'startDate',this.value)" title="Date In" style="width:100%"></div>
+      <div><div class="wday-mlabel">Time In</div><input type="time" value="${d.startTime}" oninput="onFGDay(${gid},${d.id},'startTime',this.value)" title="Time In" style="width:100%"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+      <div><div class="wday-mlabel">Date Out</div><input type="date" value="${d.endDate}" oninput="onFGDay(${gid},${d.id},'endDate',this.value)" title="Date Out" style="width:100%"></div>
+      <div><div class="wday-mlabel">Time Out</div><input type="time" value="${d.endTime}" oninput="onFGDay(${gid},${d.id},'endTime',this.value)" title="Time Out" style="width:100%"></div>
+    </div>
+    <div>
+      <div class="wday-mlabel">Hours</div>
+      <div id="dhours_${d.id}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent)">${h&&h>0?fmtH(h):'—'}</div>
+    </div>
+    <div>
+      <div class="wday-mlabel">Rate</div>
+      <div id="drate_${d.id}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--amber)">${h&&h>0?'MVR '+rate.toLocaleString():'—'}</div>
+    </div>
+    <div>
+      <div class="wday-mlabel">Rate Mode</div>
       <div style="display:flex;align-items:center;gap:5px">
         <label class="toggle-switch"><input type="checkbox" ${d.override?'checked':''} onchange="toggleDayOverride(${gid},${d.id},this.checked)"><span class="toggle-slider"></span></label>
         <span id="ovlbl_${d.id}" style="font-size:11px;color:var(--text3)">${d.override?'Custom':'Auto'}</span>

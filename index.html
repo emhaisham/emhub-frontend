@@ -970,10 +970,6 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="nav-item" onclick="cpNav('payments')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>Payments <span class="nav-badge" id="unpaidBadge" style="display:none">0</span></div>
               <div class="nav-item" onclick="cpNav('reports')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>Reports</div>
             </div>
-            <div class="sidebar-footer">
-              <div class="sf-row"><div class="sf-label">Events</div><div class="sf-val blue" id="sbEvents">0</div></div>
-              <div class="sf-row"><div class="sf-label">Total Paid Out</div><div class="sf-val green" id="sbPay">MVR 0</div></div>
-            </div>
           </aside>
           <div class="main-area">
             <!-- Dashboard -->
@@ -1040,7 +1036,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
             <div class="page" id="cp-page-payments">
               <div class="page-hdr"><div class="page-title">Payments</div><div class="page-sub">Track payment status per event or group</div></div>
               <div class="stat-row stat-row-4">
-                <div class="stat-card"><div class="stat-top"><span class="stat-label">Total Value</span><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span></div><div class="stat-val green" id="payTotal">MVR 0</div></div>
+                <div class="stat-card"><div class="stat-top"><span class="stat-label">Total Value</span></div><div class="stat-val green" id="payTotal">MVR 0</div></div>
                 <div class="stat-card"><div class="stat-top"><span class="stat-label">Paid</span><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span></div><div class="stat-val green" id="payPaid">MVR 0</div></div>
                 <div class="stat-card"><div class="stat-top"><span class="stat-label">Outstanding</span><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span></div><div class="stat-val red" id="payOwed">MVR 0</div></div>
                 <div class="stat-card"><div class="stat-top"><span class="stat-label">Unpaid Events</span><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div><div class="stat-val amber" id="payUnpaidCnt">0</div></div>
@@ -2976,7 +2972,6 @@ function renderDashboard(){
   set('dTotal',(crewEvents||[]).length);set('dSub',`${paidEvs} paid · ${unpaidEvs} unpaid`);
   set('dPaid',paidEvs);set('dUnpaid',unpaidEvs);set('dOwed',fmt(owed));
   set('dTotVal',fmt(tot));set('dStaff',staff);
-  set('sbEvents',(crewEvents||[]).length);set('sbPay',fmt(tot));
   // Unpaid badge
   const b=document.getElementById('unpaidBadge');
   if(b){b.textContent=unpaidEvs;b.style.display=unpaidEvs>0?'':'none'}
@@ -3071,7 +3066,12 @@ function renderPayments(){
     if(!isLocalCrewEventPaid(ev)) unpaidCnt++;
   });
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
-  set('payTotal',fmtCurMap(totMap));set('payPaid',fmtCurMap(paidMap));set('payOwed',fmtCurMap(owedMap));set('payUnpaidCnt',unpaidCnt);
+  const setHtml=(id,h)=>{const e=document.getElementById(id);if(e)e.innerHTML=h};
+  // Big stat values: stack each currency on its own line so MVR/USD don't crowd the card
+  setHtml('payTotal',fmtCurMapStacked(totMap));
+  setHtml('payPaid',fmtCurMapStacked(paidMap));
+  setHtml('payOwed',fmtCurMapStacked(owedMap));
+  set('payUnpaidCnt',unpaidCnt);
   const filter=document.getElementById('payFilter')?.value||'';
   let list=events;
   if(filter==='paid')list=events.filter(ev=>isEventPaid(ev.id));
@@ -6223,6 +6223,12 @@ function fmtCurMap(map){
   const entries = Object.entries(map).filter(([,v])=>v!==0);
   if(!entries.length) return fmtAmt(0,'MVR');
   return entries.map(([c,v])=>fmtAmt(v,c)).join(' · ');
+}
+// Same data, but each currency on its own line — used for big stat-card values
+function fmtCurMapStacked(map){
+  const entries = Object.entries(map).filter(([,v])=>v!==0);
+  if(!entries.length) return fmtAmt(0,'MVR');
+  return entries.map(([c,v])=>fmtAmt(v,c)).join('<br>');
 }
 
 function openLocalCrew(id){

@@ -789,6 +789,46 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
   }
 }
 
+/* ── MOBILE FIXES ─────────────────────────────────────── */
+@media (max-width: 700px) {
+  /* HR profile tabs: horizontal scroll instead of cramming */
+  .profile-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    scrollbar-width: thin;
+  }
+  .profile-tabs::-webkit-scrollbar { height: 4px; }
+  .profile-tabs::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .profile-tab { flex: 0 0 auto !important; white-space: nowrap; min-width: max-content; }
+
+  /* CrewPay Reports: date inputs that were collapsing to tiny circles */
+  #cp-page-reports .field { max-width: none !important; min-width: 0; }
+  #cp-page-reports input[type="date"] { width: 100%; min-width: 130px; box-sizing: border-box; }
+
+  /* HR All Staff dashboard: keep labels on one consistent line so numbers align */
+  #hr-page-employees .stat-card .stat-label,
+  #hr-page-employees .stat-top .stat-label { white-space: normal; min-height: 28px; display: flex; align-items: center; }
+  /* Allow horizontal scroll on the stat row so 5+ cards stay readable */
+  #hr-page-employees .stat-row { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; gap: 8px; }
+  #hr-page-employees .stat-row .stat-card { flex: 0 0 130px; }
+
+  /* Local Crew add/edit modal: collapse multi-col grids to one column */
+  #lcStaffRows > div > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  /* The compact "summary" row at the bottom of each staff card */
+  #lcStaffRows > div > div[style*="justify-content:space-between"]:last-child {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 6px !important;
+  }
+  /* Local Crew event header grid (name + date) stacks too */
+  #userModalForm > div[style*="grid-template-columns:2fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* ── UNITS LIST inside item-detail modal ─────────── */
 .units-grid-hdr,.units-grid-row{display:grid;grid-template-columns:90px 90px 110px 110px 110px 80px auto;gap:6px;align-items:center}
 .units-grid-hdr{padding:7px 14px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);border-bottom:2px solid var(--border);margin-bottom:6px}
@@ -2869,7 +2909,7 @@ function saveReportJpeg(){
   }
   if(!window.html2canvas){
     const s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
     s.onload=doIt;document.head.appendChild(s);
   }else{doIt()}
 }
@@ -4239,7 +4279,7 @@ function renderProfile(empId){
       <button class="profile-tab ${profileActiveTab==='loans'?'active':''}" onclick="profileActiveTab='loans';renderProfile('${emp.id}')">Loans</button>
       <button class="profile-tab ${profileActiveTab==='disciplinary'?'active':''}" onclick="profileActiveTab='disciplinary';renderProfile('${emp.id}')">Disciplinary</button>
       <button class="profile-tab ${profileActiveTab==='assets'?'active':''}" onclick="profileActiveTab='assets';renderProfile('${emp.id}')">Assets</button>
-      <button class="profile-tab ${profileActiveTab==='payment'?'active':''}" onclick="profileActiveTab='payment';renderProfile('${emp.id}')">Pay & Emergency</button>
+      <button class="profile-tab ${profileActiveTab==='payment'?'active':''}" onclick="profileActiveTab='payment';renderProfile('${emp.id}')">Bank Details & Emergency Contact</button>
     </div>
     <div class="profile-panel ${profileActiveTab==='info'?'active':''}" id="ptab-info">
       <div class="info-grid">
@@ -4556,7 +4596,7 @@ function savePayslipJpeg(prId){
       toast('JPEG saved ✓');div.innerHTML='';
     });
   }
-  if(!window.html2canvas){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=doCapture;document.head.appendChild(s);}
+  if(!window.html2canvas){const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';s.onload=doCapture;document.head.appendChild(s);}
   else doCapture();
 }
 
@@ -4956,7 +4996,7 @@ function saveReportJpeg2(){
       const a=document.createElement('a');a.download='employment-letter.jpg';a.href=canvas.toDataURL('image/jpeg',.95);a.click();toast('Letter JPEG saved ✓');
     });
   }
-  if(!window.html2canvas){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=doIt;document.head.appendChild(s);}
+  if(!window.html2canvas){const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';s.onload=doIt;document.head.appendChild(s);}
   else doIt();
 }
 
@@ -7861,6 +7901,10 @@ function renderInventory(){
       <div style="text-align:right">Actions</div>
     </div>
     ${_p.shown.map(item=>invParentRowHtml(item)).join('')}${_p.footer}`;
+  // Resolve thumbnail signed URLs after rows are in the DOM.
+  // Without this, the <img data-key="..."> placeholders stay hidden and the
+  // list shows blank squares even when the item has a photo.
+  loadInvPhotos();
 }
 
 function invParentRowHtml(item){

@@ -74,17 +74,23 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Handle background messages
+// Handle background messages.
+// The backend now sends a DATA-ONLY payload (no `notification` field) so
+// FCM doesn't auto-display alongside this handler. Title and body live in
+// payload.data — fall back to payload.notification for older sent messages
+// still in flight.
 messaging.onBackgroundMessage(payload => {
-  const { title, body } = payload.notification || {};
-  const notifTitle = title || 'EM HUB';
+  const d = payload.data || {};
+  const n = payload.notification || {};
+  const notifTitle = d.title || n.title || 'EM HUB';
+  const notifBody  = d.body  || n.body  || '';
   const notifOptions = {
-    body: body || '',
+    body: notifBody,
     icon: '/icon-192.png',
     badge: '/icon-72.png',
-    data: payload.data || {},
+    data: d,
     vibrate: [200, 100, 200],
-    tag: payload.data?.notifId || 'emhub-notif',
+    tag: d.notifId || 'emhub-notif',
     renotify: true,
     actions: [{ action: 'open', title: 'Open EM HUB' }]
   };

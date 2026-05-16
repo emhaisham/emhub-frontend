@@ -4760,7 +4760,7 @@ function lumpSumLoan(id){
   document.getElementById('userModal').classList.add('open');
 }
 
-function confirmLumpSum(id){
+async function confirmLumpSum(id){
   const loan=hrLoans.find(l=>String(l.id)===String(id));if(!loan)return;
   const amount=parseFloat(document.getElementById('ls_amount')?.value);
   const notes=document.getElementById('ls_notes')?.value.trim();
@@ -4774,19 +4774,30 @@ function confirmLumpSum(id){
 
   if(loan.remaining<=0){
     // Fully settled — mark all schedule months as paid
-    loan.schedule.forEach(mo=>{
+    (loan.schedule||[]).forEach(mo=>{
       if(!loan.repayments) loan.repayments={};
       if(loan.repayments[mo]!=='paid') loan.repayments[mo]='paid';
     });
     loan.remaining=0;
     loan.status='completed';
     loan.lumpSumDate=payDate;
-    toast('Loan fully settled ✓');
-  } else {
-    toast(`${fmtMVR(amount)} recorded. ${fmtMVR(loan.remaining)} still outstanding.`);
   }
 
-  api('GET','/hr/loans').then(r=>{if(r)hrLoans=r;}); closeUserModal(); renderLoans(); updateHRSidebar();
+  // Persist to the backend BEFORE re-fetching — otherwise the GET below
+  // overwrites the local mutation with stale server data (the bug we're fixing).
+  const res = await api('PUT','/hr/loans/'+id,{
+    amount: loan.amount, monthlyAmount: loan.monthlyAmount||loan.monthly_amount,
+    remaining: loan.remaining,
+    schedule: loan.schedule||[], repayments: loan.repayments||{},
+    notes: loan.notes||null, status: loan.status||'active',
+    lumpPayments: loan.lumpPayments, lumpSumDate: loan.lumpSumDate||null
+  });
+  if(!res){ toast('Failed to save lump-sum payment'); return; }
+
+  const fresh = await api('GET','/hr/loans');
+  if(fresh) hrLoans = fresh;
+  closeUserModal(); renderLoans(); updateHRSidebar();
+  toast(loan.status==='completed' ? 'Loan fully settled ✓' : `${fmtMVR(amount)} recorded · ${fmtMVR(loan.remaining)} outstanding`);
 }
 
 function renderPension(){

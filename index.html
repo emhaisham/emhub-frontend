@@ -10144,7 +10144,11 @@ function _applyTemplateToList(tplId, ev){
     for(const u of candidates){
       if(remaining<=0) break;
       const unitQty = parseInt(u.qty)||1;
-      const take = Math.min(unitQty, remaining);
+      // Subtract any qty already committed to overlapping events
+      const reservation = _reservationOnSerial(u.serial, ev.id, ev.eventDateFrom, ev.eventDateTo);
+      const available = Math.max(0, unitQty - reservation.qty);
+      if(available <= 0) continue; // fully booked on overlapping event
+      const take = Math.min(available, remaining);
       const fc = invFlightCases.find(f => String(f.id)===String(u.fcId||u.flightCaseId));
       items.push({
         parentId: parent.id, parentName: parent.name,
@@ -10158,7 +10162,7 @@ function _applyTemplateToList(tplId, ev){
       usedSerials.add(u.serial);
       remaining -= take;
     }
-    if(remaining > 0) shortfalls.push(`${parent.name}: ${need-remaining} of ${need} available`);
+    if(remaining > 0) shortfalls.push(`${parent.name}: ${need-remaining} of ${need} available (rest reserved on overlapping events or unavailable)`);
   });
   const missingNote = shortfalls.length ? `Short on: ${shortfalls.join('; ')}` : '';
   return { items, missingNote };
@@ -10234,6 +10238,38 @@ function filterElItems(){
   }).join('');
 }
 
+// ── Equipment date-conflict helpers ─────────────────────────────────
+// True iff two [from,to] YYYY-MM-DD date ranges share at least one day.
+function _rangesOverlap(aFrom, aTo, bFrom, bTo){
+  if(!aFrom || !aTo || !bFrom || !bTo) return false;
+  return aFrom <= bTo && bFrom <= aTo;
+}
+
+// Sum of qtyUsed for a given EM serial across all events OTHER than excludeEvId
+// whose dates overlap [from,to]. Also returns the names of those events so we
+// can show the user which event(s) are competing for the unit.
+function _reservationOnSerial(emSerial, excludeEvId, from, to){
+  const conflicts = []; // {eventName, eventId, qty}
+  if(!emSerial || !from || !to) return { qty:0, conflicts };
+  let total = 0;
+  (calEvents||[]).forEach(ev => {
+    if(String(ev.id) === String(excludeEvId)) return;
+    if(!_rangesOverlap(ev.eventDateFrom, ev.eventDateTo, from, to)) return;
+    let evQty = 0;
+    (ev.equipLists||[]).forEach(l => (l.items||[]).forEach(it => {
+      if(it.emSerial === emSerial){
+        evQty += parseInt(it.qtyUsed) || 1;
+      }
+    }));
+    if(evQty > 0){
+      total += evQty;
+      conflicts.push({ eventName: ev.name, eventId: ev.id, qty: evQty,
+                        from: ev.eventDateFrom, to: ev.eventDateTo });
+    }
+  });
+  return { qty: total, conflicts };
+}
+
 function selectElParent(parentId){
   const item=invItems.find(x=>String(x.id)===String(parentId)); if(!item) return;
   const dd=document.getElementById('el_item_dd');
@@ -10246,6 +10282,8 @@ function selectElParent(parentId){
   if(!wrap||!list) return;
 
   const ev=calEvents.find(e=>String(e.id)===String(_addListEvId));
+  const evFrom = ev?.eventDateFrom;
+  const evTo   = ev?.eventDateTo;
   const existingSerials=new Set((ev?.equipLists||[]).flatMap(l=>(l.items||[]).map(i=>i.emSerial)));
 
   const availUnits=(item.units||[]).filter(u=>!u.discarded);
@@ -10259,22 +10297,36 @@ function selectElParent(parentId){
     const fc=invFlightCases.find(f=>String(f.id)===String(u.fcId||u.flightCaseId));
     const alreadyAdded=existingSerials.has(u.serial);
     const coEvent=u.checkout&&!u.checkout.checkedInAt?calEvents.find(e=>String(e.id)===String(u.checkout.eventId)):null;
-    const isBlocked=alreadyAdded||!!coEvent;
     const totalQty=parseInt(u.qty)||1;
     const isBulk=totalQty>1;
-    return`<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid ${coEvent?'var(--red-bd)':isBlocked?'var(--border)':'var(--border)'};border-radius:8px;cursor:${isBlocked?'not-allowed':'pointer'};background:${coEvent?'var(--red-bg)':alreadyAdded?'var(--surface)':'var(--white)'}">
+    // Cross-event reservation: how many of this serial are committed to other
+    // events whose dates overlap this one's? Bulk units can be partially shared.
+    const reservation = _reservationOnSerial(u.serial, _addListEvId, evFrom, evTo);
+    const reservedQty = reservation.qty;
+    const available = Math.max(0, totalQty - reservedQty);
+    const fullyReservedElsewhere = reservedQty >= totalQty;
+    const conflictNames = reservation.conflicts.map(c => `${c.eventName} (${c.from}→${c.to})${c.qty>1?` ×${c.qty}`:''}`).join(', ');
+    const isBlocked = alreadyAdded || !!coEvent || fullyReservedElsewhere;
+    const bg = coEvent ? 'var(--red-bg)'
+             : fullyReservedElsewhere ? 'var(--red-bg)'
+             : alreadyAdded ? 'var(--surface)' : 'var(--white)';
+    const border = coEvent ? 'var(--red-bd)' : fullyReservedElsewhere ? 'var(--red-bd)' : 'var(--border)';
+    const partialConflict = !fullyReservedElsewhere && reservedQty > 0;
+    return`<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid ${border};border-radius:8px;cursor:${isBlocked?'not-allowed':'pointer'};background:${bg}">
       <input type="checkbox" class="el-unit-chk" value="${u.serial}" data-parent="${item.id}" data-parent-name="${item.name.replace(/"/g,'&quot;')}" data-total-qty="${totalQty}"
         ${isBlocked?'disabled':''} style="accent-color:var(--accent)">
       <div style="flex:1;min-width:0">
-        <div style="font-family:monospace;font-size:12px;font-weight:700;color:${coEvent?'var(--red)':'var(--accent)'}">${u.serial}${isBulk?` <span style="background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd);border-radius:8px;padding:0 6px;font-size:10px;margin-left:4px">×${totalQty}</span>`:''}</div>
+        <div style="font-family:monospace;font-size:12px;font-weight:700;color:${coEvent||fullyReservedElsewhere?'var(--red)':'var(--accent)'}">${u.serial}${isBulk?` <span style="background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd);border-radius:8px;padding:0 6px;font-size:10px;margin-left:4px">×${totalQty}</span>`:''}</div>
         <div style="font-size:11px;color:var(--text3)">${u.itemSerial?'Item S/N: '+u.itemSerial+' · ':''} ${fc?''+fc.fcSerial+' — '+fc.name:'No flight case'}</div>
         ${coEvent?`<div style="font-size:11px;color:var(--red);font-weight:600">Checked out to: ${coEvent.name}</div>`:''}
-        ${alreadyAdded&&!coEvent?`<div style="font-size:11px;color:var(--text3)">Already in this event's list</div>`:''}
+        ${fullyReservedElsewhere?`<div style="font-size:11px;color:var(--red);font-weight:600">⚠️ Fully booked on overlapping event${reservation.conflicts.length>1?'s':''}: ${conflictNames}</div>`:''}
+        ${partialConflict?`<div style="font-size:11px;color:var(--amber);font-weight:600">⚠️ ${reservedQty} of ${totalQty} reserved on: ${conflictNames} — ${available} available</div>`:''}
+        ${alreadyAdded&&!coEvent&&!fullyReservedElsewhere?`<div style="font-size:11px;color:var(--text3)">Already in this event's list</div>`:''}
       </div>
       ${isBulk&&!isBlocked?`<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);white-space:nowrap" onclick="event.preventDefault();event.stopPropagation()">
         Take
-        <input type="number" class="el-unit-qty" data-serial="${u.serial}" min="1" max="${totalQty}" value="${totalQty}" style="width:60px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:13px;text-align:center" onclick="event.stopPropagation()">
-        of ${totalQty}
+        <input type="number" class="el-unit-qty" data-serial="${u.serial}" min="1" max="${available}" value="${available}" style="width:60px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:13px;text-align:center" onclick="event.stopPropagation()">
+        of ${available}${available<totalQty?` (cap ${totalQty})`:''}
       </div>`:''}
     </label>`;
   }).join('');
@@ -10287,6 +10339,7 @@ async function saveItemsToList(){
   const ev=calEvents.find(e=>String(e.id)===String(_addListEvId||_elEventId)); if(!ev){toast('Event not found');return;}
   const list=ev.equipLists[_addListIdx]; if(!list){toast('List not found');return;}
 
+  const conflictBlockedNames = [];
   checked.forEach(chk=>{
     const emSerial=chk.value;
     const parentId=chk.dataset.parent;
@@ -10296,11 +10349,20 @@ async function saveItemsToList(){
     const unit=(item?.units||[]).find(u=>u.serial===emSerial);
     if(!unit) return;
     const fc=invFlightCases.find(f=>String(f.id)===String(unit.fcId||unit.flightCaseId));
-    // Per-row qty input (bulk units only) — falls back to total qty
-    let qtyUsed=totalQty;
+    // Re-check conflict at save time (defensive — user may have lingered in modal)
+    const reservation = _reservationOnSerial(emSerial, ev.id, ev.eventDateFrom, ev.eventDateTo);
+    const available = Math.max(0, totalQty - reservation.qty);
+    if(available <= 0){
+      conflictBlockedNames.push(`${parentName} (${emSerial})`);
+      return;
+    }
+    // Per-row qty input (bulk units only) — clamp to available
+    let qtyUsed = totalQty;
     if(totalQty>1){
       const qtyInput=document.querySelector(`.el-unit-qty[data-serial="${emSerial}"]`);
-      qtyUsed=Math.min(Math.max(1, parseInt(qtyInput?.value)||totalQty), totalQty);
+      qtyUsed=Math.min(Math.max(1, parseInt(qtyInput?.value)||available), available);
+    } else {
+      qtyUsed = 1;
     }
     // Avoid duplicates
     if(!list.items.find(i=>i.emSerial===emSerial)){
@@ -10314,6 +10376,9 @@ async function saveItemsToList(){
       });
     }
   });
+  if(conflictBlockedNames.length){
+    toast(`Skipped (reserved on overlapping event): ${conflictBlockedNames.join(', ')}`);
+  }
 
   const res=await api('PATCH','/events/'+ev.id+'/equip-lists',{equipLists:ev.equipLists});
   if(!res){toast('Failed to save');return;}
@@ -10332,24 +10397,33 @@ async function updateEquipListItemQty(inputEl){
   const evId = inputEl.dataset.evid;
   const li = parseInt(inputEl.dataset.li);
   const ii = parseInt(inputEl.dataset.ii);
-  const max = parseInt(inputEl.dataset.max)||1;
+  const totalCap = parseInt(inputEl.dataset.max)||1;
   let qty = parseInt(inputEl.value)||1;
   if(qty < 1) qty = 1;
-  if(qty > max) qty = max;
-  inputEl.value = qty; // clamp visually
-  const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
+  const ev = calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
   const list=ev.equipLists?.[li]; if(!list || !list.items?.[ii]) return;
-  const prev = list.items[ii].qtyUsed;
-  list.items[ii].qtyUsed = qty;
-  list.items[ii].totalQty = max; // refresh snapshot
+  const item = list.items[ii];
+  // Cross-event conflict: limit qty to (totalCap − reservedOnOverlappingOtherEvents)
+  const reservation = _reservationOnSerial(item.emSerial, evId, ev.eventDateFrom, ev.eventDateTo);
+  const maxAllowed = Math.max(0, totalCap - reservation.qty);
+  if(qty > maxAllowed){
+    const names = reservation.conflicts.map(c=>c.eventName).join(', ');
+    toast(`Only ${maxAllowed} available — ${reservation.qty} are reserved on overlapping event${reservation.conflicts.length>1?'s':''}: ${names}`);
+    qty = maxAllowed;
+  }
+  if(qty > totalCap) qty = totalCap;
+  if(qty < 1) qty = 1;
+  inputEl.value = qty;
+  const prev = item.qtyUsed;
+  item.qtyUsed = qty;
+  item.totalQty = totalCap;
   const res = await api('PATCH','/events/'+evId+'/equip-lists',{equipLists: ev.equipLists});
-  if(!res){ list.items[ii].qtyUsed = prev; renderEventLists(); return toast('Failed to update quantity'); }
-  // Refresh from server
+  if(!res){ item.qtyUsed = prev; renderEventLists(); return toast('Failed to update quantity'); }
+  // Refresh from server so the rest of the app picks up the change
   const rawEvts = await api('GET','/events') || [];
   calEvents = rawEvts.map(e => ({...e, eventDateFrom:normalizeDate(e.eventDateFrom), eventDateTo:normalizeDate(e.eventDateTo)}));
   events = calEvents;
   toast('Quantity updated ✓');
-  // No re-render needed — the input now shows the saved value
 }
 
 async function removeItemFromList(evId,li,ii){

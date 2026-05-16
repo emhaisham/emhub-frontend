@@ -842,6 +842,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
         <button class="hub-tab" onclick="switchModule('hr')" id="tab-hr"><span class="tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span> HR</button>
         <button class="hub-tab" onclick="switchModule('msging')" id="tab-msging"><span class="tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span> Push Notification <span class="tab-badge" id="msgBadge" style="display:none"></span></button>
         <button class="hub-tab" onclick="switchModule('users')" id="tab-users"><span class="tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></span> Users</button>
+        <button class="hub-tab" onclick="switchModule('audit')" id="tab-audit"><span class="tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span> Audit Trail</button>
       </div>
       <div class="hub-right">
         <div class="hub-user" id="hubUserInfo">
@@ -1466,6 +1467,51 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
         </div>
       </div>
 
+
+      <!-- ── AUDIT TRAIL MODULE (admin only) ───────────── -->
+      <div class="module" id="mod-audit">
+        <div class="app-shell">
+          <aside class="sidebar">
+            <div class="sidebar-brand">
+              <div class="sidebar-brand-name"><span class="sidebar-brand-dot" style="background:#0ea5e9"></span>Audit Trail</div>
+              <div class="sidebar-brand-sub">Activity Log</div>
+            </div>
+            <div class="nav-wrap">
+              <div class="nav-item active"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>All Activity</div>
+            </div>
+          </aside>
+          <div class="main-area">
+            <div class="content">
+              <div class="page active" id="audit-page-list">
+                <div class="page-hdr"><div class="page-title">Audit Trail</div><div class="page-sub">Every add, edit, delete, approve, and mark-paid across the app</div></div>
+                <div class="toolbar">
+                  <input type="text" id="auditFilterUser" placeholder="Filter by username…" oninput="auditDebouncedRender()">
+                  <select id="auditFilterAction" onchange="renderAudit()">
+                    <option value="">All actions</option>
+                    <option value="CREATE">Creates</option>
+                    <option value="UPDATE">Updates / Edits</option>
+                    <option value="DELETE">Deletes</option>
+                    <option value="LEAVE_APPROVED">Leave approved</option>
+                    <option value="LEAVE_REJECTED">Leave rejected</option>
+                    <option value="POST">All POST</option>
+                    <option value="PUT">All PUT</option>
+                    <option value="PATCH">All PATCH</option>
+                  </select>
+                  <button class="btn btn-ghost btn-sm" onclick="loadAudit(1)">↻ Refresh</button>
+                  <span class="toolbar-count" id="auditCount"></span>
+                </div>
+                <div style="overflow-x:auto">
+                  <table class="data-table">
+                    <thead><tr><th>When</th><th>User</th><th>Action</th><th>Resource</th><th>Resource ID</th><th>IP</th></tr></thead>
+                    <tbody id="auditBody"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3)">Loading…</td></tr></tbody>
+                  </table>
+                </div>
+                <div style="display:flex;justify-content:center;gap:8px;align-items:center;padding:16px 0" id="auditPager"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- ── MSGING MODULE ─────────────────────────── -->
       <div class="module" id="mod-msging">
@@ -2307,6 +2353,7 @@ function applyPermissions(){
   show('tab-hr',       p('hr_view_all')||p('hr_view_own')||p('hr_add_emp')||p('hr_payroll')||p('hr_leave')||p('hr_disc')||p('hr_assets')||p('hr_loans')||p('hr_pension')||p('hr_letters'));
   show('tab-msging',   p('msg_send')||p('msg_history'));
   show('tab-users',    isAdmin||p('users_manage')||p('roles_manage'));
+  show('tab-audit',    isAdmin);
 
   applyPerms();
 }
@@ -2485,6 +2532,7 @@ function switchModule(name){
         populateInvCatFilter(); populateInvWhFilter(); renderInventory(); loanEquipNav('inventory'); applyPerms();
       });
     }
+    if(name==='audit'){ loadAudit(1); }
     if(name==='launcher'){}
     setTimeout(_injectMobileMenubars,150);
   });
@@ -6152,6 +6200,90 @@ function renderAll(){
       <div style="font-size:12px;font-weight:600;color:var(--text)">${e.name}</div>
       <div style="font-size:11px;color:var(--text3)">${calFmtDate(e.eventDateFrom)}</div>
     </div>`).join(''):'<div style="font-size:12px;color:var(--text3)">No upcoming events</div>';
+  }
+}
+
+// ══ AUDIT TRAIL (admin only) ══════════════════════════
+let _auditState = { logs:[], page:1, pages:1, total:0, loading:false };
+let _auditDebounceTimer = null;
+
+async function loadAudit(page){
+  _auditState.loading = true;
+  const userQ = (document.getElementById('auditFilterUser')?.value || '').trim();
+  const actionQ = (document.getElementById('auditFilterAction')?.value || '').trim();
+  const params = new URLSearchParams();
+  params.set('page', page || 1);
+  params.set('limit', 50);
+  if(userQ) params.set('user', userQ);
+  if(actionQ) params.set('action', actionQ);
+  const r = await api('GET', '/audit?' + params.toString());
+  if(r && r.logs){
+    _auditState.logs = r.logs;
+    _auditState.page = r.page;
+    _auditState.pages = r.pages;
+    _auditState.total = r.total;
+  } else if(r === null) {
+    _auditState.logs = [];
+  }
+  _auditState.loading = false;
+  renderAudit();
+}
+
+function auditDebouncedRender(){
+  clearTimeout(_auditDebounceTimer);
+  _auditDebounceTimer = setTimeout(()=>loadAudit(1), 300);
+}
+
+function renderAudit(){
+  const body = document.getElementById('auditBody');
+  const cnt = document.getElementById('auditCount');
+  const pager = document.getElementById('auditPager');
+  if(!body) return;
+  if(cnt) cnt.textContent = `${_auditState.total} record${_auditState.total!==1?'s':''}`;
+
+  if(!_auditState.logs.length){
+    body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3)">No audit records match these filters</td></tr>';
+    if(pager) pager.innerHTML = '';
+    return;
+  }
+  // Strip leading HTTP method (e.g. "POST /hr/employees" → "POST" + path), label friendly
+  body.innerHTML = _auditState.logs.map(l => {
+    const t = l.created_at ? new Date(l.created_at) : null;
+    const when = t ? t.toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+    const actionParts = (l.action || '').split(' ');
+    const verb = actionParts[0] || l.action || '—';
+    const path = actionParts.slice(1).join(' ');
+    const verbColor = verb.startsWith('DELETE') || verb==='DELETE' ? 'var(--red)'
+                    : verb.startsWith('LEAVE_APPROVED') ? 'var(--green)'
+                    : verb.startsWith('LEAVE_REJECTED') ? 'var(--red)'
+                    : verb==='POST' || verb.startsWith('CREATE') ? 'var(--green)'
+                    : verb==='PUT' || verb==='PATCH' || verb.startsWith('UPDATE') ? 'var(--amber)'
+                    : 'var(--text2)';
+    return `<tr>
+      <td class="td-mono" style="white-space:nowrap;color:var(--text3)">${when}</td>
+      <td><strong>${l.username||'anonymous'}</strong></td>
+      <td><span style="font-weight:700;color:${verbColor};font-family:'JetBrains Mono',monospace;font-size:11px">${verb}</span>${path?` <span style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:11px">${path}</span>`:''}</td>
+      <td>${l.resource||'—'}</td>
+      <td class="td-mono" style="font-size:11px;color:var(--text3)">${l.resource_id||'—'}</td>
+      <td class="td-mono" style="font-size:11px;color:var(--text3)">${l.ip_address||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  // Pager
+  if(pager){
+    if(_auditState.pages <= 1){ pager.innerHTML = ''; return; }
+    const p = _auditState.page;
+    const total = _auditState.pages;
+    const btn = (label, target, disabled, active) =>
+      `<button class="btn ${active?'btn-primary':'btn-ghost'} btn-sm" ${disabled?'disabled style="opacity:.4;cursor:not-allowed"':''} onclick="loadAudit(${target})">${label}</button>`;
+    let html = btn('« Prev', Math.max(1,p-1), p===1);
+    // window: up to 5 pages around current
+    const start = Math.max(1, p-2);
+    const end   = Math.min(total, start+4);
+    for(let i=start; i<=end; i++) html += btn(String(i), i, false, i===p);
+    html += btn('Next »', Math.min(total,p+1), p===total);
+    html += `<span style="font-size:12px;color:var(--text3);margin-left:8px">Page ${p} of ${total}</span>`;
+    pager.innerHTML = html;
   }
 }
 

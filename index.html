@@ -854,6 +854,38 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
    own column header). The @media (max-width:700px) block above re-shows them
    with !important for narrow viewports. */
 .wday-mlabel { display: none; }
+.sa-mlabel { display: none; }
+
+/* Staff Assets list: collapse the 6-column desktop grid to a stacked card
+   layout on phones, hide the column header, show inline field labels. */
+@media (max-width: 700px) {
+  .sa-hdr { display: none !important; }
+  .sa-row {
+    display: block !important;
+    padding: 12px 14px !important;
+  }
+  .sa-row > div {
+    padding: 4px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .sa-row > div:last-child { border-bottom: none; padding-top: 8px; }
+  .sa-row > div:first-child { border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 4px; }
+  .sa-mlabel {
+    display: inline-block !important;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-right: 8px;
+    min-width: 90px;
+  }
+  .sa-row .sa-actions {
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+}
 
 /* ── UNITS LIST inside item-detail modal ─────────── */
 .units-grid-hdr,.units-grid-row{display:grid;grid-template-columns:90px 90px 110px 110px 110px 80px auto;gap:6px;align-items:center}
@@ -9821,7 +9853,7 @@ function renderAllStaffAssets(){
   }
 
   el.innerHTML=`
-    <div style="display:grid;grid-template-columns:180px 1fr 120px 120px 120px 130px;gap:12px;padding:8px 16px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);border-bottom:2px solid var(--border);margin-bottom:6px;align-items:center">
+    <div class="sa-hdr" style="display:grid;grid-template-columns:180px 1fr 120px 120px 120px 130px;gap:12px;padding:8px 16px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);border-bottom:2px solid var(--border);margin-bottom:6px;align-items:center">
       <div>Staff</div>
       <div>Asset</div>
       <div>Handed Over</div>
@@ -9833,21 +9865,22 @@ function renderAllStaffAssets(){
       const statusHtml=a.damagedDate
         ?`<span class="inv-badge-faulty">⚠️ Damaged</span>`
         :`<span class="inv-badge-working">Active</span>`;
-      return`<div style="display:grid;grid-template-columns:180px 1fr 120px 120px 120px 130px;gap:12px;padding:10px 16px;background:${a.damagedDate?'var(--red-bg)':'var(--white)'};border:1px solid ${a.damagedDate?'var(--red-bd)':'var(--border)'};border-radius:8px;margin-bottom:6px;align-items:center">
+      return`<div class="sa-row" style="display:grid;grid-template-columns:180px 1fr 120px 120px 120px 130px;gap:12px;padding:10px 16px;background:${a.damagedDate?'var(--red-bg)':'var(--white)'};border:1px solid ${a.damagedDate?'var(--red-bd)':'var(--border)'};border-radius:8px;margin-bottom:6px;align-items:center">
         <div style="min-width:0">
           <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${emp.name}</div>
           <div style="font-size:11px;color:var(--text3)">${emp.empId||''}</div>
         </div>
         <div style="min-width:0">
+          <span class="sa-mlabel">Asset</span>
           <div style="font-size:13px;font-weight:600;color:var(--text)">${a.assetName}</div>
           ${a.notes?`<div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.notes}</div>`:''}
           ${a.replacementAsset?`<div style="font-size:11px;color:var(--accent)">↩ ${a.replacementAsset}</div>`:''}
           ${a.damagedDate&&a.damageDetails?`<div style="font-size:11px;color:var(--red);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.damageDetails}</div>`:''}
         </div>
-        <div style="font-size:12px;color:var(--text3)">${a.handedDate||'—'}</div>
-        <div>${statusHtml}</div>
-        <div style="font-size:12px;color:var(--text3)">${a.damagedDate||'—'}</div>
-        <div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:nowrap">
+        <div style="font-size:12px;color:var(--text3)"><span class="sa-mlabel">Handed Over</span>${a.handedDate||'—'}</div>
+        <div><span class="sa-mlabel">Status</span>${statusHtml}</div>
+        <div style="font-size:12px;color:var(--text3)"><span class="sa-mlabel">Damaged On</span>${a.damagedDate||'—'}</div>
+        <div class="sa-actions" style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:nowrap">
           ${!a.damagedDate?`<button class="btn btn-ghost btn-xs" onclick="openRecordDamage('${emp.id}','${idx}');document.getElementById('simpleModalSave').onclick=()=>{saveDamage('${emp.id}','${idx}');renderAllStaffAssets();}">⚠️ Damaged</button>`:''}
           ${a.damagedDate&&!a.replacementAsset?`<button class="btn btn-primary btn-xs" onclick="openReplaceAsset('${emp.id}','${idx}');document.getElementById('simpleModalSave').onclick=()=>{saveReplacement('${emp.id}','${idx}');renderAllStaffAssets();}">↩ Replace</button>`:''}
           <button class="btn btn-ghost btn-xs" onclick="profileActiveTab='assets';hrNav('profile','${emp.id}')">View</button>

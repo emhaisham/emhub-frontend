@@ -1135,6 +1135,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="nav-item" onclick="hrNav('payroll')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Monthly Payroll</div>
               <div class="nav-item" onclick="hrNav('loans')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M8 10v11M12 10v11M16 10v11M20 10v11"/></svg></span>Loans</div>
               <div class="nav-item" onclick="hrNav('pension')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v1a3 3 0 006 0V7m0 1a3 3 0 006 0V7m0 1a3 3 0 006 0V7L12 2 3 7z"/></svg></span>Pension</div>
+              <div class="nav-item" onclick="hrNav('bonus')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>Bonus</div>
               <div class="nav-lbl">Other</div>
               <div class="nav-item" onclick="hrNav('leave')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></span>Leave</div>
               <div class="nav-item" onclick="hrNav('letters')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>Staff Letters</div>
@@ -1243,6 +1244,25 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 </div>
               </div>
               <div id="pensionList"></div>
+            </div>
+
+            <!-- ── BONUS ── -->
+            <div class="page" id="hr-page-bonus">
+              <div class="page-hdr">
+                <div class="page-title">Bonus</div>
+                <div class="page-sub">Local Crew event payouts — populated from CrewPay → Local Crew</div>
+              </div>
+              <div class="toolbar">
+                <select id="bnFilterStaff" onchange="renderBonus()"><option value="">All Staff</option></select>
+                <select id="bnFilterYear" onchange="renderBonus()"><option value="">All Years</option></select>
+                <span class="toolbar-count" id="bnCount"></span>
+              </div>
+              <div class="stat-row stat-row-3" style="margin-bottom:14px">
+                <div class="stat-card"><div class="stat-top"><span class="stat-label">Events</span></div><div class="stat-val blue" id="bnStatEv">0</div></div>
+                <div class="stat-card"><div class="stat-top"><span class="stat-label">Total Days</span></div><div class="stat-val amber" id="bnStatDays">0</div></div>
+                <div class="stat-card"><div class="stat-top"><span class="stat-label">Total Payout</span></div><div class="stat-val green" id="bnStatPayout">MVR 0</div></div>
+              </div>
+              <div id="bonusList"></div>
             </div>
 
             <!-- ── LEAVE ── -->
@@ -2309,12 +2329,12 @@ function applyPerms(){
 
   // ── HR SIDEBAR nav items (by position) ───────────────
   const hrNavItems=document.querySelectorAll('#mod-hr .nav-wrap .nav-item');
-  // positions: 0=All Staff, 1=Add Emp, 2=Disciplinary, 3=Staff Assets, 4=Payroll, 5=Loans, 6=Pension, 7=Leave, 8=Letters
-  const hrMap=['hr_view_all','hr_add_emp','hr_disc','hr_assets','hr_payroll','hr_loans','hr_pension','hr_leave','hr_letters'];
+  // positions: 0=All Staff, 1=Add Emp, 2=Disciplinary, 3=Staff Assets, 4=Payroll, 5=Loans, 6=Pension, 7=Bonus, 8=Leave, 9=Letters
+  const hrMap=['hr_view_all','hr_add_emp','hr_disc','hr_assets','hr_payroll','hr_loans','hr_pension','__bonus__','hr_leave','hr_letters'];
   hrMap.forEach((k,i)=>{
     if(!hrNavItems[i]) return;
-    // All Staff nav item visible if user has view_all OR view_own
-    if(k==='hr_view_all') hrNavItems[i].style.display=(p('hr_view_all')||p('hr_view_own'))?'':'none';
+    // All Staff and Bonus both gate on hr_view_all OR hr_view_own
+    if(k==='hr_view_all'||k==='__bonus__') hrNavItems[i].style.display=(p('hr_view_all')||p('hr_view_own'))?'':'none';
     else hrNavItems[i].style.display=p(k)?'':'none';
   });
 
@@ -3477,6 +3497,7 @@ function hrNav(page, extra){
       'payroll':'hr_payroll',
       'loans':'hr_loans',
       'pension':'hr_pension',
+      'bonus':'hr_view_own', // also allowed for hr_view_all/admin (handled in hrNav block below)
       'leave':'hr_leave',
       'letters':'hr_letters',
       'disciplinary':'hr_disc',
@@ -3504,6 +3525,9 @@ function hrNav(page, extra){
         else toast('⛔ No employee profile linked to your account');
         return;
       } else { toast("You don't have permission to access this"); return; }
+    } else if(page==='bonus'){
+      // Bonus uses the HR view perms — view_all or view_own (admin handled above)
+      if(!hasViewAll && !hasViewOwn){ toast("You don't have permission to access this"); return; }
     } else if(permKey && perms[permKey+'_view']!==true && perms[permKey+'_edit']!==true && perms[permKey]!==true){
       toast("You don't have permission to access this");
       return;
@@ -3514,7 +3538,7 @@ function hrNav(page, extra){
   const pageEl = document.getElementById('hr-page-'+page);
   if(pageEl) pageEl.classList.add('active');
   const items = document.querySelectorAll('#mod-hr .nav-item');
-  const map = {employees:0,'add-employee':1,disciplinary:2,'staff-assets':3,payroll:4,loans:5,pension:6,leave:7,letters:8};
+  const map = {employees:0,'add-employee':1,disciplinary:2,'staff-assets':3,payroll:4,loans:5,pension:6,bonus:7,leave:8,letters:9};
   if(items[map[page]]) items[map[page]].classList.add('active');
   hrActivePage = page;
   if(page==='employees')     { populateHRFilters(); renderEmployees(); }
@@ -3527,6 +3551,7 @@ function hrNav(page, extra){
   }
   if(page==='loans')         { populateLoanFilter(); renderLoans(); }
   if(page==='pension')       { renderPension(); }
+  if(page==='bonus')         { _ensureLocalCrewLoaded().then(()=>{ populateBonusFilters(); renderBonus(); }); }
   if(page==='profile')       { renderProfile(extra); }
   if(page==='leave')         { api('GET','/hr/leave').then(r=>{if(r)hrLeave=r; populateLeaveFilter(); renderLeave();}); }
   if(page==='letters')       { populateLetterEmp(); document.getElementById('ltDate').valueAsDate=new Date(); }
@@ -6226,6 +6251,91 @@ function deleteLocalCrew(id){
     await loadLocalCrew();
     toast('Event deleted');
   });
+}
+
+// ── HR BONUS PAGE (sources data from Local Crew) ─────────────
+// Flattens local crew events into one row per (event, staff). Visibility:
+//   admin or hr_view_all : sees everyone
+//   hr_view_own only     : sees own bonuses only (matched by linkedUserId
+//                          then name fallback, same as elsewhere in app)
+function _bonusOwnEmp(){
+  return hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||'')||(!e.linkedUserId&&e.name===currentUser?.name));
+}
+function _bonusVisibleRows(){
+  const role=currentUser?.roleId?appRoles.find(r=>String(r.id)===String(currentUser?.roleId)):null;
+  const perms=role?.perms||currentUser?.rolePerms||{};
+  const isAdmin=currentUser?.role==='admin';
+  const canSeeAll=isAdmin||perms['hr_view_all_view']===true||perms['hr_view_all_edit']===true||perms['hr_view_all']===true;
+  const ownEmp=canSeeAll?null:_bonusOwnEmp();
+  const out=[];
+  (localCrewEvents||[]).forEach(ev=>{
+    (ev.staff||[]).forEach(s=>{
+      if(!canSeeAll && (!ownEmp || String(s.empId)!==String(ownEmp.id))) return;
+      out.push({
+        eventId:ev.id, eventName:ev.name, date:normalizeDate(ev.date),
+        empId:s.empId, empName:s.empName||(hrEmployees.find(e=>String(e.id)===String(s.empId))?.name)||'(unknown)',
+        days:_lcStaffDays(s), payout:_lcStaffPayout(s),
+        setupDays:s.setupDays||0, setupRate:s.setupRate||0,
+        eventDays:s.eventDays||0, eventRate:s.eventRate||0,
+        adjustment:s.adjustment||0
+      });
+    });
+  });
+  // Sort by date desc, then event name
+  out.sort((a,b)=>{
+    const d=String(b.date||'').localeCompare(String(a.date||''));
+    return d!==0?d:String(a.eventName||'').localeCompare(String(b.eventName||''));
+  });
+  return out;
+}
+
+function populateBonusFilters(){
+  const rows=_bonusVisibleRows();
+  const staffSel=document.getElementById('bnFilterStaff');
+  const yearSel=document.getElementById('bnFilterYear');
+  if(staffSel){
+    const cur=staffSel.value;
+    const seen=new Map();
+    rows.forEach(r=>{ if(r.empId&&!seen.has(r.empId)) seen.set(r.empId,r.empName); });
+    staffSel.innerHTML='<option value="">All Staff</option>'+
+      [...seen.entries()].sort((a,b)=>a[1].localeCompare(b[1]))
+        .map(([id,name])=>`<option value="${id}"${String(id)===String(cur)?' selected':''}>${name}</option>`).join('');
+  }
+  if(yearSel){
+    const cur=yearSel.value;
+    const years=[...new Set(rows.map(r=>(r.date||'').slice(0,4)).filter(Boolean))].sort().reverse();
+    yearSel.innerHTML='<option value="">All Years</option>'+years.map(y=>`<option value="${y}"${y===cur?' selected':''}>${y}</option>`).join('');
+  }
+}
+
+function renderBonus(){
+  const fStaff=document.getElementById('bnFilterStaff')?.value||'';
+  const fYear=document.getElementById('bnFilterYear')?.value||'';
+  let rows=_bonusVisibleRows();
+  if(fStaff) rows=rows.filter(r=>String(r.empId)===String(fStaff));
+  if(fYear)  rows=rows.filter(r=>(r.date||'').startsWith(fYear));
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
+  set('bnStatEv', rows.length);
+  set('bnStatDays', rows.reduce((s,r)=>s+r.days,0));
+  set('bnStatPayout', fmtMVR(rows.reduce((s,r)=>s+r.payout,0)));
+  set('bnCount', `${rows.length} record${rows.length!==1?'s':''}`);
+  const el=document.getElementById('bonusList'); if(!el) return;
+  if(!rows.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div class="empty-title">No bonus records</div><div class="empty-sub">Local Crew event payouts will appear here</div></div>';
+    return;
+  }
+  el.innerHTML=rows.map(r=>`<div class="card" style="margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:14px;font-weight:700;color:var(--text)">${r.eventName||'(unnamed)'}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">${r.date?fmtDate(r.date):'No date'} · ${r.empName} · ${r.days} day${r.days!==1?'s':''}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Payout</div>
+        <div style="font-size:15px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace">${fmtMVR(r.payout)}</div>
+      </div>
+    </div>
+  </div>`).join('');
 }
 
 // ══ TOAST ════════════════════════════════════════════

@@ -9893,6 +9893,7 @@ function renderEventLists(){
               <thead><tr style="background:var(--surface)">
                 <th style="padding:7px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)">Item</th>
                 <th style="padding:7px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)">EM Serial</th>
+                <th style="padding:7px 14px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)">Qty</th>
                 <th style="padding:7px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)">Item Serial</th>
                 <th style="padding:7px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)">Flight Case</th>
                 <th style="padding:7px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)">Status</th>
@@ -9900,12 +9901,22 @@ function renderEventLists(){
               </tr></thead>
               <tbody>${list.items.map((item,ii)=>{
                 const unit=_findUnitBySerial(item.emSerial);
+                // Live total qty (in case inventory has been changed since the list was created)
+                const liveTotalQty=parseInt(unit?.unit?.qty)||parseInt(item.totalQty)||1;
+                const qtyUsed=parseInt(item.qtyUsed)||liveTotalQty;
+                const isBulk=liveTotalQty>1;
+                const qtyCell=isBulk
+                  ? (isDone
+                      ? `<span style="font-family:monospace;font-size:12px;color:var(--text2)">${qtyUsed}/${liveTotalQty}</span>`
+                      : `<input type="number" min="1" max="${liveTotalQty}" value="${qtyUsed}" data-evid="${evId}" data-li="${li}" data-ii="${ii}" data-max="${liveTotalQty}" onchange="updateEquipListItemQty(this)" style="width:64px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;font-size:12px;text-align:center;font-family:monospace" title="of ${liveTotalQty} available"><div style="font-size:10px;color:var(--text3);margin-top:1px">of ${liveTotalQty}</div>`)
+                  : '<span style="color:var(--text3);font-size:12px">1</span>';
                 const coStatus=unit?.unit.checkout&&!unit?.unit.checkout.checkedInAt
                   ?`<span style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);border-radius:10px;padding:2px 7px;font-size:11px;font-weight:700">Out</span>`
                   :`<span class="inv-badge-working" style="font-size:11px">✅ In</span>`;
                 return`<tr style="border-top:1px solid var(--border)">
                   <td style="padding:7px 14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.parentName}</td>
                   <td style="padding:7px 14px;font-family:monospace;color:var(--accent);font-weight:700">${item.emSerial}</td>
+                  <td style="padding:7px 14px;text-align:center">${qtyCell}</td>
                   <td style="padding:7px 14px;font-family:monospace;color:var(--text2)">${item.itemSerial||'—'}</td>
                   <td style="padding:7px 14px;overflow:hidden">${item.fcName?`<span style="font-size:12px">${item.fcSerial}</span><div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.fcName}</div>`:'—'}</td>
                   <td style="padding:7px 14px">${coStatus}</td>
@@ -10119,7 +10130,8 @@ function _applyTemplateToList(tplId, ev){
   (tpl.items||[]).forEach(ti => {
     const parent = invItems.find(p => String(p.id)===String(ti.parentId));
     if(!parent) { shortfalls.push(`${ti.parentName||'item'} (no longer in inventory)`); return; }
-    // Pick `qty` available units: not discarded, not faulty, not checked out, not used in this event
+    // Pick units: not discarded, not faulty, not checked out, not used in this event.
+    // For bulk units (qty>1) one unit can cover the whole template requirement.
     const candidates = (parent.units||[]).filter(u => {
       if(u.discarded) return false;
       if(u.status==='faulty') return false;
@@ -10128,8 +10140,11 @@ function _applyTemplateToList(tplId, ev){
       return true;
     });
     const need = ti.qty||1;
-    const picked = candidates.slice(0, need);
-    picked.forEach(u => {
+    let remaining = need;
+    for(const u of candidates){
+      if(remaining<=0) break;
+      const unitQty = parseInt(u.qty)||1;
+      const take = Math.min(unitQty, remaining);
       const fc = invFlightCases.find(f => String(f.id)===String(u.fcId||u.flightCaseId));
       items.push({
         parentId: parent.id, parentName: parent.name,
@@ -10137,11 +10152,13 @@ function _applyTemplateToList(tplId, ev){
         itemSerial: u.itemSerial||'',
         fcId: u.fcId||u.flightCaseId||'',
         fcSerial: fc?.fcSerial||'',
-        fcName: fc?.name||''
+        fcName: fc?.name||'',
+        qtyUsed: take, totalQty: unitQty
       });
       usedSerials.add(u.serial);
-    });
-    if(picked.length < need) shortfalls.push(`${parent.name}: ${picked.length} of ${need} available`);
+      remaining -= take;
+    }
+    if(remaining > 0) shortfalls.push(`${parent.name}: ${need-remaining} of ${need} available`);
   });
   const missingNote = shortfalls.length ? `Short on: ${shortfalls.join('; ')}` : '';
   return { items, missingNote };
@@ -10185,16 +10202,36 @@ function openAddItemToList(evId,li){
 function filterElItems(){
   const q=(document.getElementById('el_item_search')?.value||'').toLowerCase();
   const dd=document.getElementById('el_item_dd'); if(!dd) return;
-  const filtered=invItems.filter(x=>!q||x.name.toLowerCase().includes(q)||(x.model||'').toLowerCase().includes(q));
+  // Also let users search by flight case serial / name (the user's reason
+  // for showing FCs in the dropdown — "where is this stuff stored?").
+  const filtered=invItems.filter(x=>{
+    if(!q) return true;
+    if(x.name.toLowerCase().includes(q)) return true;
+    if((x.model||'').toLowerCase().includes(q)) return true;
+    return (x.units||[]).some(u => {
+      const fc = invFlightCases.find(f => String(f.id)===String(u.fcId||u.flightCaseId));
+      return fc && ((fc.fcSerial||'').toLowerCase().includes(q) || (fc.name||'').toLowerCase().includes(q));
+    });
+  });
   if(!filtered.length){dd.style.display='none';return;}
   dd.style.display='block';
-  dd.innerHTML=filtered.slice(0,10).map(item=>`
-    <div onclick="selectElParent('${item.id}')"
+  dd.innerHTML=filtered.slice(0,10).map(item=>{
+    // Unique flight case serials across this parent's active units
+    const fcSet=new Set();
+    (item.units||[]).forEach(u=>{
+      if(u.discarded) return;
+      const fc=invFlightCases.find(f=>String(f.id)===String(u.fcId||u.flightCaseId));
+      if(fc?.fcSerial) fcSet.add(fc.fcSerial);
+    });
+    const fcs=[...fcSet];
+    const fcStr=fcs.length ? fcs.slice(0,3).join(', ')+(fcs.length>3?`, +${fcs.length-3} more`:'') : 'no flight case';
+    return `<div onclick="selectElParent('${item.id}')"
       style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)"
       onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
       <div style="font-weight:600">${item.name}</div>
-      <div style="font-size:11px;color:var(--text3)">${item.model||''} · ${(item.units||[]).length} units</div>
-    </div>`).join('');
+      <div style="font-size:11px;color:var(--text3)">${item.model||''}${item.model?' · ':''}${(item.units||[]).length} unit${(item.units||[]).length!==1?'s':''} · <span style="color:var(--accent);font-family:monospace">${fcStr}</span></div>
+    </div>`;
+  }).join('');
 }
 
 function selectElParent(parentId){
@@ -10223,15 +10260,22 @@ function selectElParent(parentId){
     const alreadyAdded=existingSerials.has(u.serial);
     const coEvent=u.checkout&&!u.checkout.checkedInAt?calEvents.find(e=>String(e.id)===String(u.checkout.eventId)):null;
     const isBlocked=alreadyAdded||!!coEvent;
+    const totalQty=parseInt(u.qty)||1;
+    const isBulk=totalQty>1;
     return`<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid ${coEvent?'var(--red-bd)':isBlocked?'var(--border)':'var(--border)'};border-radius:8px;cursor:${isBlocked?'not-allowed':'pointer'};background:${coEvent?'var(--red-bg)':alreadyAdded?'var(--surface)':'var(--white)'}">
-      <input type="checkbox" class="el-unit-chk" value="${u.serial}" data-parent="${item.id}" data-parent-name="${item.name.replace(/"/g,'&quot;')}"
+      <input type="checkbox" class="el-unit-chk" value="${u.serial}" data-parent="${item.id}" data-parent-name="${item.name.replace(/"/g,'&quot;')}" data-total-qty="${totalQty}"
         ${isBlocked?'disabled':''} style="accent-color:var(--accent)">
       <div style="flex:1;min-width:0">
-        <div style="font-family:monospace;font-size:12px;font-weight:700;color:${coEvent?'var(--red)':'var(--accent)'}">${u.serial}</div>
+        <div style="font-family:monospace;font-size:12px;font-weight:700;color:${coEvent?'var(--red)':'var(--accent)'}">${u.serial}${isBulk?` <span style="background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd);border-radius:8px;padding:0 6px;font-size:10px;margin-left:4px">×${totalQty}</span>`:''}</div>
         <div style="font-size:11px;color:var(--text3)">${u.itemSerial?'Item S/N: '+u.itemSerial+' · ':''} ${fc?''+fc.fcSerial+' — '+fc.name:'No flight case'}</div>
         ${coEvent?`<div style="font-size:11px;color:var(--red);font-weight:600">Checked out to: ${coEvent.name}</div>`:''}
         ${alreadyAdded&&!coEvent?`<div style="font-size:11px;color:var(--text3)">Already in this event's list</div>`:''}
       </div>
+      ${isBulk&&!isBlocked?`<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);white-space:nowrap" onclick="event.preventDefault();event.stopPropagation()">
+        Take
+        <input type="number" class="el-unit-qty" data-serial="${u.serial}" min="1" max="${totalQty}" value="${totalQty}" style="width:60px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:13px;text-align:center" onclick="event.stopPropagation()">
+        of ${totalQty}
+      </div>`:''}
     </label>`;
   }).join('');
 }
@@ -10247,10 +10291,17 @@ async function saveItemsToList(){
     const emSerial=chk.value;
     const parentId=chk.dataset.parent;
     const parentName=chk.dataset.parentName;
+    const totalQty=parseInt(chk.dataset.totalQty)||1;
     const item=invItems.find(x=>String(x.id)===String(parentId));
     const unit=(item?.units||[]).find(u=>u.serial===emSerial);
     if(!unit) return;
     const fc=invFlightCases.find(f=>String(f.id)===String(unit.fcId||unit.flightCaseId));
+    // Per-row qty input (bulk units only) — falls back to total qty
+    let qtyUsed=totalQty;
+    if(totalQty>1){
+      const qtyInput=document.querySelector(`.el-unit-qty[data-serial="${emSerial}"]`);
+      qtyUsed=Math.min(Math.max(1, parseInt(qtyInput?.value)||totalQty), totalQty);
+    }
     // Avoid duplicates
     if(!list.items.find(i=>i.emSerial===emSerial)){
       list.items.push({
@@ -10258,7 +10309,8 @@ async function saveItemsToList(){
         itemSerial:unit.itemSerial||'',
         fcId:unit.fcId||unit.flightCaseId||'',
         fcSerial:fc?.fcSerial||'',
-        fcName:fc?.name||''
+        fcName:fc?.name||'',
+        qtyUsed, totalQty
       });
     }
   });
@@ -10276,6 +10328,30 @@ async function saveItemsToList(){
   toast(`${checked.length} unit${checked.length>1?'s':''} added to list ✓`);
 }
 
+async function updateEquipListItemQty(inputEl){
+  const evId = inputEl.dataset.evid;
+  const li = parseInt(inputEl.dataset.li);
+  const ii = parseInt(inputEl.dataset.ii);
+  const max = parseInt(inputEl.dataset.max)||1;
+  let qty = parseInt(inputEl.value)||1;
+  if(qty < 1) qty = 1;
+  if(qty > max) qty = max;
+  inputEl.value = qty; // clamp visually
+  const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
+  const list=ev.equipLists?.[li]; if(!list || !list.items?.[ii]) return;
+  const prev = list.items[ii].qtyUsed;
+  list.items[ii].qtyUsed = qty;
+  list.items[ii].totalQty = max; // refresh snapshot
+  const res = await api('PATCH','/events/'+evId+'/equip-lists',{equipLists: ev.equipLists});
+  if(!res){ list.items[ii].qtyUsed = prev; renderEventLists(); return toast('Failed to update quantity'); }
+  // Refresh from server
+  const rawEvts = await api('GET','/events') || [];
+  calEvents = rawEvts.map(e => ({...e, eventDateFrom:normalizeDate(e.eventDateFrom), eventDateTo:normalizeDate(e.eventDateTo)}));
+  events = calEvents;
+  toast('Quantity updated ✓');
+  // No re-render needed — the input now shows the saved value
+}
+
 async function removeItemFromList(evId,li,ii){
   const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
   ev.equipLists[li].items.splice(ii,1);
@@ -10289,18 +10365,24 @@ async function removeItemFromList(evId,li,ii){
 // ── Export List PDF ───────────────────────────────────────────────────────────
 function _buildEquipPDF(ev, lists){
   const allRows = lists.map(list=>{
-  const rows = list.items.map((item,i)=>`<tr>
+  const rows = list.items.map((item,i)=>{
+    const total=parseInt(item.totalQty)||1;
+    const used=parseInt(item.qtyUsed)||total;
+    const qtyDisp = total>1 ? `${used}/${total}` : '1';
+    return `<tr>
       <td style="text-align:center;color:#6b7280">${i+1}</td>
       <td style="font-weight:600">${item.parentName}</td>
       <td style="font-family:monospace;color:#1d4ed8;font-weight:700">${item.emSerial}</td>
+      <td style="text-align:center;font-family:monospace;font-weight:${total>1?'700':'400'}">${qtyDisp}</td>
       <td style="font-family:monospace">${item.itemSerial||'—'}</td>
       <td>${item.fcName?`${item.fcSerial} — ${item.fcName}`:'—'}</td>
       <td style="text-align:center"><input type="checkbox" style="width:13px;height:13px"></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
     return `
       <div class="team-header">${list.teamName} <span style="font-weight:400;font-size:11px;color:#94a3b8">${list.items.length} item${list.items.length!==1?'s':''}</span></div>
-      <table><colgroup><col style="width:30px"><col style="width:auto"><col style="width:90px"><col style="width:90px"><col style="width:180px"><col style="width:30px"></colgroup>
-      <thead><tr><th>#</th><th>Item</th><th>EM Serial</th><th>Item Serial</th><th>Flight Case</th><th>✓</th></tr></thead>
+      <table><colgroup><col style="width:30px"><col style="width:auto"><col style="width:90px"><col style="width:60px"><col style="width:90px"><col style="width:170px"><col style="width:30px"></colgroup>
+      <thead><tr><th>#</th><th>Item</th><th>EM Serial</th><th>Qty</th><th>Item Serial</th><th>Flight Case</th><th>✓</th></tr></thead>
       <tbody>${rows}</tbody></table>
       <div style="height:14px"></div>
     `;

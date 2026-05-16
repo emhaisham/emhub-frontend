@@ -6716,10 +6716,11 @@ function renderBonus(){
     if(r.paid) paidMap[c]=(paidMap[c]||0)+r.payout;
     else       owedMap[c]=(owedMap[c]||0)+r.payout;
   });
+  const setHtml=(id,h)=>{const el=document.getElementById(id);if(el)el.innerHTML=h};
   set('bnStatEv', rows.length);
   set('bnStatDays', rows.reduce((s,r)=>s+r.days,0));
-  set('bnStatPaid', fmtCurMap(paidMap));
-  set('bnStatOutstanding', fmtCurMap(owedMap));
+  setHtml('bnStatPaid', fmtCurMapStacked(paidMap));
+  setHtml('bnStatOutstanding', fmtCurMapStacked(owedMap));
   set('bnCount', `${rows.length} record${rows.length!==1?'s':''}`);
   const el=document.getElementById('bonusList'); if(!el) return;
   if(!rows.length){

@@ -965,7 +965,8 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
             <div class="nav-wrap">
               <div class="nav-lbl">Menu</div>
               <div class="nav-item active" onclick="cpNav('dashboard')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Dashboard</div>
-              <div class="nav-item" onclick="cpNav('events')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></span>Events</div>
+              <div class="nav-item" onclick="cpNav('events')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></span>Labor Payment</div>
+              <div class="nav-item" onclick="cpNav('localcrew')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>Local Crew</div>
               <div class="nav-item" onclick="cpNav('payments')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>Payments <span class="nav-badge" id="unpaidBadge" style="display:none">0</span></div>
               <div class="nav-item" onclick="cpNav('reports')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>Reports</div>
             </div>
@@ -991,9 +992,9 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="sdiv"><div class="sdiv-title">Recent Events</div><div class="sdiv-line"></div></div>
               <div id="dashRecent"></div>
             </div>
-            <!-- Events -->
+            <!-- Labor Payment (formerly "Events") -->
             <div class="page" id="cp-page-events">
-              <div class="page-hdr"><div class="page-title">Events</div><div class="page-sub">Add events with multi-day staff groups</div></div>
+              <div class="page-hdr"><div class="page-title">Labor Payment</div><div class="page-sub">Add events with multi-day staff groups</div></div>
               <div class="rate-banner">
                 <span class="rate-lbl">Rates (MVR/person)</span>
                 <div class="rate-chips">
@@ -1022,6 +1023,18 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <span class="toolbar-count" id="fCount"></span>
               </div>
               <div class="events-list" id="eventsList"></div>
+            </div>
+            <!-- Local Crew -->
+            <div class="page" id="cp-page-localcrew">
+              <div class="page-hdr" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+                <div><div class="page-title">Local Crew</div><div class="page-sub">Per-event staff payout sheets — setup + event days, with adjustments</div></div>
+                <button class="btn btn-primary btn-sm" onclick="guardAction('crewpay_edit',()=>openLocalCrew(null))">＋ New Event</button>
+              </div>
+              <div class="toolbar">
+                <input type="text" id="lcSearch" placeholder="Search events…" oninput="renderLocalCrew()">
+                <span class="toolbar-count" id="lcCount"></span>
+              </div>
+              <div id="localCrewList"></div>
             </div>
             <!-- Payments -->
             <div class="page" id="cp-page-payments">
@@ -2437,12 +2450,13 @@ function cpNav(page){
   document.querySelectorAll('#mod-crewpay .nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('cp-page-'+page).classList.add('active');
   const items=document.querySelectorAll('#mod-crewpay .nav-item');
-  const map={dashboard:0,events:1,payments:2,reports:3};
+  const map={dashboard:0,events:1,localcrew:2,payments:3,reports:4};
   if(items[map[page]])items[map[page]].classList.add('active');
   cpActivePage=page;
   if(page==='payments')renderPayments();
   if(page==='reports')renderReports();
   if(page==='dashboard')renderDashboard();
+  if(page==='localcrew')loadLocalCrew();
 }
 
 function usrNav(page){
@@ -5924,6 +5938,188 @@ function renderAll(){
       <div style="font-size:11px;color:var(--text3)">${calFmtDate(e.eventDateFrom)}</div>
     </div>`).join(''):'<div style="font-size:12px;color:var(--text3)">No upcoming events</div>';
   }
+}
+
+// ══ LOCAL CREW (CrewPay sub-module) ═══════════════════
+let localCrewEvents = [];
+let _lcEditing = null;       // event being edited (null = new)
+let _lcStaffRows = [];       // working staff array in the modal
+
+async function loadLocalCrew(){
+  const r = await api('GET','/crewpay/local-crew');
+  if(r) localCrewEvents = r;
+  renderLocalCrew();
+}
+
+function renderLocalCrew(){
+  const search=(document.getElementById('lcSearch')?.value||'').toLowerCase();
+  const list=localCrewEvents.filter(e=>!search||(e.name||'').toLowerCase().includes(search));
+  const cnt=document.getElementById('lcCount');
+  if(cnt) cnt.textContent=`${list.length} event${list.length!==1?'s':''}`;
+  const el=document.getElementById('localCrewList'); if(!el) return;
+  if(!list.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="empty-title">No Local Crew events yet</div><div class="empty-sub">Click "＋ New Event" to record a payout sheet</div></div>';
+    return;
+  }
+  el.innerHTML=list.map(ev=>{
+    const total=_lcEventTotal(ev);
+    const staffCount=(ev.staff||[]).length;
+    return `<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:14px;font-weight:700;color:var(--text)">${ev.name||'(unnamed)'}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">${ev.date?fmtDate(ev.date):'No date'} · ${staffCount} staff</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Total Payout</div>
+          <div style="font-size:15px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace">${fmtMVR(total)}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-xs" onclick="openLocalCrew('${ev.id}')">View / Edit</button>
+          <button class="btn btn-red btn-xs" onclick="guardAction('crewpay_edit',()=>deleteLocalCrew('${ev.id}'))"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Per-staff payout calc — single source of truth
+function _lcStaffPayout(s){
+  const sd=parseFloat(s.setupDays)||0, sr=parseFloat(s.setupRate)||0;
+  const ed=parseFloat(s.eventDays)||0, er=parseFloat(s.eventRate)||0;
+  const adj=parseFloat(s.adjustment)||0;
+  return sd*sr + ed*er + adj;
+}
+function _lcStaffTotal(s){
+  const sd=parseFloat(s.setupDays)||0, sr=parseFloat(s.setupRate)||0;
+  const ed=parseFloat(s.eventDays)||0, er=parseFloat(s.eventRate)||0;
+  return sd*sr + ed*er;
+}
+function _lcStaffDays(s){
+  return (parseFloat(s.setupDays)||0) + (parseFloat(s.eventDays)||0);
+}
+function _lcEventTotal(ev){
+  return (ev.staff||[]).reduce((t,s)=>t+_lcStaffPayout(s),0);
+}
+
+function openLocalCrew(id){
+  _lcEditing = id ? localCrewEvents.find(e=>String(e.id)===String(id)) : null;
+  _lcStaffRows = _lcEditing ? JSON.parse(JSON.stringify(_lcEditing.staff||[])) : [];
+  const inner=document.getElementById('userModalInner');
+  if(inner){ inner.classList.remove('modal-sm'); inner.classList.add('modal-wide'); }
+  document.getElementById('userModalTitle').textContent = _lcEditing ? 'Edit Local Crew Event' : 'New Local Crew Event';
+  document.getElementById('userModalForm').innerHTML = `
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="field"><label class="field-label">Event Name *</label><input type="text" id="lc_name" value="${_lcEditing?.name||''}" placeholder="e.g. Easter Pool Party"></div>
+      <div class="field"><label class="field-label">Date</label><input type="date" id="lc_date" value="${(_lcEditing?.date||'').toString().slice(0,10)}"></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:700;color:var(--text)">Staff</div>
+      <button class="btn btn-ghost btn-sm" onclick="addLocalCrewStaff()">＋ Add Staff</button>
+    </div>
+    <div id="lcStaffRows"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-top:10px">
+      <div style="font-size:13px;font-weight:700;color:var(--text)">Event Total Payout</div>
+      <div id="lcEventTotal" style="font-size:16px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace">${fmtMVR(_lcEditing?_lcEventTotal(_lcEditing):0)}</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--border);margin-top:14px">
+      <button class="btn btn-ghost btn-sm" onclick="closeUserModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveLocalCrew()">${_lcEditing?'Save Changes':'Create Event'}</button>
+    </div>`;
+  renderLocalCrewStaffRows();
+  document.getElementById('userModal').classList.add('open');
+}
+
+function addLocalCrewStaff(){
+  _lcStaffRows.push({empId:'',empName:'',setupDays:0,setupRate:0,eventDays:0,eventRate:0,adjustment:0});
+  renderLocalCrewStaffRows();
+}
+
+function removeLocalCrewStaff(idx){
+  _lcStaffRows.splice(idx,1);
+  renderLocalCrewStaffRows();
+}
+
+function onLocalCrewFieldChange(idx, field, val){
+  const s = _lcStaffRows[idx]; if(!s) return;
+  if(field==='empId'){
+    const emp = hrEmployees.find(e=>String(e.id)===String(val));
+    s.empId = val;
+    s.empName = emp?.name || '';
+  } else {
+    s[field] = val;
+  }
+  // Update only the calculated cells inline for snappiness
+  const row=document.getElementById('lc-row-'+idx);
+  if(row){
+    row.querySelector('.lc-total-days').textContent = _lcStaffDays(s);
+    row.querySelector('.lc-total').textContent = fmtMVR(_lcStaffTotal(s));
+    row.querySelector('.lc-payout').textContent = fmtMVR(_lcStaffPayout(s));
+  }
+  const tot=document.getElementById('lcEventTotal');
+  if(tot) tot.textContent = fmtMVR(_lcStaffRows.reduce((t,x)=>t+_lcStaffPayout(x),0));
+}
+
+function renderLocalCrewStaffRows(){
+  const el=document.getElementById('lcStaffRows'); if(!el) return;
+  if(!_lcStaffRows.length){
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px;text-align:center;border:1px dashed var(--border);border-radius:8px">No staff yet — click "＋ Add Staff" to add one.</div>';
+    return;
+  }
+  const activeEmps = hrEmployees.filter(e=>e.status==='active'||e.status==='probation');
+  el.innerHTML = _lcStaffRows.map((s,i)=>{
+    const empOpts = ['<option value="">— Select staff —</option>']
+      .concat(activeEmps.map(e=>`<option value="${e.id}"${String(e.id)===String(s.empId)?' selected':''}>${e.name}</option>`))
+      .join('');
+    return `<div id="lc-row-${i}" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:var(--white)">
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-bottom:8px">
+        <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Staff Name *</label><select onchange="onLocalCrewFieldChange(${i},'empId',this.value)">${empOpts}</select></div>
+        <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Adjustment (+/-)</label><input type="number" step="0.01" value="${s.adjustment||0}" oninput="onLocalCrewFieldChange(${i},'adjustment',this.value)"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px">
+        <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Setup Days</label><input type="number" step="0.5" min="0" value="${s.setupDays||0}" oninput="onLocalCrewFieldChange(${i},'setupDays',this.value)"></div>
+        <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Setup Rate</label><input type="number" step="0.01" min="0" value="${s.setupRate||0}" oninput="onLocalCrewFieldChange(${i},'setupRate',this.value)"></div>
+        <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Event Days</label><input type="number" step="0.5" min="0" value="${s.eventDays||0}" oninput="onLocalCrewFieldChange(${i},'eventDays',this.value)"></div>
+        <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Event Rate</label><input type="number" step="0.01" min="0" value="${s.eventRate||0}" oninput="onLocalCrewFieldChange(${i},'eventRate',this.value)"></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:6px 4px;font-size:12px;color:var(--text2);background:var(--surface);border-radius:6px;padding:8px 12px;flex-wrap:wrap">
+        <div>Total Days: <strong class="lc-total-days" style="color:var(--text)">${_lcStaffDays(s)}</strong></div>
+        <div>Total: <strong class="lc-total" style="color:var(--text);font-family:'JetBrains Mono',monospace">${fmtMVR(_lcStaffTotal(s))}</strong></div>
+        <div>Payout: <strong class="lc-payout" style="color:var(--green);font-family:'JetBrains Mono',monospace">${fmtMVR(_lcStaffPayout(s))}</strong></div>
+        <button class="btn btn-red btn-xs" onclick="removeLocalCrewStaff(${i})">Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function saveLocalCrew(){
+  const name=document.getElementById('lc_name')?.value.trim();
+  const date=document.getElementById('lc_date')?.value;
+  if(!name) return toast('Enter event name');
+  // Drop empty/incomplete rows
+  const staff = _lcStaffRows.filter(s=>s.empId).map(s=>({
+    empId:s.empId, empName:s.empName||'',
+    setupDays:parseFloat(s.setupDays)||0, setupRate:parseFloat(s.setupRate)||0,
+    eventDays:parseFloat(s.eventDays)||0, eventRate:parseFloat(s.eventRate)||0,
+    adjustment:parseFloat(s.adjustment)||0
+  }));
+  const body = { name, date: date||null, staff };
+  const res = _lcEditing
+    ? await api('PUT', '/crewpay/local-crew/'+_lcEditing.id, body)
+    : await api('POST','/crewpay/local-crew', body);
+  if(!res) return;
+  closeUserModal();
+  await loadLocalCrew();
+  toast(_lcEditing?'Event updated ✓':'Event created ✓');
+}
+
+function deleteLocalCrew(id){
+  openConfirm('Delete this Local Crew event?','All staff payout data on this event will be removed.','Delete',async()=>{
+    const r = await api('DELETE','/crewpay/local-crew/'+id);
+    if(!r) return;
+    await loadLocalCrew();
+    toast('Event deleted');
+  });
 }
 
 // ══ TOAST ════════════════════════════════════════════

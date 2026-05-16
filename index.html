@@ -9105,7 +9105,7 @@ function openAddEquipList(evId){
     const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
     if(!ev.equipLists) ev.equipLists=[];
     ev.equipLists.push({teamName,items:[],createdAt:new Date().toISOString()});
-    const res=await api('PUT','/events/'+evId,{...ev});
+    const res=await api('PATCH','/events/'+evId+'/equip-lists',{equipLists:ev.equipLists});
     if(!res){ev.equipLists.pop();toast('Failed to create list');return;}
     // Refresh calEvents
     const rawEvts=await api('GET','/events')||[];
@@ -9125,7 +9125,7 @@ function deleteEquipList(evId,li){
   openConfirm('Delete this list?','All items in it will be removed.','Delete',async()=>{
     const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
     ev.equipLists.splice(li,1);
-    await api('PUT','/events/'+ev.id,{...ev});
+    await api('PATCH','/events/'+ev.id+'/equip-lists',{equipLists:ev.equipLists});
     const rawEvts=await api('GET','/events')||[];
     calEvents=rawEvts.map(e=>({...e,eventDateFrom:normalizeDate(e.eventDateFrom),eventDateTo:normalizeDate(e.eventDateTo)}));
     events=calEvents;
@@ -9237,7 +9237,7 @@ async function saveItemsToList(){
     }
   });
 
-  const res=await api('PUT','/events/'+ev.id,{...ev});
+  const res=await api('PATCH','/events/'+ev.id+'/equip-lists',{equipLists:ev.equipLists});
   if(!res){toast('Failed to save');return;}
   // Refresh calEvents
   const rawEvts=await api('GET','/events')||[];
@@ -9253,7 +9253,7 @@ async function saveItemsToList(){
 async function removeItemFromList(evId,li,ii){
   const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
   ev.equipLists[li].items.splice(ii,1);
-  await api('PUT','/events/'+evId,{...ev});
+  await api('PATCH','/events/'+evId+'/equip-lists',{equipLists:ev.equipLists});
   const rawEvts=await api('GET','/events')||[];
   calEvents=rawEvts.map(e=>({...e,eventDateFrom:normalizeDate(e.eventDateFrom),eventDateTo:normalizeDate(e.eventDateTo)}));
   events=calEvents;

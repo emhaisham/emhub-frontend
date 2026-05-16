@@ -817,7 +817,12 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
     <div class="login-title">Welcome back</div>
     <div class="login-sub">Sign in to your account to continue</div>
     <div class="login-field"><label>Username</label><input type="text" id="loginUser" placeholder="Enter username" onkeydown="if(event.key==='Enter')doLogin()"></div>
-    <div class="login-field"><label>Password</label><input type="password" id="loginPass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="login-field"><label>Password</label>
+      <div style="position:relative">
+        <input type="password" id="loginPass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:42px;width:100%">
+        <button type="button" id="loginPassToggle" onclick="(function(){const i=document.getElementById('loginPass');const b=document.getElementById('loginPassToggle');if(i.type==='password'){i.type='text';b.setAttribute('aria-label','Hide password');b.innerHTML='&#128064;';}else{i.type='password';b.setAttribute('aria-label','Show password');b.innerHTML='&#128065;';}})()" aria-label="Show password" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:6px 8px;font-size:16px;line-height:1;color:var(--text3)">&#128065;</button>
+      </div>
+    </div>
     <div class="login-err" id="loginErr">Invalid username or password</div>
     <button class="btn-login" onclick="doLogin()">Sign In</button>
 
@@ -2600,7 +2605,12 @@ function ensurePay(eid,groups){
   (groups||[]).forEach(g=>{if(!payments[eid].groups[g.id])payments[eid].groups[g.id]=false});
 }
 function isEventPaid(eid){
-  const ev=events.find(e=>String(e.id)===String(eid));if(!ev||!ev.groups?.length)return false;
+  // Look in crewEvents (the source for payment status) — not the shared
+  // `events` global, which flips between calendar and crewpay data
+  // depending on which module last loaded. That mismatch caused the
+  // CrewPay tab badge to spuriously show "!" on refresh.
+  const src = (typeof crewEvents !== 'undefined' && crewEvents.length) ? crewEvents : events;
+  const ev=src.find(e=>String(e.id)===String(eid));if(!ev||!ev.groups?.length)return false;
   return ev.groups.every(g=>payments[eid]?.groups?.[g.id]);
 }
 function isGroupPaid(eid,gid){return!!(payments[eid]?.groups[gid])}

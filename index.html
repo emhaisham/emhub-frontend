@@ -1255,12 +1255,14 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="toolbar">
                 <select id="bnFilterStaff" onchange="renderBonus()"><option value="">All Staff</option></select>
                 <select id="bnFilterYear" onchange="renderBonus()"><option value="">All Years</option></select>
+                <select id="bnFilterPaid" onchange="renderBonus()"><option value="">All Status</option><option value="paid">Paid Only</option><option value="unpaid">Unpaid Only</option></select>
                 <span class="toolbar-count" id="bnCount"></span>
               </div>
-              <div class="stat-row stat-row-3" style="margin-bottom:14px">
+              <div class="stat-row stat-row-4" style="margin-bottom:14px">
                 <div class="stat-card"><div class="stat-top"><span class="stat-label">Events</span></div><div class="stat-val blue" id="bnStatEv">0</div></div>
                 <div class="stat-card"><div class="stat-top"><span class="stat-label">Total Days</span></div><div class="stat-val amber" id="bnStatDays">0</div></div>
-                <div class="stat-card"><div class="stat-top"><span class="stat-label">Total Payout</span></div><div class="stat-val green" id="bnStatPayout">MVR 0</div></div>
+                <div class="stat-card"><div class="stat-top"><span class="stat-label">Paid</span></div><div class="stat-val green" id="bnStatPaid">MVR 0</div></div>
+                <div class="stat-card"><div class="stat-top"><span class="stat-label">Outstanding</span></div><div class="stat-val red" id="bnStatOutstanding">MVR 0</div></div>
               </div>
               <div id="bonusList"></div>
             </div>
@@ -2502,7 +2504,7 @@ function cpNav(page){
   const map={dashboard:0,events:1,localcrew:2,payments:3,reports:4};
   if(items[map[page]])items[map[page]].classList.add('active');
   cpActivePage=page;
-  if(page==='payments')renderPayments();
+  if(page==='payments') _ensureLocalCrewLoaded().then(renderPayments);
   if(page==='reports')renderReports();
   if(page==='dashboard')renderDashboard();
   if(page==='localcrew')loadLocalCrew();
@@ -3051,48 +3053,104 @@ function renderEvents(keep){
 
 // ══ RENDER: PAYMENTS ═════════════════════════════════
 function renderPayments(){
+  // Combined totals from labor payment events + local crew events
   let tot=0,paid=0,unpaidCnt=0;
   events.forEach(ev=>{const a=calcEvent(ev);tot+=a;if(isEventPaid(ev.id))paid+=a;else unpaidCnt++});
+  (localCrewEvents||[]).forEach(ev=>{
+    const a=_lcEventTotal(ev); tot+=a;
+    paid+=_lcEventPaidAmount(ev);
+    if(!isLocalCrewEventPaid(ev)) unpaidCnt++;
+  });
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
   set('payTotal',fmt(tot));set('payPaid',fmt(paid));set('payOwed',fmt(tot-paid));set('payUnpaidCnt',unpaidCnt);
   const filter=document.getElementById('payFilter')?.value||'';
   let list=events;
   if(filter==='paid')list=events.filter(ev=>isEventPaid(ev.id));
   if(filter==='unpaid')list=events.filter(ev=>!isEventPaid(ev.id));
+  let lcList=localCrewEvents||[];
+  if(filter==='paid') lcList=lcList.filter(ev=>isLocalCrewEventPaid(ev));
+  if(filter==='unpaid') lcList=lcList.filter(ev=>!isLocalCrewEventPaid(ev));
   const el=document.getElementById('payList');if(!el)return;
-  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg></div><div class="empty-title">No events</div></div>';return}
-  el.innerHTML=list.map(ev=>{
-    const totA=calcEvent(ev);const evPaid=isEventPaid(ev.id);const isExp=payExpanded.has(ev.id);
-    const gRows=(ev.groups||[]).map((g,gi)=>{
-      const gPaid=isGroupPaid(ev.id,g.id);const gAmt=calcGroup(g);
-      const daysSummary=g.days.map(d=>`${d.pax} pax · ${fmtDate(d.startDate)} ${fmtTime(d.startTime)}`).join(', ');
-      return`<div class="pay-group-row">
-        <div><div class="pg-name">Group ${gi+1}${g.label?' · '+g.label:''}</div><div class="pg-detail">${daysSummary}</div></div>
-        <div class="pg-right">
-          <div class="pg-amount">${fmt(gAmt)}</div>
-          <span class="badge ${gPaid?'badge-green':'badge-red'}" style="font-size:11px">${gPaid?'Paid':'Unpaid'}</span>
-          <button class="btn ${gPaid?'btn-red':'btn-green'} btn-xs" onclick="toggleGroupPaid('${ev.id}','${g.id}')">${gPaid?'Unmark':'Mark Paid'}</button>
+  if(!list.length && !lcList.length){el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg></div><div class="empty-title">No events</div></div>';return}
+
+  // Labor payment events (existing grouped rendering)
+  const laborHtml=list.length ? (
+    `<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:0 0 8px 2px">Labor Payment</div>` +
+    list.map(ev=>{
+      const totA=calcEvent(ev);const evPaid=isEventPaid(ev.id);const isExp=payExpanded.has(ev.id);
+      const gRows=(ev.groups||[]).map((g,gi)=>{
+        const gPaid=isGroupPaid(ev.id,g.id);const gAmt=calcGroup(g);
+        const daysSummary=g.days.map(d=>`${d.pax} pax · ${fmtDate(d.startDate)} ${fmtTime(d.startTime)}`).join(', ');
+        return`<div class="pay-group-row">
+          <div><div class="pg-name">Group ${gi+1}${g.label?' · '+g.label:''}</div><div class="pg-detail">${daysSummary}</div></div>
+          <div class="pg-right">
+            <div class="pg-amount">${fmt(gAmt)}</div>
+            <span class="badge ${gPaid?'badge-green':'badge-red'}" style="font-size:11px">${gPaid?'Paid':'Unpaid'}</span>
+            <button class="btn ${gPaid?'btn-red':'btn-green'} btn-xs" onclick="toggleGroupPaid('${ev.id}','${g.id}')">${gPaid?'Unmark':'Mark Paid'}</button>
+          </div>
+        </div>`;
+      }).join('');
+      return`<div class="pay-card ${isExp?'expanded':''}">
+        <div class="pay-hdr" onclick="togglePayEv('${ev.id}')">
+          <div><div class="ev-name">${ev.name}</div><div class="ev-date">${fmtDate(ev.date)}</div></div>
+          <span class="badge ${evPaid?'badge-green':'badge-red'}">${evPaid?'Paid':'Unpaid'}</span>
+          <div class="ev-total">${fmt(totA)}</div>
+          <span class="chevron">▼</span>
         </div>
-      </div>`;
-    }).join('');
-    return`<div class="pay-card ${isExp?'expanded':''}">
-      <div class="pay-hdr" onclick="togglePayEv('${ev.id}')">
-        <div><div class="ev-name">${ev.name}</div><div class="ev-date">${fmtDate(ev.date)}</div></div>
-        <span class="badge ${evPaid?'badge-green':'badge-red'}">${evPaid?'Paid':'Unpaid'}</span>
-        <div class="ev-total">${fmt(totA)}</div>
-        <span class="chevron">▼</span>
-      </div>
-      <div class="pay-body">${gRows}
-        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border);margin-top:4px">
-          <span style="font-size:13px;font-weight:600;color:var(--text2)">Total: ${fmt(totA)}</span>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-red btn-sm" onclick="markEventPaid('${ev.id}',false)">Mark All Unpaid</button>
-            <button class="btn btn-green btn-sm" onclick="markEventPaid('${ev.id}',true)">Mark All Paid</button>
+        <div class="pay-body">${gRows}
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border);margin-top:4px">
+            <span style="font-size:13px;font-weight:600;color:var(--text2)">Total: ${fmt(totA)}</span>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-red btn-sm" onclick="markEventPaid('${ev.id}',false)">Mark All Unpaid</button>
+              <button class="btn btn-green btn-sm" onclick="markEventPaid('${ev.id}',true)">Mark All Paid</button>
+            </div>
           </div>
         </div>
-      </div>
-    </div>`;
-  }).join('');
+      </div>`;
+    }).join('')
+  ) : '';
+
+  // Local Crew events — same expand pattern, per-staff toggles
+  const lcHtml=lcList.length ? (
+    `<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:${list.length?'18px':'0'} 0 8px 2px">Local Crew</div>` +
+    lcList.map(ev=>{
+      const totA=_lcEventTotal(ev);
+      const evPaid=isLocalCrewEventPaid(ev);
+      const isExp=payExpanded.has('lc:'+ev.id);
+      const sRows=(ev.staff||[]).map((s,i)=>{
+        const sPaid=!!s.paid;
+        const payout=_lcStaffPayout(s);
+        const days=_lcStaffDays(s);
+        return `<div class="pay-group-row">
+          <div><div class="pg-name">${s.empName||'(unknown)'}</div><div class="pg-detail">${days} day${days!==1?'s':''} · setup ${s.setupDays||0}×${fmtMVR(s.setupRate||0)} · event ${s.eventDays||0}×${fmtMVR(s.eventRate||0)}${(parseFloat(s.adjustment)||0)!==0?' · adj '+((parseFloat(s.adjustment)||0)>0?'+':'')+fmtMVR(parseFloat(s.adjustment)||0):''}</div></div>
+          <div class="pg-right">
+            <div class="pg-amount">${fmtMVR(payout)}</div>
+            <span class="badge ${sPaid?'badge-green':'badge-red'}" style="font-size:11px">${sPaid?'Paid':'Unpaid'}</span>
+            <button class="btn ${sPaid?'btn-red':'btn-green'} btn-xs" onclick="toggleLocalCrewStaffPaid('${ev.id}',${i})">${sPaid?'Unmark':'Mark Paid'}</button>
+          </div>
+        </div>`;
+      }).join('') || '<div style="padding:10px;color:var(--text3);font-size:13px">No staff entries</div>';
+      return `<div class="pay-card ${isExp?'expanded':''}">
+        <div class="pay-hdr" onclick="togglePayEv('lc:${ev.id}')">
+          <div><div class="ev-name">${ev.name} <span style="font-size:10px;background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd);border-radius:8px;padding:1px 6px;margin-left:4px;font-weight:600">Local Crew</span></div><div class="ev-date">${ev.date?fmtDate(ev.date):'No date'}</div></div>
+          <span class="badge ${evPaid?'badge-green':'badge-red'}">${evPaid?'All Paid':'Outstanding'}</span>
+          <div class="ev-total">${fmtMVR(totA)}</div>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="pay-body">${sRows}
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border);margin-top:4px">
+            <span style="font-size:13px;font-weight:600;color:var(--text2)">Total: ${fmtMVR(totA)} &nbsp;·&nbsp; Paid: ${fmtMVR(_lcEventPaidAmount(ev))}</span>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-red btn-sm" onclick="markLocalCrewAllPaid('${ev.id}',false)">Mark All Unpaid</button>
+              <button class="btn btn-green btn-sm" onclick="markLocalCrewAllPaid('${ev.id}',true)">Mark All Paid</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('')
+  ) : '';
+
+  el.innerHTML = laborHtml + lcHtml;
 }
 
 // ══ RENDER: LABOR LOG ════════════════════════════════
@@ -6105,8 +6163,9 @@ function renderLocalCrew(){
           <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Total Payout</div>
           <div style="font-size:15px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace">${fmtMVR(total)}</div>
         </div>
-        <div style="display:flex;gap:6px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-xs" onclick="openLocalCrew('${ev.id}')">View / Edit</button>
+          <button class="btn btn-ghost btn-xs" onclick="openLocalCrewReport('${ev.id}')" title="Open report — export PDF or JPEG">📄 Export</button>
           <button class="btn btn-red btn-xs" onclick="guardAction('crewpay_edit',()=>deleteLocalCrew('${ev.id}'))"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
         </div>
       </div>
@@ -6253,6 +6312,87 @@ function deleteLocalCrew(id){
   });
 }
 
+// ── Local Crew payment status helpers ─────────────────────
+function isLocalCrewStaffPaid(s){ return !!(s && s.paid); }
+function isLocalCrewEventPaid(ev){
+  if(!ev || !ev.staff || !ev.staff.length) return false;
+  return ev.staff.every(s=>s.paid);
+}
+function _lcEventPaidAmount(ev){
+  return (ev.staff||[]).filter(s=>s.paid).reduce((t,s)=>t+_lcStaffPayout(s),0);
+}
+async function toggleLocalCrewStaffPaid(eid, idx){
+  const ev=localCrewEvents.find(e=>String(e.id)===String(eid));
+  if(!ev||!ev.staff||!ev.staff[idx]) return;
+  const wasPaid=!!ev.staff[idx].paid;
+  ev.staff[idx].paid=!wasPaid;
+  ev.staff[idx].paidAt=ev.staff[idx].paid?new Date().toISOString():null;
+  const res=await api('PUT','/crewpay/local-crew/'+eid,{name:ev.name,date:ev.date,staff:ev.staff});
+  if(!res){ ev.staff[idx].paid=wasPaid; return toast('Failed to update'); }
+  // Re-normalize date from server response
+  if(res.date) ev.date=normalizeDate(res.date);
+  renderPayments();
+  toast(ev.staff[idx].paid?'Marked paid ✓':'Marked unpaid');
+}
+async function markLocalCrewAllPaid(eid, paid){
+  const ev=localCrewEvents.find(e=>String(e.id)===String(eid));
+  if(!ev||!ev.staff||!ev.staff.length) return;
+  const now=new Date().toISOString();
+  const backup=ev.staff.map(s=>({paid:s.paid,paidAt:s.paidAt}));
+  ev.staff.forEach(s=>{ s.paid=paid; s.paidAt=paid?now:null; });
+  const res=await api('PUT','/crewpay/local-crew/'+eid,{name:ev.name,date:ev.date,staff:ev.staff});
+  if(!res){ ev.staff.forEach((s,i)=>{ s.paid=backup[i].paid; s.paidAt=backup[i].paidAt; }); return toast('Failed to update'); }
+  if(res.date) ev.date=normalizeDate(res.date);
+  renderPayments();
+  toast(paid?'All marked paid ✓':'All marked unpaid');
+}
+
+// ── Local Crew PDF / JPEG export ──────────────────────────
+function openLocalCrewReport(eid){
+  const ev=localCrewEvents.find(e=>String(e.id)===String(eid));
+  if(!ev) return;
+  const total=_lcEventTotal(ev);
+  const paid=_lcEventPaidAmount(ev);
+  const totDays=(ev.staff||[]).reduce((s,x)=>s+_lcStaffDays(x),0);
+  const totAdj=(ev.staff||[]).reduce((s,x)=>s+(parseFloat(x.adjustment)||0),0);
+  document.getElementById('reportModalTitle').textContent=ev.name+' — Local Crew Report';
+  const rows=(ev.staff||[]).map(s=>{
+    const sd=parseFloat(s.setupDays)||0, sr=parseFloat(s.setupRate)||0;
+    const ed=parseFloat(s.eventDays)||0, er=parseFloat(s.eventRate)||0;
+    const adj=parseFloat(s.adjustment)||0;
+    return `<tr>
+      <td>${s.empName||'(unknown)'}</td>
+      <td>${sd} × ${fmtMVR(sr)}</td>
+      <td>${ed} × ${fmtMVR(er)}</td>
+      <td class="rt-money">${fmtMVR(_lcStaffTotal(s))}</td>
+      <td style="color:${adj<0?'#c0392b':adj>0?'#0a7c4e':'#9aa3af'}">${adj>0?'+':''}${fmtMVR(adj)}</td>
+      <td class="rt-money">${fmtMVR(_lcStaffPayout(s))}</td>
+      <td>${s.paid?'<span style="color:#0a7c4e;font-weight:700">PAID</span>':'<span style="color:#c0392b;font-weight:700">UNPAID</span>'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('reportContent').innerHTML=`
+    <div class="report-header">
+      <div class="report-company">EM HUB · CrewPay · Local Crew Report</div>
+      <div class="report-event-title">${ev.name}</div>
+      <div class="report-meta">Reference Date: ${ev.date?fmtDate(ev.date):'—'} &nbsp;·&nbsp; Generated: ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} &nbsp;·&nbsp; Status: <strong style="color:${isLocalCrewEventPaid(ev)?'var(--green)':'var(--red)'}">${isLocalCrewEventPaid(ev)?'ALL PAID':'PARTIALLY/UNPAID'}</strong></div>
+    </div>
+    <div class="report-summary">
+      <div class="rs-box"><div class="rs-val">${(ev.staff||[]).length}</div><div class="rs-lbl">Staff</div></div>
+      <div class="rs-box"><div class="rs-val">${totDays}</div><div class="rs-lbl">Total Days</div></div>
+      <div class="rs-box"><div class="rs-val" style="color:${totAdj<0?'#c0392b':totAdj>0?'#0a7c4e':'#0f1923'}">${totAdj>0?'+':''}${fmtMVR(totAdj)}</div><div class="rs-lbl">Adjustments</div></div>
+      <div class="rs-box"><div class="rs-val" style="color:var(--green)">${fmtMVR(total)}</div><div class="rs-lbl">Total Payout</div></div>
+    </div>
+    <div class="report-section-title">Staff Breakdown</div>
+    <table class="report-table">
+      <thead><tr><th>Staff</th><th>Setup (d × rate)</th><th>Event (d × rate)</th><th>Subtotal</th><th>Adj</th><th>Payout</th><th>Status</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="7" style="text-align:center;color:#9aa3af">No staff entries</td></tr>'}</tbody>
+    </table>
+    <div class="report-grand"><div class="rg-label">Grand Total — ${ev.name}</div><div class="rg-val">${fmtMVR(total)}</div></div>
+    <div style="margin-top:8px;font-size:11px;color:#6b7280">Paid: ${fmtMVR(paid)} &nbsp;·&nbsp; Outstanding: ${fmtMVR(total-paid)}</div>
+    <div class="report-footer">EM HUB · CrewPay Local Crew · ${new Date().toISOString().slice(0,10)} · For finance use only</div>`;
+  document.getElementById('reportModal').classList.add('open');
+}
+
 // ── HR BONUS PAGE (sources data from Local Crew) ─────────────
 // Flattens local crew events into one row per (event, staff). Visibility:
 //   admin or hr_view_all : sees everyone
@@ -6277,7 +6417,8 @@ function _bonusVisibleRows(){
         days:_lcStaffDays(s), payout:_lcStaffPayout(s),
         setupDays:s.setupDays||0, setupRate:s.setupRate||0,
         eventDays:s.eventDays||0, eventRate:s.eventRate||0,
-        adjustment:s.adjustment||0
+        adjustment:s.adjustment||0,
+        paid:!!s.paid, paidAt:s.paidAt||null
       });
     });
   });
@@ -6311,13 +6452,19 @@ function populateBonusFilters(){
 function renderBonus(){
   const fStaff=document.getElementById('bnFilterStaff')?.value||'';
   const fYear=document.getElementById('bnFilterYear')?.value||'';
+  const fPaid=document.getElementById('bnFilterPaid')?.value||'';
   let rows=_bonusVisibleRows();
   if(fStaff) rows=rows.filter(r=>String(r.empId)===String(fStaff));
   if(fYear)  rows=rows.filter(r=>(r.date||'').startsWith(fYear));
+  if(fPaid==='paid')   rows=rows.filter(r=>r.paid);
+  if(fPaid==='unpaid') rows=rows.filter(r=>!r.paid);
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
+  const totPayout=rows.reduce((s,r)=>s+r.payout,0);
+  const totPaid=rows.filter(r=>r.paid).reduce((s,r)=>s+r.payout,0);
   set('bnStatEv', rows.length);
   set('bnStatDays', rows.reduce((s,r)=>s+r.days,0));
-  set('bnStatPayout', fmtMVR(rows.reduce((s,r)=>s+r.payout,0)));
+  set('bnStatPaid', fmtMVR(totPaid));
+  set('bnStatOutstanding', fmtMVR(totPayout-totPaid));
   set('bnCount', `${rows.length} record${rows.length!==1?'s':''}`);
   const el=document.getElementById('bonusList'); if(!el) return;
   if(!rows.length){
@@ -6330,7 +6477,8 @@ function renderBonus(){
         <div style="font-size:14px;font-weight:700;color:var(--text)">${r.eventName||'(unnamed)'}</div>
         <div style="font-size:12px;color:var(--text3);margin-top:2px">${r.date?fmtDate(r.date):'No date'} · ${r.empName} · ${r.days} day${r.days!==1?'s':''}</div>
       </div>
-      <div style="text-align:right">
+      <span class="badge ${r.paid?'badge-green':'badge-red'}" style="font-size:11px">${r.paid?'Paid':'Unpaid'}</span>
+      <div style="text-align:right;min-width:110px">
         <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Payout</div>
         <div style="font-size:15px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace">${fmtMVR(r.payout)}</div>
       </div>

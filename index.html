@@ -1083,6 +1083,35 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               </div>
               <div class="card"><div class="card-hdr"><div class="card-hdr-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div><div class="card-title">All Events Summary</div></div></div>
               <div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Event</th><th>Date</th><th>Groups</th><th>Pax</th><th>Hours</th><th>Amount</th><th>Status</th></tr></thead><tbody id="rptBody"></tbody></table></div></div>
+
+              <!-- Local Crew by Staff -->
+              <div class="card" style="margin-top:16px">
+                <div class="card-hdr">
+                  <div class="card-hdr-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+                  <div><div class="card-title">Local Crew Payouts — by Staff</div><div class="card-sub">Select a staff member to see their Local Crew event payout details</div></div>
+                </div>
+                <div class="card-body">
+                  <div class="field" style="max-width:340px;margin-bottom:14px">
+                    <label class="field-label">Staff Member</label>
+                    <select id="rptLcStaff" onchange="renderLocalCrewReport()"><option value="">— Select staff —</option></select>
+                  </div>
+                  <div id="rptLcSummary" style="display:none">
+                    <div class="stat-row stat-row-4" style="margin-bottom:14px">
+                      <div class="stat-card"><div class="stat-top"><span class="stat-label">Events</span></div><div class="stat-val blue" id="rptLcEv">0</div></div>
+                      <div class="stat-card"><div class="stat-top"><span class="stat-label">Total Days</span></div><div class="stat-val amber" id="rptLcDays">0</div></div>
+                      <div class="stat-card"><div class="stat-top"><span class="stat-label">Adjustments</span></div><div class="stat-val" id="rptLcAdj">MVR 0</div></div>
+                      <div class="stat-card"><div class="stat-top"><span class="stat-label">Total Payout</span></div><div class="stat-val green" id="rptLcPayout">MVR 0</div></div>
+                    </div>
+                    <div style="overflow-x:auto">
+                      <table class="data-table">
+                        <thead><tr><th>Event</th><th>Date</th><th>Setup (d×rate)</th><th>Event (d×rate)</th><th>Subtotal</th><th>Adj.</th><th>Payout</th></tr></thead>
+                        <tbody id="rptLcBody"></tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div id="rptLcEmpty" style="color:var(--text3);font-size:13px;padding:14px;text-align:center">Select a staff member to view their payout details.</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -5905,6 +5934,81 @@ function renderReports(){
   if(bm)bm.innerHTML=months.map(([m,a])=>{const[y,mo]=m.split('-');const lbl=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+y;return`<div class="bar-row"><div class="bar-label">${lbl}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(a/maxM*100)}%;background:var(--green)"></div></div><div class="bar-val">${fmt(a)}</div></div>`}).join('')||'<div style="color:var(--text3);font-size:13px">No data</div>';
   const tbody=document.getElementById('rptBody');
   if(tbody)tbody.innerHTML=byEvent.map(e=>`<tr><td class="td-primary">${e.name}</td><td class="td-mono">${fmtDate(e.date)}</td><td>${e.groups}</td><td>${e.pax}</td><td>${fmtH(e.h)}</td><td class="td-green">${fmt(e.a)}</td><td><span class="badge ${e.paid?'badge-green':'badge-red'}" style="font-size:11px">${e.paid?'Paid':'Unpaid'}</span></td></tr>`).join('')||`<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">No events in range</td></tr>`;
+  // Ensure Local Crew data + staff dropdown is ready, then render the by-staff section
+  _ensureLocalCrewLoaded().then(()=>{ populateLcStaffSelect(); renderLocalCrewReport(); });
+}
+
+let _lcLoadedOnce=false;
+async function _ensureLocalCrewLoaded(){
+  if(_lcLoadedOnce) return;
+  _lcLoadedOnce=true;
+  await loadLocalCrew();
+}
+
+function populateLcStaffSelect(){
+  const sel=document.getElementById('rptLcStaff'); if(!sel) return;
+  const cur=sel.value;
+  // Build a unique list of staff that appear in any Local Crew event,
+  // falling back to active employees so users can be selected even before
+  // they appear in any event.
+  const seen=new Map();
+  localCrewEvents.forEach(ev=>(ev.staff||[]).forEach(s=>{
+    if(s.empId && !seen.has(s.empId)) seen.set(s.empId, s.empName || (hrEmployees.find(e=>String(e.id)===String(s.empId))?.name) || '(unknown)');
+  }));
+  hrEmployees.filter(e=>e.status==='active'||e.status==='probation').forEach(e=>{
+    if(!seen.has(e.id)) seen.set(e.id, e.name);
+  });
+  const opts=['<option value="">— Select staff —</option>']
+    .concat([...seen.entries()].sort((a,b)=>a[1].localeCompare(b[1])).map(([id,name])=>`<option value="${id}"${String(id)===String(cur)?' selected':''}>${name}</option>`));
+  sel.innerHTML=opts.join('');
+}
+
+function renderLocalCrewReport(){
+  const empId=document.getElementById('rptLcStaff')?.value||'';
+  const summary=document.getElementById('rptLcSummary');
+  const empty=document.getElementById('rptLcEmpty');
+  if(!empId){
+    if(summary) summary.style.display='none';
+    if(empty) empty.style.display='block';
+    return;
+  }
+  if(summary) summary.style.display='block';
+  if(empty) empty.style.display='none';
+  // Reuse the global date range so report sections stay in sync
+  const rFrom=document.getElementById('rptFrom')?.value||'';
+  const rTo=document.getElementById('rptTo')?.value||'9999';
+  const rows=[];
+  let totDays=0, totSubtotal=0, totAdj=0, totPayout=0;
+  localCrewEvents.forEach(ev=>{
+    const d=normalizeDate(ev.date)||'';
+    if(rFrom && d<rFrom) return;
+    if(rTo && d>rTo) return;
+    (ev.staff||[]).filter(s=>String(s.empId)===String(empId)).forEach(s=>{
+      const sub=_lcStaffTotal(s); const adj=parseFloat(s.adjustment)||0;
+      const payout=_lcStaffPayout(s); const days=_lcStaffDays(s);
+      rows.push({name:ev.name,date:d,s,sub,adj,payout,days});
+      totDays+=days; totSubtotal+=sub; totAdj+=adj; totPayout+=payout;
+    });
+  });
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
+  set('rptLcEv', rows.length);
+  set('rptLcDays', totDays);
+  set('rptLcAdj', fmtMVR(totAdj));
+  set('rptLcPayout', fmtMVR(totPayout));
+  const body=document.getElementById('rptLcBody'); if(!body) return;
+  body.innerHTML = rows.length ? rows.map(r=>{
+    const sd=parseFloat(r.s.setupDays)||0, sr=parseFloat(r.s.setupRate)||0;
+    const ed=parseFloat(r.s.eventDays)||0, er=parseFloat(r.s.eventRate)||0;
+    return `<tr>
+      <td class="td-primary">${r.name}</td>
+      <td class="td-mono">${fmtDate(r.date)}</td>
+      <td>${sd} × ${fmtMVR(sr)}</td>
+      <td>${ed} × ${fmtMVR(er)}</td>
+      <td class="td-mono">${fmtMVR(r.sub)}</td>
+      <td class="td-mono" style="color:${r.adj<0?'var(--red)':r.adj>0?'var(--green)':'var(--text3)'}">${r.adj>0?'+':''}${fmtMVR(r.adj)}</td>
+      <td class="td-green td-mono"><strong>${fmtMVR(r.payout)}</strong></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">No Local Crew payouts for this staff in the selected range</td></tr>';
 }
 
 function setRptRange(preset){
@@ -5947,7 +6051,9 @@ let _lcStaffRows = [];       // working staff array in the modal
 
 async function loadLocalCrew(){
   const r = await api('GET','/crewpay/local-crew');
-  if(r) localCrewEvents = r;
+  // pg can return DATE as a JS Date object (toString → "Wed Oct 15 ..."),
+  // which breaks fmtDate. normalizeDate forces YYYY-MM-DD.
+  if(r) localCrewEvents = r.map(ev => ({...ev, date: normalizeDate(ev.date)}));
   renderLocalCrew();
 }
 

@@ -776,10 +776,12 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 
 /* ── PWA STANDALONE MODE (saved to home screen) ─────────────────── */
 @media all and (display-mode: standalone) {
-  /* Push content below iPhone notch/dynamic island */
+  /* Push content below iPhone notch/dynamic island. Background matches
+     the regular app bg — the iOS status-bar tint comes from the
+     <meta name="theme-color"> tag, not the body. */
   body {
     padding-top: env(safe-area-inset-top);
-    background: var(--hub);
+    background: var(--bg);
   }
   /* Dark status bar area */
   #screen-hub, #screen-login {

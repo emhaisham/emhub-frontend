@@ -1033,9 +1033,19 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
       </div>
       <div class="hub-right">
         <div class="hub-user" id="hubUserInfo">
-          <div id="notifBell" onclick="switchModule('msging')" title="Notifications" style="position:relative;cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);margin-right:4px">
+          <div id="notifBell" onclick="event.stopPropagation();toggleNotifDropdown(this)" title="Notifications" style="position:relative;cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);margin-right:4px">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
             <span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;align-items:center;justify-content:center"></span>
+          </div>
+          <div id="notifDropdown" onclick="event.stopPropagation()" style="display:none;position:fixed;top:60px;right:14px;width:340px;max-width:calc(100vw - 28px);max-height:480px;background:var(--white);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);z-index:600;overflow:hidden;flex-direction:column">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface)">
+              <div style="font-size:14px;font-weight:700;color:var(--text)">Notifications</div>
+              <button onclick="markAllNotifsRead()" class="btn btn-ghost btn-xs">Mark all read</button>
+            </div>
+            <div id="notifDropdownList" style="overflow-y:auto;flex:1"></div>
+            <div style="border-top:1px solid var(--border);padding:8px;background:var(--surface)">
+              <button onclick="closeNotifDropdown();switchModule('msging')" class="btn btn-ghost btn-sm" style="width:100%">View all →</button>
+            </div>
           </div>
           <div id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle dark mode" style="cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);margin-right:8px;font-size:16px">🌙</div>
           <div class="hub-avatar" id="hubAvatar">A</div>
@@ -5181,6 +5191,21 @@ let calView = 'month';
 let calDate = new Date();
 let calPopupEid = null;
 const EVENT_COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
+
+// Color-to-status mapping for calendar events
+//   #10b981 (green) → "Not fully confirmed"
+//   #ef4444 (red)   → "Confirmed"
+// Other colors carry no semantic status.
+const EVENT_STATUS_BY_COLOR = {
+  '#10b981': { label: 'Not fully confirmed', bg: 'rgba(16,185,129,.15)', fg: '#047857', bd: '#a7f3d0' },
+  '#ef4444': { label: 'Confirmed',           bg: 'rgba(239,68,68,.15)',  fg: '#b91c1c', bd: '#fecaca' }
+};
+function getEventStatusTag(color){ return EVENT_STATUS_BY_COLOR[color] || null; }
+function renderEventStatusBadge(color, opts){
+  const t = getEventStatusTag(color); if(!t) return '';
+  const size = opts?.small ? '10px' : '11px';
+  return `<span style="background:${t.bg};color:${t.fg};border:1px solid ${t.bd};border-radius:10px;padding:2px 8px;font-size:${size};font-weight:700;white-space:nowrap">${t.label}</span>`;
+}
 const PHASE_COLORS = {loading:'#f59e0b',setup:'#3b82f6',rehearsal:'#8b5cf6',event:'#10b981'};
 
 async function calSave(){ /* saved via API */ }
@@ -5570,7 +5595,10 @@ function showCalPopup(eid, evt){
       <div style="flex:1;min-width:0">
         <div style="font-size:16px;font-weight:700;color:var(--text);${isCompleted?'text-decoration:line-through;opacity:.6':''};word-break:break-word">${ev.name}</div>
         <div style="font-size:12px;color:var(--text3);margin-top:2px">${calFmtDate(ev.eventDateFrom)}${ev.eventDateFrom!==ev.eventDateTo?' → '+calFmtDate(ev.eventDateTo):''}</div>${ev.venue?`<div style="font-size:12px;color:var(--text3);margin-top:2px">📍 ${ev.venue}</div>`:''}
-        ${isCompleted?`<span class="badge badge-green" style="font-size:10px;margin-top:4px">✅ Completed</span>`:''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+          ${renderEventStatusBadge(ev.color)}
+          ${isCompleted?`<span class="badge badge-green" style="font-size:10px">✅ Completed</span>`:''}
+        </div>
       </div>
     </div>
     <div style="display:flex;gap:5px;flex-shrink:0;margin-left:8px">
@@ -5687,9 +5715,15 @@ function _renderCalModal(ev, defaultDate){
         </div>
         <div class="field"><label class="field-label">Venue / Location</label><input type="text" id="cef_venue" value="${ev?.venue||''}" placeholder="e.g. Bandos Island Resort"></div>
         <div class="field"><label class="field-label">Event Details / Notes</label><textarea id="cef_details" rows="3" style="resize:vertical">${ev?.notes||ev?.details||''}</textarea></div>
-        <div class="field"><label class="field-label">Colour</label>
-          <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:4px" id="cef_colors">
-            ${EVENT_COLORS.map(c=>`<div onclick="document.querySelectorAll('#cef_colors .ccol').forEach(x=>x.style.outline='none');this.style.outline='3px solid #000';document.getElementById('cef_color').value='${c}'" class="ccol" style="width:26px;height:26px;border-radius:50%;background:${c};cursor:pointer;outline:${(ev?.color||color)===c?'3px solid #000':'none'}"></div>`).join('')}
+        <div class="field"><label class="field-label">Colour / Status</label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px" id="cef_colors">
+            ${EVENT_COLORS.map(c=>{
+              const tag = EVENT_STATUS_BY_COLOR[c];
+              return `<div onclick="document.querySelectorAll('#cef_colors .ccol').forEach(x=>x.style.outline='none');this.querySelector('.ccol').style.outline='3px solid #000';document.getElementById('cef_color').value='${c}'" style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+                <div class="ccol" style="width:26px;height:26px;border-radius:50%;background:${c};outline:${(ev?.color||color)===c?'3px solid #000':'none'}"></div>
+                ${tag ? `<div style="font-size:10px;font-weight:600;color:${tag.fg};text-align:center;line-height:1.1;max-width:80px">${tag.label}</div>` : ''}
+              </div>`;
+            }).join('')}
             <input type="hidden" id="cef_color" value="${ev?.color||color}">
           </div>
         </div>
@@ -7159,8 +7193,67 @@ function showInAppToast(title, body, type){
 
 function updateNotifBell(){
   const unread = _inAppNotifs.filter(n=>!n.read).length;
-  const badge = document.getElementById('notifBadge');
-  if (badge) { badge.textContent = unread; badge.style.display = unread ? 'flex' : 'none'; }
+  // Desktop bell badge (single element)
+  const deskBadge = document.getElementById('notifBadge');
+  if (deskBadge) { deskBadge.textContent = unread; deskBadge.style.display = unread ? 'flex' : 'none'; }
+  // Mobile bell badges (one per module-area where the mob-menubar was injected)
+  document.querySelectorAll('.notif-badge-mobile').forEach(badge => {
+    badge.textContent = unread;
+    badge.style.display = unread ? 'flex' : 'none';
+  });
+}
+
+// ── Notification dropdown ─────────────────────────────────────
+function toggleNotifDropdown(){
+  const dd = document.getElementById('notifDropdown');
+  if(!dd) return;
+  const isOpen = dd.style.display !== 'none';
+  if(isOpen){ closeNotifDropdown(); return; }
+  renderNotifDropdown();
+  dd.style.display = 'flex';
+  // Mark all as read so the badge clears
+  _inAppNotifs.forEach(n => { n.read = true; });
+  updateNotifBell();
+  setTimeout(() => document.addEventListener('click', _notifOutsideClickClose), 50);
+}
+
+function closeNotifDropdown(){
+  const dd = document.getElementById('notifDropdown');
+  if(dd) dd.style.display = 'none';
+  document.removeEventListener('click', _notifOutsideClickClose);
+}
+
+function _notifOutsideClickClose(e){
+  const dd = document.getElementById('notifDropdown');
+  if(!dd) return;
+  if(!dd.contains(e.target) && !e.target.closest('#notifBell, .notif-bell-mobile')){
+    closeNotifDropdown();
+  }
+}
+
+function renderNotifDropdown(){
+  const el = document.getElementById('notifDropdownList');
+  if(!el) return;
+  const items = (_inAppNotifs || []).slice(0, 15);
+  if(!items.length){
+    el.innerHTML = '<div style="padding:30px 16px;text-align:center;color:var(--text3);font-size:13px">No notifications yet</div>';
+    return;
+  }
+  el.innerHTML = items.map(n => {
+    const ts = n.sentAt || n.sent_at || n.createdAt || n.created_at;
+    const ago = ts ? msgTimeAgo(ts) : '';
+    return `<div style="padding:10px 16px;border-bottom:1px solid var(--border);cursor:default">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px">${(n.title||'').toString()}</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.4">${(n.body||'').toString()}</div>
+      ${ago ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">${ago}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function markAllNotifsRead(){
+  _inAppNotifs.forEach(n => { n.read = true; });
+  updateNotifBell();
+  toast('All marked read');
 }
 
 async function loadInAppNotifs(){
@@ -11345,7 +11438,12 @@ function _injectMobileMenubars(){
     bar.className='mob-menubar';
     bar.innerHTML=`<button class="mob-hamburger" onclick="openDrawer()" aria-label="Menu">
       <span></span><span></span><span></span>
-    </button><div class="mob-module-title">${brand}</div><button class="mob-logout" onclick="doLogout()">Sign Out</button>`;
+    </button><div class="mob-module-title">${brand}</div>
+    <div class="notif-bell-mobile" onclick="event.stopPropagation();toggleNotifDropdown()" style="position:relative;cursor:pointer;width:34px;height:34px;border-radius:7px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:var(--surface);flex-shrink:0;margin-right:6px" title="Notifications">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text)"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      <span class="notif-badge-mobile" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;align-items:center;justify-content:center"></span>
+    </div>
+    <button class="mob-logout" onclick="doLogout()">Sign Out</button>`;
     area.insertBefore(bar,area.firstChild);
   });
   // Auto-close drawer when any nav-item is clicked

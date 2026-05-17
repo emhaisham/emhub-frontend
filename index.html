@@ -2439,6 +2439,60 @@ async function doLogin(){
   _afterLogin();
 }
 
+// ── Data freshness cache ──────────────────────────────────────────────
+// Most modules currently re-fetch their data on every tab click. That made
+// the app feel slow on flaky connections — clicking HR → CrewPay → HR
+// fetched /hr/employees twice in 5 seconds. Mark each dataset's fetch time
+// and skip re-fetch if it was retrieved within FRESH_TTL_MS.
+const FRESH_TTL_MS = 60 * 1000; // 60 seconds
+const _dataFresh = {};
+function isDataFresh(key){ return _dataFresh[key] && (Date.now() - _dataFresh[key]) < FRESH_TTL_MS; }
+function markFresh(key){ _dataFresh[key] = Date.now(); }
+function invalidateFresh(key){ delete _dataFresh[key]; }
+
+// Helper: upsert an item into an array by id. Used after save so we can
+// merge the API response into local cache instead of re-fetching the list.
+function _upsertById(arr, item, insertAtStart){
+  if(!item || !arr) return arr;
+  const i = arr.findIndex(x => String(x.id) === String(item.id));
+  if(i >= 0) arr[i] = item;
+  else if(insertAtStart) arr.unshift(item);
+  else arr.push(item);
+  return arr;
+}
+
+// Map a raw API employee row to the frontend shape (used by both initial
+// load and post-save merge so we only need one mapping)
+function _mapEmployeeFromApi(e){
+  return {
+    ...e,
+    title: e.designation,
+    joined: e.joinDate ? String(e.joinDate).slice(0,10) : '',
+    basicSalary: e.salary,
+    allowance: e.allowance || 0,
+    emgName: e.emergencyName,
+    emgPhone: e.emergencyPhone,
+    emgRelation: e.emergencyRel,
+    bankName: e.bankName, bankAcctName: e.bankAcctName, bankAcct: e.bankAcct,
+    payMethod: e.payMethod || 'bank', pensionEligible: e.pensionEligible || 'yes',
+    empBasis: e.empBasis || 'fulltime', nationality: e.nationality,
+    dob: e.dob ? String(e.dob).slice(0,10) : '',
+    insuranceNo: e.insuranceNo, insuranceAgency: e.insuranceAgency,
+    probationStart: e.probationStart ? String(e.probationStart).slice(0,10) : '',
+    probationMonths: e.probationMonths || 0, probationSalary: e.probationSalary || 0,
+    exitType: e.exitType, exitDate: e.exitDate ? String(e.exitDate).slice(0,10) : '', exitReason: e.exitReason,
+    nidExpiry: e.nidExpiry ? String(e.nidExpiry).slice(0,10) : '',
+    passportExpiry: e.passportExpiry ? String(e.passportExpiry).slice(0,10) : '',
+    workPermitExpiry: e.workPermitExpiry ? String(e.workPermitExpiry).slice(0,10) : '',
+    insuranceExpiry: e.insuranceExpiry ? String(e.insuranceExpiry).slice(0,10) : '',
+    quotaExpiry: e.quotaExpiry ? String(e.quotaExpiry).slice(0,10) : '',
+    medicalExpiry: e.medicalExpiry ? String(e.medicalExpiry).slice(0,10) : '',
+    contractExpiry: e.contractExpiry ? String(e.contractExpiry).slice(0,10) : '',
+    docs: (e.extraDocs || []).reduce((acc, d) => { if(d.type) acc[d.type] = d; return acc; },
+      e.photo ? {photo:{key: e.photo}} : {}),
+  };
+}
+
 function _afterLogin(){
   const user = currentUser;
   if(!user || !user.name){ toast('Invalid login response — please try again'); doLogout(); return; }
@@ -2531,6 +2585,11 @@ async function _loadAllData(){
       payments[e.id] = localPays[e.id];
     }
   });
+  // Mark every dataset as fresh so the per-module switchModule handlers
+  // don't immediately re-fetch what we just loaded
+  ['events','hrEmployees','hrLoans','hrPayrolls','hrPensions','hrLeave',
+   'invItems','invCats','invSubCats','invWarehouses','invFlightCases',
+   'users','hrLeaveTypes','crewEvents'].forEach(markFresh);
 }
 
 function resetToDefaults(){ toast('Account management is now handled via the backend.'); }
@@ -2662,53 +2721,30 @@ function switchModule(name){
   if(tab) tab.classList.add('active');
   requestAnimationFrame(()=>{
     if(name==='crewpay'){
-      api('GET','/crewpay/events').then(evts=>{
-        if(evts){
-          crewEvents=evts;
-          events=evts.map(e=>({...e,groups:e.groups||[]}));
-          // Restore payments from API (merged with localStorage fallback)
-          const localPays=JSON.parse(localStorage.getItem('em_pays')||'{}');
-          evts.forEach(e=>{
-            if(e.payments&&Object.keys(e.payments).length){
-              payments[e.id]=e.payments; // prefer API data
-            } else if(localPays[e.id]){
-              payments[e.id]=localPays[e.id]; // fallback to localStorage
-            }
-          });
-          populateMonths();
-        }
-        renderAll();
-      });
+      const _renderCp = () => { renderAll(); };
+      if(isDataFresh('crewEvents')){
+        _renderCp();
+      } else {
+        api('GET','/crewpay/events').then(evts=>{
+          if(evts){
+            crewEvents=evts;
+            events=evts.map(e=>({...e,groups:e.groups||[]}));
+            const localPays=JSON.parse(localStorage.getItem('em_pays')||'{}');
+            evts.forEach(e=>{
+              if(e.payments&&Object.keys(e.payments).length){ payments[e.id]=e.payments; }
+              else if(localPays[e.id]){ payments[e.id]=localPays[e.id]; }
+            });
+            populateMonths();
+            markFresh('crewEvents');
+          }
+          _renderCp();
+        });
+      }
     }
     if(name==='users'){ renderUsers(); usrNav('userslist'); }
     if(name==='hr'){
-      // Show loading while fetching
-      const el=document.getElementById('hrEmpList');
-      if(el) el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3)">Loading...</div>';
-      api('GET','/hr/employees').then(emps=>{
-        if(emps){
-          hrEmployees = emps.map(e=>({
-            ...e,
-            title:e.designation, joined:e.joinDate?String(e.joinDate).slice(0,10):'',
-            basicSalary:e.salary, allowance:e.allowance||0,
-            emgName:e.emergencyName, emgPhone:e.emergencyPhone, emgRelation:e.emergencyRel,
-            bankName:e.bankName, bankAcctName:e.bankAcctName, bankAcct:e.bankAcct,
-            payMethod:e.payMethod||'bank', pensionEligible:e.pensionEligible||'yes',
-            empBasis:e.empBasis||'fulltime', nationality:e.nationality, dob:e.dob,
-            insuranceNo:e.insuranceNo, insuranceAgency:e.insuranceAgency,
-            nidExpiry:e.nidExpiry?String(e.nidExpiry).slice(0,10):'',
-            passportExpiry:e.passportExpiry?String(e.passportExpiry).slice(0,10):'',
-            workPermitExpiry:e.workPermitExpiry?String(e.workPermitExpiry).slice(0,10):'',
-            insuranceExpiry:e.insuranceExpiry?String(e.insuranceExpiry).slice(0,10):'',
-            quotaExpiry:e.quotaExpiry?String(e.quotaExpiry).slice(0,10):'',
-            medicalExpiry:e.medicalExpiry?String(e.medicalExpiry).slice(0,10):'',
-            contractExpiry:e.contractExpiry?String(e.contractExpiry).slice(0,10):'',
-            docs:(e.extraDocs||[]).reduce((acc,d)=>{if(d.type)acc[d.type]=d;return acc;},
-              e.photo?{photo:{key:e.photo}}:{}),
-          }));
-        }
+      const _afterHr = () => {
         populateHRFilters(); renderEmployees(); updateHRSidebar(); applyPerms();
-        // Auto-redirect non-admin HR users to own profile
         if(currentUser?.role!=='admin'){
           const role=appRoles.find(r=>String(r.id)===String(currentUser?.roleId));
           const perms=role?.perms||currentUser?.rolePerms||{};
@@ -2717,43 +2753,58 @@ function switchModule(name){
             if(ownEmp){ profileActiveTab='info'; setTimeout(()=>hrNav('profile', ownEmp.id),100); }
           }
         }
-      });
+      };
+      if(isDataFresh('hrEmployees')){
+        _afterHr();
+      } else {
+        const el=document.getElementById('hrEmpList');
+        if(el) el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3)">Loading...</div>';
+        api('GET','/hr/employees').then(emps=>{
+          if(emps){ hrEmployees = emps.map(_mapEmployeeFromApi); markFresh('hrEmployees'); }
+          _afterHr();
+        });
+      }
     }
     if(name==='calendar'){
-      // Show loading while fetching
-      const calBodyEl=document.getElementById('calBody');
-      if(calBodyEl) calBodyEl.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3)">Loading events...</div>';
-      api('GET','/events').then(evts=>{
-        console.log('[calendar] API returned:', evts?.length, 'events');
-        if(evts){
-          calEvents = evts.map(e=>({
-            ...e,
-            eventDateFrom: normalizeDate(e.eventDateFrom),
-            eventDateTo:   normalizeDate(e.eventDateTo),
-          }));
-          events = calEvents;
-          console.log('[calendar] calEvents set to', calEvents.length, 'events');
-          if(calEvents.length>0) console.log('[calendar] first event dates:', calEvents[0].eventDateFrom, 'to', calEvents[0].eventDateTo);
-        }
-        calDate=new Date(); calSetView('month');
-      });
+      const _afterCal = () => { calDate=new Date(); calSetView('month'); };
+      if(isDataFresh('events')){
+        _afterCal();
+      } else {
+        const calBodyEl=document.getElementById('calBody');
+        if(calBodyEl) calBodyEl.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3)">Loading events...</div>';
+        api('GET','/events').then(evts=>{
+          if(evts){
+            calEvents = evts.map(e=>({...e, eventDateFrom:normalizeDate(e.eventDateFrom), eventDateTo:normalizeDate(e.eventDateTo)}));
+            events = calEvents;
+            markFresh('events');
+          }
+          _afterCal();
+        });
+      }
     }
     if(name==='msging'){ renderMsgHistory(); updateMsgBadge(); msgNav('compose'); }
     if(name==='loans'){
-      Promise.all([
-        api('GET','/inventory/items'),
-        api('GET','/inventory/categories'),
-        api('GET','/inventory/subcategories'),
-        api('GET','/inventory/warehouses'),
-        api('GET','/inventory/flightcases'),
-      ]).then(([items,cats,subcats,wh,fc])=>{
-        if(items) invItems=items;
-        if(cats){ invCats=cats; }
-        if(subcats){ invSubCats=subcats; }
-        if(wh){ invWarehouses=wh; }
-        if(fc){ invFlightCases=fc; }
-        populateInvCatFilter(); populateInvWhFilter(); renderInventory(); loanEquipNav('inventory'); applyPerms();
-      });
+      const _afterInv = () => { populateInvCatFilter(); populateInvWhFilter(); renderInventory(); loanEquipNav('inventory'); applyPerms(); };
+      // All 5 inventory datasets share freshness as a group — if any is stale, refetch all
+      const invFresh = ['invItems','invCats','invSubCats','invWarehouses','invFlightCases'].every(isDataFresh);
+      if(invFresh){
+        _afterInv();
+      } else {
+        Promise.all([
+          api('GET','/inventory/items'),
+          api('GET','/inventory/categories'),
+          api('GET','/inventory/subcategories'),
+          api('GET','/inventory/warehouses'),
+          api('GET','/inventory/flightcases'),
+        ]).then(([items,cats,subcats,wh,fc])=>{
+          if(items){ invItems=items; markFresh('invItems'); }
+          if(cats){  invCats=cats; markFresh('invCats'); }
+          if(subcats){ invSubCats=subcats; markFresh('invSubCats'); }
+          if(wh){    invWarehouses=wh; markFresh('invWarehouses'); }
+          if(fc){    invFlightCases=fc; markFresh('invFlightCases'); }
+          _afterInv();
+        });
+      }
     }
     if(name==='audit'){ loadAudit(1); }
     if(name==='launcher'){}
@@ -3896,14 +3947,24 @@ function hrNav(page, extra){
   if(page==='disciplinary')  { renderDisciplinaryPage(); }
   if(page==='staff-assets')  { renderAllStaffAssets(); }
   if(page==='payroll'){
-    api('GET','/hr/payroll').then(r=>{ if(r) hrPayrolls=r; populatePayrollDept(); renderPayroll(); });
+    if(isDataFresh('hrPayrolls')){
+      populatePayrollDept(); renderPayroll();
+    } else {
+      api('GET','/hr/payroll').then(r=>{ if(r){ hrPayrolls=r; markFresh('hrPayrolls'); } populatePayrollDept(); renderPayroll(); });
+    }
     return;
   }
   if(page==='loans')         { populateLoanFilter(); renderLoans(); }
   if(page==='pension')       { renderPension(); }
   if(page==='bonus')         { _ensureLocalCrewLoaded().then(()=>{ populateBonusFilters(); renderBonus(); }); }
   if(page==='profile')       { renderProfile(extra); }
-  if(page==='leave')         { api('GET','/hr/leave').then(r=>{if(r)hrLeave=r; populateLeaveFilter(); renderLeave();}); }
+  if(page==='leave')         {
+    if(isDataFresh('hrLeave')){
+      populateLeaveFilter(); renderLeave();
+    } else {
+      api('GET','/hr/leave').then(r=>{ if(r){ hrLeave=r; markFresh('hrLeave'); } populateLeaveFilter(); renderLeave(); });
+    }
+  }
   if(page==='letters')       { populateLetterEmp(); document.getElementById('ltDate').valueAsDate=new Date(); }
   updateHRSidebar();
 }
@@ -4270,33 +4331,10 @@ function saveEmployee(){
     if(editingEmpId){ res=await api('PUT','/hr/employees/'+editingEmpId,apiEmp); }
     else { res=await api('POST','/hr/employees',apiEmp); }
     if(!res)return;
-    const rawEmps = await api('GET','/hr/employees') || [];
-    hrEmployees = rawEmps.map(e => ({
-      ...e,
-      title: e.designation,
-      joined: e.joinDate ? String(e.joinDate).slice(0,10) : '',
-      basicSalary: e.salary,
-      allowance: e.allowance||0,
-      emgName: e.emergencyName,
-      emgPhone: e.emergencyPhone,
-      emgRelation: e.emergencyRel,
-      bankName: e.bankName, bankAcctName: e.bankAcctName, bankAcct: e.bankAcct,
-      payMethod: e.payMethod||'bank', pensionEligible: e.pensionEligible||'yes',
-      empBasis: e.empBasis||'fulltime', nationality: e.nationality,
-      dob: e.dob, insuranceNo: e.insuranceNo, insuranceAgency: e.insuranceAgency,
-      probationStart: e.probationStart, probationMonths: e.probationMonths||0,
-      probationSalary: e.probationSalary||0,
-      exitType: e.exitType, exitDate: e.exitDate, exitReason: e.exitReason,
-      nidExpiry: e.nidExpiry ? String(e.nidExpiry).slice(0,10) : '',
-      passportExpiry: e.passportExpiry ? String(e.passportExpiry).slice(0,10) : '',
-      workPermitExpiry: e.workPermitExpiry ? String(e.workPermitExpiry).slice(0,10) : '',
-      insuranceExpiry: e.insuranceExpiry ? String(e.insuranceExpiry).slice(0,10) : '',
-      quotaExpiry: e.quotaExpiry ? String(e.quotaExpiry).slice(0,10) : '',
-      medicalExpiry: e.medicalExpiry ? String(e.medicalExpiry).slice(0,10) : '',
-      contractExpiry: e.contractExpiry ? String(e.contractExpiry).slice(0,10) : '',
-      docs: (e.extraDocs||[]).reduce((acc,d) => { if(d.type) acc[d.type]=d; return acc; },
-        e.photo ? {photo:{key:e.photo}} : {}),
-    }));
+    // Merge the saved record into local cache instead of refetching the full
+    // list — the PUT / POST response already contains the updated record.
+    _upsertById(hrEmployees, _mapEmployeeFromApi(res), /*insertAtStart*/ !editingEmpId);
+    markFresh('hrEmployees');
     populateHRFilters();
     toast(editingEmpId?'Employee updated ✓':'Employee added ✓');
     profileActiveTab='info';
@@ -4919,7 +4957,9 @@ async function saveLoan(){
       schedule,notes,remaining,status
     });
     if(!res){toast('Failed to update loan');return;}
-    hrLoans=await api('GET','/hr/loans')||hrLoans;
+    // Merge updated record into local cache; skip redundant GET
+    _upsertById(hrLoans, {...res, empId:res.empId||res.emp_id, monthlyAmount:res.monthlyAmount||res.monthly_amount}, false);
+    markFresh('hrLoans');
     closeUserModal();renderLoans();toast('Loan updated ✓');
   } else {
     const conflict=hrPayrolls.find(p=>String(p.empId)===String(empId)&&p.month===start&&p.status==='paid');
@@ -4929,7 +4969,8 @@ async function saveLoan(){
       schedule,notes,remaining:amount,status:'active'
     });
     if(!res){toast('Failed to save loan');return;}
-    hrLoans=await api('GET','/hr/loans')||hrLoans;
+    _upsertById(hrLoans, {...res, empId:res.empId||res.emp_id, monthlyAmount:res.monthlyAmount||res.monthly_amount}, true);
+    markFresh('hrLoans');
     closeUserModal();renderLoans();updateHRSidebar();toast('Loan approved ✓');
   }
 }
@@ -5073,9 +5114,11 @@ async function confirmLumpSum(id){
     lumpPayments: loan.lumpPayments, lumpSumDate: loan.lumpSumDate||null
   });
   if(!res){ toast('Failed to save lump-sum payment'); return; }
-
-  const fresh = await api('GET','/hr/loans');
-  if(fresh) hrLoans = fresh;
+  // Merge response into local cache; the loan record already lives in
+  // hrLoans (we mutated it in place above) so we just need to overlay
+  // any server-derived fields from the response.
+  _upsertById(hrLoans, {...loan, ...res, empId: res.empId||res.emp_id||loan.empId, monthlyAmount: res.monthlyAmount||res.monthly_amount||loan.monthlyAmount}, false);
+  markFresh('hrLoans');
   closeUserModal(); renderLoans(); updateHRSidebar();
   toast(loan.status==='completed' ? 'Loan fully settled ✓' : `${fmtMVR(amount)} recorded · ${fmtMVR(loan.remaining)} outstanding`);
 }
@@ -5965,23 +6008,27 @@ async function saveLeave(){
   if(days<=0)return toast('Invalid date range');
   const res=await api('POST','/hr/leave',{empId,leaveType:type,type,fromDate:from,from,toDate:to,to,days,reason:notes});
   if(!res)return;
-  hrLeave=await api('GET','/hr/leave')||hrLeave;
+  // Merge response into local cache instead of refetching whole list
+  _upsertById(hrLeave, res, true);
+  markFresh('hrLeave');
   closeUserModal();renderLeave();toast('Leave request submitted ✓');
 }
 
 async function updateLeaveStatus(lvId,status){
   const res=await api('PATCH','/hr/leave/'+lvId+'/status',{status});
   if(!res)return;
-  const lv=hrLeave.find(l=>String(l.id)===String(lvId));
-  if(!lv)return;
-  lv.status=status;lv.processedDate=new Date().toISOString().slice(0,10);
-  api('GET','/hr/leave').then(r=>{if(r)hrLeave=r;});renderLeave();toast(`Leave ${status} ✓`);
+  // Apply the response to local cache; no need for follow-up GET
+  _upsertById(hrLeave, res, false);
+  markFresh('hrLeave');
+  renderLeave();toast(`Leave ${status} ✓`);
 }
 
 function deleteLeave(id){
   openConfirm('Delete this leave record?','This cannot be undone.','Delete',async()=>{
-    await api('DELETE','/hr/leave/'+id);
-    hrLeave=await api('GET','/hr/leave')||hrLeave;
+    const r = await api('DELETE','/hr/leave/'+id);
+    if(!r) return;
+    hrLeave = hrLeave.filter(l => String(l.id) !== String(id));
+    markFresh('hrLeave');
     renderLeave(); toast('Leave record deleted ✓');
   });
 }
@@ -6804,8 +6851,11 @@ async function saveLocalCrew(){
     ? await api('PUT', '/crewpay/local-crew/'+_lcEditing.id, body)
     : await api('POST','/crewpay/local-crew', body);
   if(!res) return;
+  // Merge response into local cache; skip the loadLocalCrew refetch
+  res.date = normalizeDate(res.date);
+  _upsertById(localCrewEvents, res, !_lcEditing);
   closeUserModal();
-  await loadLocalCrew();
+  renderLocalCrew();
   toast(_lcEditing?'Event updated ✓':'Event created ✓');
 }
 
@@ -6813,7 +6863,8 @@ function deleteLocalCrew(id){
   openConfirm('Delete this Local Crew event?','All staff payout data on this event will be removed.','Delete',async()=>{
     const r = await api('DELETE','/crewpay/local-crew/'+id);
     if(!r) return;
-    await loadLocalCrew();
+    localCrewEvents = localCrewEvents.filter(e => String(e.id) !== String(id));
+    renderLocalCrew();
     toast('Event deleted');
   });
 }

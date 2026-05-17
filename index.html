@@ -1061,14 +1061,6 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
       </div>
     </div>
 
-    <!-- Install banner (Android/Desktop PWA) -->
-    <div id="installBanner" style="display:none;background:#1e40af;color:#fff;padding:10px 20px;align-items:center;justify-content:space-between;gap:12px;font-size:13px;font-weight:500;flex-shrink:0">
-      <span>Add EM HUB to your home screen for quick access</span>
-      <div style="display:flex;gap:8px">
-        <button onclick="installApp()" style="background:#fff;color:#1e40af;border:none;border-radius:6px;padding:6px 14px;font-family:'Inter',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer">Install App</button>
-        <button onclick="this.parentElement.parentElement.style.display='none'" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-family:'Inter',sans-serif;font-size:12.5px;cursor:pointer">✕</button>
-      </div>
-    </div>
     <div class="hub-content">
       <!-- Mobile drawer backdrop -->
       <div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
@@ -11636,24 +11628,8 @@ async function openSecureFile(keyOrUrl){
 }
 
 // ── INIT ═════════════════════════════════════════════
-let deferredInstallPrompt=null;
-window.addEventListener('beforeinstallprompt',(e)=>{
-  e.preventDefault();deferredInstallPrompt=e;
-  // Show install banner after login
-  setTimeout(()=>showInstallBanner(),2000);
-});
-
-function showInstallBanner(){
-  if(!deferredInstallPrompt)return;
-  const banner=document.getElementById('installBanner');
-  if(banner)banner.style.display='flex';
-}
-
-function installApp(){
-  if(!deferredInstallPrompt)return;
-  deferredInstallPrompt.prompt();
-  deferredInstallPrompt.userChoice.then(()=>{deferredInstallPrompt=null;document.getElementById('installBanner').style.display='none'});
-}
+// Suppress Chrome's built-in install prompt — banner removed by request
+window.addEventListener('beforeinstallprompt',(e)=>{ e.preventDefault(); });
 
 document.addEventListener('DOMContentLoaded',()=>{
   const okBtn=document.getElementById('confirmOkBtn');

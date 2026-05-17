@@ -2434,7 +2434,11 @@ async function doLogin(){
   localStorage.setItem('em_auth_token', _authToken);
   currentUser = res.user;
   if(currentUser.rolePerms && typeof currentUser.rolePerms==='string'){ try{currentUser.rolePerms=JSON.parse(currentUser.rolePerms);}catch(e){currentUser.rolePerms={};} }
-  appRoles = await api('GET', '/users/roles') || [];
+  // Use the cached snapshot for the instant first paint, then update in the
+  // background. If the call fails (offline / slow), fall back to cache.
+  const freshRoles = await api('GET', '/users/roles');
+  if(freshRoles){ appRoles = freshRoles; _cacheAppRoles(appRoles); }
+  // else: keep the localStorage-seeded value from page load
 
   _afterLogin();
 }
@@ -2575,6 +2579,7 @@ async function _loadAllData(){
   invFlightCases = fc || [];
   users = usrs || [];
   hrLeaveTypes = (lvTypes||[]).map(lt=>({...lt, days: lt.days_allowed||lt.days||0}));
+  if(lvTypes) _cacheLeaveTypes(hrLeaveTypes);
   crewEvents = crewEvts || [];
   // Restore payments from API events + localStorage fallback
   const localPays = JSON.parse(localStorage.getItem('em_pays')||'{}');
@@ -6104,18 +6109,26 @@ function populateLetterEmp(){
 // ══════════════════════════════════════════════════════
 // LEAVE TYPES & BALANCES
 // ══════════════════════════════════════════════════════
-let hrLeaveTypes = [];
-// Defaults
-if(!hrLeaveTypes.length){
-  hrLeaveTypes=[
+// Seed from localStorage so the leave-request modal can populate types
+// before the network round-trip finishes. Falls back to defaults if nothing
+// is cached yet (first ever visit).
+let hrLeaveTypes = (function(){
+  try {
+    const cached = JSON.parse(localStorage.getItem('em_leave_types')||'null');
+    if(Array.isArray(cached) && cached.length) return cached;
+  } catch(e){}
+  return [
     {id:1,name:'Annual Leave',days:30,color:'#10b981',paid:true},
     {id:2,name:'Sick Leave',days:14,color:'#ef4444',paid:true},
     {id:3,name:'Unpaid Leave',days:0,color:'#6b7280',paid:false},
     {id:4,name:'Emergency Leave',days:3,color:'#f59e0b',paid:true},
   ];
-
+})();
+function _cacheLeaveTypes(v){ try { localStorage.setItem('em_leave_types', JSON.stringify(v||[])); } catch(e){} }
+async function lvtSave(){
+  const r = await api('GET','/hr/leave-types');
+  if(r){ hrLeaveTypes = r; _cacheLeaveTypes(hrLeaveTypes); }
 }
-async function lvtSave(){ hrLeaveTypes = await api('GET','/hr/leave-types') || hrLeaveTypes; }
 
 function hrLeaveSubNav(tab){
   if(tab==='types' && !hasPerm('hr_leave_types')){
@@ -6183,14 +6196,18 @@ async function saveLeaveType(existingId){
     if(res) hrLeaveTypes.push({...res,days:res.days_allowed||days,color,paid});
   }
   if(!res){toast('Failed to save leave type');return;}
-  hrLeaveTypes=await api('GET','/hr/leave-types')||hrLeaveTypes;
-  // Map days_allowed to days for frontend use
-  hrLeaveTypes=hrLeaveTypes.map(lt=>({...lt,days:lt.days_allowed||lt.days||0}));
+  // Local cache was already updated above (push or in-place patch). Just
+  // normalise the `days` field and refresh localStorage — no GET round-trip.
+  hrLeaveTypes = hrLeaveTypes.map(lt=>({...lt, days: lt.days_allowed||lt.days||0}));
+  _cacheLeaveTypes(hrLeaveTypes);
   closeSimpleModal(); renderLeaveTypes(); populateLeaveTypeFilter(); toast('Leave type saved ✓');
 }
 function deleteLeaveType(id){
-  openConfirm('Delete this leave type?','Existing leave records will remain.','Delete',()=>{
-    hrLeaveTypes=hrLeaveTypes.filter(x=>x.id!==id);lvtSave();renderLeaveTypes();toast('Deleted');
+  openConfirm('Delete this leave type?','Existing leave records will remain.','Delete',async()=>{
+    await api('DELETE','/hr/leave-types/'+id);
+    hrLeaveTypes = hrLeaveTypes.filter(x=>x.id!==id);
+    _cacheLeaveTypes(hrLeaveTypes);
+    renderLeaveTypes(); toast('Deleted');
   });
 }
 
@@ -8165,27 +8182,79 @@ async function invSubCatSave(){ invSubCats = await api('GET','/inventory/subcate
 // Cache for signed URLs to avoid re-fetching
 const _signedUrlCache = {};
 
-// Load inventory item photos via signed URLs (bulk)
-async function loadInvPhotos(){
-  const imgs = document.querySelectorAll('img[data-key]');
-  if(!imgs.length) return;
-  const keys = [...new Set([...imgs].map(img=>img.getAttribute('data-key')).filter(Boolean))];
-  if(!keys.length) return;
-  try {
-    const urls = await api('POST','/inventory/signed-urls',{keys});
-    if(!urls) return;
-    // Cache the URLs
-    Object.assign(_signedUrlCache, urls);
-    imgs.forEach(img=>{
-      const key = img.getAttribute('data-key');
-      if(key && urls[key]){
-        img.src = urls[key];
-        img.style.display = 'block';
-      }
-    });
-  } catch(e){
-    console.error('loadInvPhotos error:', e);
+// Lazy-load inventory photos via IntersectionObserver.
+//
+// Previous behavior: every render bulk-fetched signed URLs for ALL
+// img[data-key] in the page (including rows far below the fold).
+// Larger inventories paid for dozens of round trips up-front and the
+// list felt sluggish on mobile.
+//
+// New behavior: only fetch the signed URL once an img scrolls within
+// 200px of the viewport. URLs already in _signedUrlCache (from the
+// detail view or a previous scroll) are applied immediately. Requests
+// are batched in 80ms windows so a quick scroll downward only fires
+// one POST /inventory/signed-urls call per batch.
+let _lazyImgObserver = null;
+let _lazyKeyBatch = [];
+let _lazyKeyTimer = null;
+function _initLazyImgObserver(){
+  if(_lazyImgObserver) return _lazyImgObserver;
+  if(typeof IntersectionObserver === 'undefined'){
+    // Old browser fallback: just load everything once
+    _lazyImgObserver = { observe(img){ _enqueueLazyImg(img); } };
+    return _lazyImgObserver;
   }
+  _lazyImgObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if(!entry.isIntersecting) return;
+      const img = entry.target;
+      _lazyImgObserver.unobserve(img); // one-shot
+      _enqueueLazyImg(img);
+    });
+  }, { rootMargin: '200px' });
+  return _lazyImgObserver;
+}
+function _enqueueLazyImg(img){
+  const key = img.dataset.key || img.getAttribute('data-key');
+  if(!key) return;
+  if(_signedUrlCache[key]){
+    img.src = _signedUrlCache[key];
+    img.style.display = 'block';
+    return;
+  }
+  _lazyKeyBatch.push({ key, img });
+  clearTimeout(_lazyKeyTimer);
+  _lazyKeyTimer = setTimeout(_flushLazyKeyBatch, 80);
+}
+async function _flushLazyKeyBatch(){
+  const batch = _lazyKeyBatch.slice();
+  _lazyKeyBatch = [];
+  if(!batch.length) return;
+  const uniqueKeys = [...new Set(batch.map(b => b.key))];
+  try {
+    const urls = await api('POST','/inventory/signed-urls',{keys:uniqueKeys});
+    if(!urls) return;
+    Object.assign(_signedUrlCache, urls);
+    batch.forEach(({key, img}) => {
+      if(urls[key]){ img.src = urls[key]; img.style.display = 'block'; }
+    });
+  } catch(e){ console.error('lazy photo batch error:', e); }
+}
+function loadInvPhotos(){
+  // Wire up newly-rendered img placeholders. Already-bound imgs are skipped
+  // so re-rendering the list doesn't double-observe.
+  const obs = _initLazyImgObserver();
+  document.querySelectorAll('img[data-key]:not([data-lazy-bound])').forEach(img => {
+    img.dataset.lazyBound = '1';
+    const key = img.dataset.key;
+    if(key && _signedUrlCache[key]){
+      // Already fetched (e.g. user scrolled before, or saw detail view)
+      img.src = _signedUrlCache[key];
+      img.style.display = 'block';
+      return;
+    }
+    obs.observe(img);
+  });
 }
 
 async function getSignedUrl(key){
@@ -11321,8 +11390,16 @@ const PERM_TREE = [
   ]},
 ];
 
-let appRoles = [];
-async function rolesSave(){ appRoles = await api('GET','/users/roles') || appRoles; }
+// Seed appRoles from localStorage so applyPermissions can resolve role.perms
+// during the very first paint of the hub — before the /users/roles call
+// finishes. Roles change rarely (an admin tweaks them once in a while) so a
+// stale snapshot is fine for a few seconds until the network catches up.
+let appRoles = (function(){ try { return JSON.parse(localStorage.getItem('em_app_roles')||'[]'); } catch(e){ return []; } })();
+function _cacheAppRoles(v){ try { localStorage.setItem('em_app_roles', JSON.stringify(v||[])); } catch(e){} }
+async function rolesSave(){
+  const r = await api('GET','/users/roles');
+  if(r){ appRoles = r; _cacheAppRoles(appRoles); }
+}
 
 function renderRoles(){
   const el=document.getElementById('rolesList'); if(!el) return;
@@ -11430,7 +11507,8 @@ async function saveRole(){
     res = await api('POST', '/users/roles', {name, description: desc, perms});
   }
   if(!res) return;
-  appRoles = await api('GET', '/users/roles') || appRoles;
+  const r = await api('GET', '/users/roles');
+  if(r){ appRoles = r; _cacheAppRoles(appRoles); }
   closeUserModal(); renderRoles();
   toast(_editRoleId ? 'Role updated ✓' : 'Role created ✓');
 }
@@ -11440,7 +11518,8 @@ async function deleteRole(id){
   const inUse = users.filter(u=>String(u.role_id)===String(id)).length;
   openConfirm('Delete role?', `"${role.name}"${inUse>0?` — assigned to ${inUse} user${inUse!==1?'s':''}. They will be unassigned.`:''}`, 'Delete', async ()=>{
     await api('DELETE', '/users/roles/' + id);
-    appRoles = await api('GET', '/users/roles') || appRoles;
+    const r = await api('GET', '/users/roles');
+    if(r){ appRoles = r; _cacheAppRoles(appRoles); }
     users = await api('GET', '/users') || users;
     renderRoles(); renderUsers();
     toast('Role deleted');

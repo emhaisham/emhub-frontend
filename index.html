@@ -2727,6 +2727,10 @@ function switchModule(name){
     if(name==='crewpay'){
       const _renderCp = () => { renderAll(); };
       if(isDataFresh('crewEvents')){
+        // Other modules (e.g. calendar) reassign `events` to calEvents which
+        // lacks the `groups` field — rehydrate from the preserved crewEvents
+        // copy so the Labor Payment renderer can read pax/days/groups.
+        events = (crewEvents||[]).map(e=>({...e,groups:e.groups||[]}));
         _renderCp();
       } else {
         api('GET','/crewpay/events').then(evts=>{

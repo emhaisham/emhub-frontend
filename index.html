@@ -752,6 +752,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .inv-badge-working{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd);border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;white-space:nowrap}
 .inv-badge-faulty{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;white-space:nowrap}
 .inv-row-actions{display:flex;gap:4px;justify-content:flex-end;flex-shrink:0}
+.inv-row-mmeta{display:none}
 .cat-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:8px}
 .cat-name{font-size:13px;font-weight:600;color:var(--text)}
 .cat-badge{font-size:11px;color:var(--text3);margin-top:1px}
@@ -908,18 +909,46 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
   /* ── Inventory list (parent items) ─── */
   .inv-list-header { display: none !important; }
   .inv-row {
-    display: block !important;
-    padding: 12px 14px !important;
+    display: grid !important;
+    grid-template-columns: 40px 1fr auto !important;
+    grid-template-rows: auto auto !important;
+    gap: 2px 10px !important;
+    padding: 9px 12px !important;
+    margin-bottom: 6px;
+    align-items: center;
   }
-  .inv-row > * { margin-bottom: 6px; }
-  .inv-row > *:last-child { margin-bottom: 0; }
-  .inv-row-name { white-space: normal !important; }
-  .inv-row-actions {
-    flex-wrap: wrap !important;
-    justify-content: flex-start !important;
-    gap: 6px !important;
-    padding-top: 6px;
-    border-top: 1px dashed var(--border);
+  .inv-row > .inv-row-thumb {
+    grid-row: 1 / span 2; align-self: center;
+    width: 40px !important; height: 40px !important;
+  }
+  .inv-row > .inv-row-thumb img { width: 40px !important; height: 40px !important; }
+  .inv-row > div:nth-child(2) {
+    grid-column: 2; grid-row: 1; min-width: 0;
+  }
+  .inv-row-name {
+    white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis;
+    font-size: 13.5px;
+  }
+  .inv-row-sub { display: none; }
+  /* Hide the desktop table cells on mobile — the .inv-row-mmeta div carries the same info */
+  .inv-row > .inv-row-cell,
+  .inv-row > div:nth-of-type(5),
+  .inv-row > div:nth-of-type(6) { display: none !important; }
+  .inv-row-mmeta {
+    display: block !important;
+    grid-column: 2 / 4;
+    grid-row: 2;
+    font-size: 11.5px;
+    color: var(--text3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .inv-row > .inv-row-actions {
+    grid-column: 3; grid-row: 1;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    padding-top: 0; border-top: none;
   }
 
   /* ── CrewPay Payments ─── */
@@ -8318,19 +8347,25 @@ function invParentRowHtml(item){
     ?`<div class="inv-row-thumb"><img data-key="${item.photoUrl}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:7px;display:none" onload="this.style.display='block'" onerror="this.parentElement.innerHTML='<svg width=\\'20\\' height=\\'20\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><path d=\\'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z\\'/></svg>'"></div>`
     :`<div class="inv-row-thumb"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`;
   const catLabel=[cat?.name,sub?.name].filter(Boolean).join(' › ')||'—';
+  const modelLine=[item.model,item.manufacturer].filter(Boolean).join(' · ');
+  const mobileMetaParts=[
+    catLabel!=='—'?catLabel:'',
+    `${totalActiveQty} unit${totalActiveQty!==1?'s':''}`
+  ].filter(Boolean).join(' · ');
   return`<div class="inv-row" id="invcard_${item.id}" style="cursor:pointer" onclick="openInvParent('${item.id}')">
     ${photoHtml}
     <div style="min-width:0">
       <div class="inv-row-name">${item.name}</div>
-      <div class="inv-row-sub">${[item.model,item.manufacturer].filter(Boolean).join(' · ')||''}</div>
+      <div class="inv-row-sub">${modelLine}</div>
     </div>
     <div class="inv-row-cell">${catLabel}</div>
     <div class="inv-row-cell" style="font-weight:700;color:var(--text)">${totalActiveQty}${discarded>0?` <span style="font-size:10px;color:var(--text3)">(+${discarded} disc.)</span>`:''}</div>
     <div><span class="inv-badge-working">✅ ${working}</span></div>
     <div>${faulty>0?`<span class="inv-badge-faulty">⚠️ ${faulty}</span>`:'-'}</div>
+    <div class="inv-row-mmeta">${mobileMetaParts} <span class="inv-badge-working" style="font-size:10.5px;padding:0 5px">✅ ${working}</span>${faulty>0?` <span class="inv-badge-faulty" style="font-size:10.5px;padding:0 5px">⚠️ ${faulty}</span>`:''}</div>
     <div class="inv-row-actions" onclick="event.stopPropagation()">
       <button class="btn btn-ghost btn-xs" onclick="guardAction('inv_edit',()=>openEditInvItem('${item.id}'))" title="Edit parent">✏️</button>
-      <button class="btn btn-primary btn-xs" onclick="openAddUnit('${item.id}')" title="Add unit">＋ Unit</button>
+      <button class="btn btn-primary btn-xs" onclick="openAddUnit('${item.id}')" title="Add unit">＋</button>
       <button class="btn btn-red btn-xs" onclick="deleteInvItem('${item.id}')" title="Delete"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
     </div>
   </div>`;

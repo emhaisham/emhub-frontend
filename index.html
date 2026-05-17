@@ -12,7 +12,7 @@
 <title>EM HUB</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -299,12 +299,12 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .data-table tr:last-child td{border-bottom:none}
 .data-table tbody tr:hover td{background:var(--surface)}
 .td-primary{color:var(--text);font-weight:600}
-.td-mono{font-family:'JetBrains Mono',monospace;font-size:12.5px}
-.td-green{color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace}
+.td-mono{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12.5px}
+.td-green{color:var(--green);font-weight:700;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
 
 /* Chips */
-.chip-rate{display:inline-block;background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber);border-radius:4px;padding:2px 7px;font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace}
-.chip-hours{display:inline-block;background:var(--accent-bg);border:1px solid var(--accent-bd);color:var(--accent);border-radius:4px;padding:2px 7px;font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace}
+.chip-rate{display:inline-block;background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber);border-radius:4px;padding:2px 7px;font-size:11.5px;font-weight:600;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
+.chip-hours{display:inline-block;background:var(--accent-bg);border:1px solid var(--accent-bd);color:var(--accent);border-radius:4px;padding:2px 7px;font-size:11.5px;font-weight:600;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
 .chip-override{display:inline-block;background:var(--purple-bg);border:1px solid var(--purple-bd);color:var(--purple);border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600}
 
 /* Toggle */
@@ -319,7 +319,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .rate-banner{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:12px 18px;margin-bottom:16px;box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .rate-lbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);white-space:nowrap}
 .rate-chips{display:flex;gap:5px;flex-wrap:wrap}
-.rc{background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:5px;padding:3px 8px;font-size:11.5px;color:var(--text2);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.rc{background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:5px;padding:3px 8px;font-size:11.5px;color:var(--text2);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
 .rc b{color:var(--amber);font-weight:600}
 
 /* ══ CREWPAY: GROUP BUILDER ══════════════════════ */
@@ -350,7 +350,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 
 .form-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-radius:0 0 var(--r) var(--r)}
 .et-label{font-size:11px;color:var(--text3)}
-.et-val{font-size:20px;font-weight:700;color:var(--green);letter-spacing:-.4px;font-family:'JetBrains Mono',monospace}
+.et-val{font-size:20px;font-weight:700;color:var(--green);letter-spacing:-.4px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
 
 /* ══ EVENT CARDS ══════════════════════════════════ */
 .events-list{display:flex;flex-direction:column;gap:10px}
@@ -360,7 +360,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .ev-hdr{display:grid;grid-template-columns:1fr auto auto auto auto auto;align-items:center;gap:12px;padding:13px 18px;cursor:pointer;user-select:none}
 .ev-name{font-size:14px;font-weight:600;color:var(--text)}
 .ev-date{font-size:12px;color:var(--text3);margin-top:2px}
-.ev-total{font-size:16px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace;min-width:110px;text-align:right}
+.ev-total{font-size:16px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;min-width:110px;text-align:right}
 .chevron{color:var(--text3);font-size:11px;transition:transform .2s}
 .ev-card.expanded .chevron{transform:rotate(180deg)}
 .ev-detail{display:none;border-top:1px solid var(--border)}
@@ -370,7 +370,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .g-section{padding:14px 18px 0}
 .g-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .g-title{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
-.g-subtotal{font-size:13px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:10px}
+.g-subtotal{font-size:13px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:10px}
 .detail-dt{width:100%;border-collapse:collapse;margin-bottom:12px;border:1px solid var(--border);border-radius:7px;overflow:hidden;font-size:12.5px}
 .detail-dt th{background:var(--surface);font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);text-align:left;padding:7px 12px;border-bottom:1px solid var(--border)}
 .detail-dt td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
@@ -386,7 +386,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .pg-name{font-size:13px;font-weight:600;color:var(--text)}
 .pg-detail{font-size:12px;color:var(--text3);margin-top:2px}
 .pg-right{display:flex;align-items:center;gap:12px}
-.pg-amount{font-size:14px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace}
+.pg-amount{font-size:14px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
 
 /* ══ REPORTS BARS ═════════════════════════════════ */
 .reports-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
@@ -396,7 +396,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .bar-label{font-size:12px;color:var(--text2);min-width:100px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bar-track{flex:1;background:var(--bg);border-radius:4px;height:8px;overflow:hidden}
 .bar-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .4s}
-.bar-val{font-size:12px;font-weight:600;color:var(--text);min-width:80px;text-align:right;font-family:'JetBrains Mono',monospace}
+.bar-val{font-size:12px;font-weight:600;color:var(--text);min-width:80px;text-align:right;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
 
 /* ══ USER MANAGEMENT ══════════════════════════════ */
 .user-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow-sm);margin-bottom:10px}
@@ -477,7 +477,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .report-meta{font-size:13px;color:var(--text3)}
 .report-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px}
 .rs-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
-.rs-val{font-size:18px;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace}
+.rs-val{font-size:18px;font-weight:700;color:var(--text);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
 .rs-lbl{font-size:11px;color:var(--text3);margin-top:3px;font-weight:500}
 .report-section-title{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
 .report-table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:12px}
@@ -485,10 +485,10 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .report-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text2)}
 .report-table tr:last-child td{border-bottom:2px solid var(--border)}
 .report-table .rt-total{font-weight:700;color:var(--text)}
-.report-table .rt-money{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--green)}
+.report-table .rt-money{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:700;color:var(--green)}
 .report-grand{background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
 .rg-label{font-size:14px;font-weight:600;color:var(--green)}
-.rg-val{font-size:22px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace}
+.rg-val{font-size:22px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
 .report-footer{margin-top:20px;padding-top:14px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);text-align:center}
 
 /* ══ EMPTY / TOAST ════════════════════════════════ */
@@ -554,7 +554,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .payslip-row{display:flex;justify-content:space-between;align-items:center;padding:9px 18px;border-bottom:1px solid var(--border)}
 .payslip-row:last-child{border-bottom:none}
 .payslip-row-label{font-size:13px;color:var(--text2)}
-.payslip-row-val{font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--text)}
+.payslip-row-val{font-size:13px;font-weight:600;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--text)}
 .payslip-row.deduction .payslip-row-val{color:var(--red)}
 .payslip-row.total-row{background:var(--surface)}
 .payslip-row.total-row .payslip-row-label{font-weight:700;color:var(--text);font-size:14px}
@@ -575,7 +575,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .repay-chip.paid .rc-amt{color:var(--green)}
 .repay-chip.skipped{background:var(--amber-bg);border-color:var(--amber-bd);opacity:.7}
 .rc-month{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:2px}
-.rc-amt{font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text)}
+.rc-amt{font-size:12px;font-weight:700;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--text)}
 
 .pension-row-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;box-shadow:var(--shadow-sm)}
 .pension-row-inner{display:grid;grid-template-columns:1fr auto auto auto auto auto;align-items:center;gap:12px;padding:12px 18px}
@@ -745,7 +745,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .cat-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:8px}
 .cat-name{font-size:13px;font-weight:600;color:var(--text)}
 .cat-badge{font-size:11px;color:var(--text3);margin-top:1px}
-.inv-serial{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2);word-break:break-all}
+.inv-serial{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;color:var(--text2);word-break:break-all}
 .eq-info{flex:1;min-width:0}
 .eq-item-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px}
 .eq-meta{font-size:12px;color:var(--text3);line-height:1.7}
@@ -2138,7 +2138,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
       <div style="margin-top:10px">
         <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:4px">Or enter serial manually:</label>
         <div style="display:flex;gap:6px">
-          <input type="text" id="qrManualInput" placeholder="e.g. EM-00001" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-family:monospace">
+          <input type="text" id="qrManualInput" placeholder="e.g. EM-00001" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">
           <button class="btn btn-primary btn-sm" onclick="submitManualSerial()">Go</button>
         </div>
       </div>
@@ -2927,11 +2927,11 @@ function renderDayRow(gid,d,di){
     </div>
     <div>
       <div class="wday-mlabel">Hours</div>
-      <div id="dhours_${d.id}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent)">${h&&h>0?fmtH(h):'—'}</div>
+      <div id="dhours_${d.id}" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;color:var(--accent)">${h&&h>0?fmtH(h):'—'}</div>
     </div>
     <div>
       <div class="wday-mlabel">Rate</div>
-      <div id="drate_${d.id}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--amber)">${h&&h>0?'MVR '+rate.toLocaleString():'—'}</div>
+      <div id="drate_${d.id}" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;color:var(--amber)">${h&&h>0?'MVR '+rate.toLocaleString():'—'}</div>
     </div>
     <div>
       <div class="wday-mlabel">Rate Mode</div>
@@ -3117,16 +3117,16 @@ function printReport(){
     .report-meta{font-size:12px;color:#9aa3af}
     .report-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
     .rs-box{border:1px solid #e3e6ea;border-radius:6px;padding:10px;text-align:center}
-    .rs-val{font-size:17px;font-weight:700;color:#0f1923;font-family:monospace}
+    .rs-val{font-size:17px;font-weight:700;color:#0f1923;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
     .rs-lbl{font-size:11px;color:#9aa3af;margin-top:3px}
     .report-section-title{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4a5568;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #e3e6ea}
     table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:11.5px}
     th{background:#0f172a;color:#fff;text-align:left;padding:6px 10px;font-weight:600;font-size:10px;letter-spacing:.05em;text-transform:uppercase}
     td{padding:7px 10px;border-bottom:1px solid #e3e6ea;color:#4a5568}
-    .rt-money{font-family:monospace;font-weight:700;color:#0a7c4e}
+    .rt-money{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:700;color:#0a7c4e}
     .report-grand{background:#edfaf3;border:1px solid #a3e6c8;border-radius:7px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:4px}
     .rg-label{font-size:13px;font-weight:600;color:#0a7c4e}
-    .rg-val{font-size:20px;font-weight:700;color:#0a7c4e;font-family:monospace}
+    .rg-val{font-size:20px;font-weight:700;color:#0a7c4e;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
     .report-footer{margin-top:18px;padding-top:12px;border-top:1px solid #e3e6ea;font-size:10.5px;color:#9aa3af;text-align:center}
   </style></head><body>${content}</body></html>`;
   _mobilePrint(html);
@@ -3190,7 +3190,7 @@ function exportReportPDF(){
     <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${e.groups}</td>
     <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${e.pax}</td>
     <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${fmtH(e.h)}</td>
-    <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:monospace;font-weight:700;color:#0a7c4e;text-align:right">${fmt(e.a)}</td>
+    <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:700;color:#0a7c4e;text-align:right">${fmt(e.a)}</td>
     <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:center"><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;${e.paid?'background:#d1fae5;color:#065f46':'background:#fee2e2;color:#991b1b'}">${e.paid?'PAID':'UNPAID'}</span></td>
   </tr>`).join('');
 
@@ -3201,7 +3201,7 @@ function exportReportPDF(){
     .sub{color:#6b7280;font-size:12px;margin-bottom:24px}
     .summary{display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap}
     .sbox{border:1px solid #e5e7eb;border-radius:8px;padding:12px 18px;flex:1;min-width:120px}
-    .sval{font-size:20px;font-weight:800;font-family:monospace;color:#0f172a}
+    .sval{font-size:20px;font-weight:800;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:#0f172a}
     .slbl{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
     table{width:100%;border-collapse:collapse}
     th{background:#0f172a;color:#fff;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
@@ -3604,7 +3604,7 @@ function userForm(u){
     ${u ? `<div class="field"><label class="field-label">New Password <span style="color:var(--text3);font-weight:400">(leave blank to keep current)</span></label><input type="text" id="uf_pass" placeholder="Enter new password to change"></div>` :
     `<div class="field"><label class="field-label">Temporary Password <span style="font-size:11px;color:var(--green)">(auto-generated)</span></label>
       <div style="display:flex;gap:8px;align-items:center">
-        <input type="text" id="uf_pass" value="${tempPass}" style="font-family:'JetBrains Mono',monospace;font-weight:600;flex:1" readonly>
+        <input type="text" id="uf_pass" value="${tempPass}" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:600;flex:1" readonly>
         <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('uf_pass').value=generateTempPassword()" title="Generate new password">🔄 New</button>
         <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('uf_pass').value);toast('Password copied ✓')" title="Copy password">📋 Copy</button>
       </div></div>`}
@@ -3809,8 +3809,8 @@ function renderEditDayRow(gid,d,di,totalDays){
       <input type="date" value="${d.endDate}" oninput="onEGDay(${gid},${d.id},'endDate',this.value)">
       <input type="time" value="${d.endTime}" oninput="onEGDay(${gid},${d.id},'endTime',this.value)">
     </div>
-    <div id="edhours_${d.id}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent)">${h&&h>0?fmtH(h):'—'}</div>
-    <div id="edrate_${d.id}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--amber)">${h&&h>0?'MVR '+rate.toLocaleString():'—'}</div>
+    <div id="edhours_${d.id}" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;color:var(--accent)">${h&&h>0?fmtH(h):'—'}</div>
+    <div id="edrate_${d.id}" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;color:var(--amber)">${h&&h>0?'MVR '+rate.toLocaleString():'—'}</div>
     <div>
       <div style="display:flex;align-items:center;gap:5px">
         <label class="toggle-switch"><input type="checkbox" ${d.override?'checked':''} onchange="toggleEditDayOverride(${gid},${d.id},this.checked)"><span class="toggle-slider"></span></label>
@@ -4740,7 +4740,7 @@ function renderPayslipCard(pr,emp,showBtn){
       <div><div style="font-size:14px;font-weight:600;color:var(--text)">${emp.name}</div><div style="font-size:12px;color:var(--text3)">${emp.dept||'—'} · ${monthLabel(pr.month)} · ${isBank?' Bank':'Cash'}${pr.isOnProbation?' · <span style="color:var(--amber);font-weight:600">Probation</span>':''}${curr==='USD'?' · <span style="color:var(--accent);font-weight:600">USD</span>':''}</div></div>
       <span class="badge badge-blue" style="font-size:11px">Basic: ${fmt(parseFloat(pr.basic)||0)}</span>
       <span class="badge ${pr.status==='paid'?'badge-green':'badge-amber'}" style="font-size:11px">${pr.status==='paid'?'Paid':'⏳ Pending'}</span>
-      <div style="font-size:16px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace;min-width:100px;text-align:right">${fmt(parseFloat(pr.net_pay)||0)}</div>
+      <div style="font-size:16px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;min-width:100px;text-align:right">${fmt(parseFloat(pr.net_pay)||0)}</div>
       <span class="payslip-hdr-chevron">▼</span>
     </div>
     <div class="payslip-body">
@@ -4777,7 +4777,7 @@ function markPayslipPaid(prId){
 function getPayslipHTML(pr,emp){
   const isBank=emp.payMethod!=='cash';
   return`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Payslip</title>
-  <style>body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;padding:40px;max-width:620px;margin:0 auto}h1{font-size:22px;font-weight:800;color:#0f172a;margin-bottom:2px}.sub{font-size:12px;color:#6b7280;margin-bottom:6px}.divider{height:2px;background:#0f172a;margin:12px 0}.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin:14px 0;font-size:12px}.lbl{font-size:10px;color:#9ca3af;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:1px}.val{font-weight:500;color:#0f172a}table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}th{background:#0f172a;color:#fff;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase}td{padding:9px 12px;border-bottom:1px solid #e5e7eb}td:last-child{text-align:right;font-family:monospace;font-weight:700}.total-row td{font-size:15px;font-weight:800;background:#ecfdf5;color:#065f46;border-top:2px solid #0f172a}.ded{color:#b91c1c}.pens{color:#6d28d9}.bank-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:12px 16px;margin-top:14px;font-size:12.5px}.bank-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1d4ed8;margin-bottom:6px}.cash-box{background:#fef9ec;border:1px solid #fcd97a;border-radius:7px;padding:10px 16px;margin-top:14px;font-size:13px;font-weight:700;color:#b45309}.empr{background:#f5f3ff;border:1px solid #c4b5fd;border-radius:7px;padding:10px 16px;margin-top:10px;font-size:12.5px;color:#6d28d9;display:flex;justify-content:space-between}.footer{margin-top:24px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center}</style>
+  <style>body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;padding:40px;max-width:620px;margin:0 auto}h1{font-size:22px;font-weight:800;color:#0f172a;margin-bottom:2px}.sub{font-size:12px;color:#6b7280;margin-bottom:6px}.divider{height:2px;background:#0f172a;margin:12px 0}.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin:14px 0;font-size:12px}.lbl{font-size:10px;color:#9ca3af;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:1px}.val{font-weight:500;color:#0f172a}table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}th{background:#0f172a;color:#fff;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase}td{padding:9px 12px;border-bottom:1px solid #e5e7eb}td:last-child{text-align:right;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:700}.total-row td{font-size:15px;font-weight:800;background:#ecfdf5;color:#065f46;border-top:2px solid #0f172a}.ded{color:#b91c1c}.pens{color:#6d28d9}.bank-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:12px 16px;margin-top:14px;font-size:12.5px}.bank-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1d4ed8;margin-bottom:6px}.cash-box{background:#fef9ec;border:1px solid #fcd97a;border-radius:7px;padding:10px 16px;margin-top:14px;font-size:13px;font-weight:700;color:#b45309}.empr{background:#f5f3ff;border:1px solid #c4b5fd;border-radius:7px;padding:10px 16px;margin-top:10px;font-size:12.5px;color:#6d28d9;display:flex;justify-content:space-between}.footer{margin-top:24px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center}</style>
   </head><body>
   <div style="text-align:center;margin-bottom:8px"><img src="${EM_LOGO_URL}" alt="Event Maldives" style="display:block;height:60px;width:auto;margin:0 auto 10px"></div><h1>PAYSLIP</h1><div class="sub">EM HUB · HR Module</div><div class="divider"></div>
   <div class="info-grid">
@@ -4847,7 +4847,7 @@ function exportPayrollSheet(){
       <td>${e.empId||'—'}</td>
       <td>${e.name}</td>
       <td>${e.dept||'—'}</td>
-      <td style="font-family:monospace;text-align:right;font-weight:700">${fmtAmt(parseFloat(pr.net_pay)||0,curr)}</td>
+      <td style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;text-align:right;font-weight:700">${fmtAmt(parseFloat(pr.net_pay)||0,curr)}</td>
       <td>${e.payMethod==='cash'?'Cash':' Bank'}</td>
       <td>${e.payMethod!=='cash'?(e.bankName||'—')+' · '+(e.bankAcct||'—'):'—'}</td>
       <td><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;${pr.status==='paid'?'background:#d1fae5;color:#065f46':'background:#fef3c7;color:#92400e'}">${pr.status==='paid'?'PAID':'PENDING'}</span></td>
@@ -4881,7 +4881,7 @@ function exportPayrollSheet(){
     td{padding:8px 10px;border-bottom:1px solid #e5e7eb}
     tr:nth-child(even) td{background:#f9fafb}
     .totals{background:#f0fdf4;padding:14px 16px;border-radius:7px;margin-top:16px;display:flex;gap:30px;flex-wrap:wrap}
-    .tval{font-size:16px;font-weight:800;color:#065f46;font-family:monospace}
+    .tval{font-size:16px;font-weight:800;color:#065f46;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
     .tlabel{font-size:11px;color:#6b7280}
     .footer{margin-top:20px;font-size:11px;color:#9ca3af;text-align:center;padding-top:12px;border-top:1px solid #e5e7eb}
   </style></head>
@@ -5027,7 +5027,7 @@ function renderLoanCard(loan,emp){
     <div class="loan-hdr" onclick="loanExpanded.has('${loan.id}')?loanExpanded.delete('${loan.id}'):loanExpanded.add('${loan.id}');document.getElementById('lcard_${loan.id}').classList.toggle('expanded')">
       <div><div style="font-size:14px;font-weight:600;color:var(--text)">${emp.name}</div><div style="font-size:12px;color:var(--text3)">${fmtMVR(loan.monthlyAmount)}/month · ${monthLabel(loan.start)}</div></div>
       <span class="badge ${loan.status==='active'?'badge-amber':'badge-green'}">${loan.status==='active'?'⏳ Active':'✅ Completed'}</span>
-      <div style="text-align:right"><div style="font-size:13px;font-weight:700;color:var(--red);font-family:'JetBrains Mono',monospace">${fmtMVR(loan.remaining)}</div><div style="font-size:11px;color:var(--text3)">of ${fmtMVR(loan.amount)}</div></div>
+      <div style="text-align:right"><div style="font-size:13px;font-weight:700;color:var(--red);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${fmtMVR(loan.remaining)}</div><div style="font-size:11px;color:var(--text3)">of ${fmtMVR(loan.amount)}</div></div>
       <div style="display:flex;gap:5px" onclick="event.stopPropagation()">
         ${loan.status==='active'?`<button class="btn btn-green btn-xs" onclick="lumpSumLoan('${loan.id}')" title="Pay remaining balance in full">Lump Sum</button>`:''}
         <button class="btn btn-ghost btn-xs" onclick="openEditLoan('${loan.id}')">✏️</button>
@@ -6719,7 +6719,7 @@ function renderLocalCrew(){
         </div>
         <div style="text-align:right">
           <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Total Payout</div>
-          <div style="font-size:13px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace">${fmtCurMap(totalMap)}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${fmtCurMap(totalMap)}</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-xs" onclick="openLocalCrew('${ev.id}')">View / Edit</button>
@@ -6790,7 +6790,7 @@ function openLocalCrew(id){
     <div id="lcStaffRows"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-top:10px;gap:12px;flex-wrap:wrap">
       <div style="font-size:13px;font-weight:700;color:var(--text)">Event Total Payout</div>
-      <div id="lcEventTotal" style="font-size:14px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace;text-align:right">${fmtCurMap(_lcEditing?_lcGroupByCurrency(_lcEditing.staff):{})}</div>
+      <div id="lcEventTotal" style="font-size:14px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;text-align:right">${fmtCurMap(_lcEditing?_lcGroupByCurrency(_lcEditing.staff):{})}</div>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--border);margin-top:14px">
       <button class="btn btn-ghost btn-sm" onclick="closeUserModal()">Cancel</button>
@@ -6857,8 +6857,8 @@ function renderLocalCrewStaffRows(){
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:8px 12px;font-size:12px;color:var(--text2);background:var(--surface);border-radius:6px;flex-wrap:wrap">
         <div>Total Days: <strong class="lc-total-days" style="color:var(--text)">${_lcStaffDays(s)}</strong></div>
-        <div>Total: <strong class="lc-total" style="color:var(--text);font-family:'JetBrains Mono',monospace">${fmtAmt(_lcStaffTotal(s),cur)}</strong></div>
-        <div>Payout: <strong class="lc-payout" style="color:var(--green);font-family:'JetBrains Mono',monospace">${fmtAmt(_lcStaffPayout(s),cur)}</strong></div>
+        <div>Total: <strong class="lc-total" style="color:var(--text);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${fmtAmt(_lcStaffTotal(s),cur)}</strong></div>
+        <div>Payout: <strong class="lc-payout" style="color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${fmtAmt(_lcStaffPayout(s),cur)}</strong></div>
         <button class="btn btn-red btn-xs" onclick="removeLocalCrewStaff(${i})">Remove</button>
       </div>
     </div>`;
@@ -7086,7 +7086,7 @@ function renderBonus(){
       <span class="badge ${r.paid?'badge-green':'badge-red'}" style="font-size:11px">${r.paid?'Paid':'Unpaid'}</span>
       <div style="text-align:right;min-width:120px">
         <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Payout</div>
-        <div style="font-size:15px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace">${fmtAmt(r.payout, r.currency||'MVR')}</div>
+        <div style="font-size:15px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${fmtAmt(r.payout, r.currency||'MVR')}</div>
       </div>
     </div>
   </div>`).join('');
@@ -7710,7 +7710,7 @@ function filterEquipItemSearch(itemId, q){
       onmouseover="this.style.background='${x.alreadyOut?'':'var(--surface)'}'" onmouseout="this.style.background=''">
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-weight:600">${x.itemName}</span>
-        <span style="font-family:monospace;color:var(--accent);font-size:11px;font-weight:700">${x.serial}</span>
+        <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent);font-size:11px;font-weight:700">${x.serial}</span>
         ${x.alreadyOut
           ?'<span style="font-size:10px;background:var(--red-bg);color:var(--red);border-radius:4px;padding:1px 5px;font-weight:600">Checked Out</span>'
           :`<span style="font-size:10px;background:${x.unitAvailQty>0?'var(--green-bg)':'var(--amber-bg)'};color:${x.unitAvailQty>0?'var(--green)':'var(--amber)'};border-radius:4px;padding:1px 5px;font-weight:600">Avail: ${x.unitAvailQty}/${x.unitQty}</span>`}
@@ -8431,7 +8431,7 @@ function renderUnitsHtml(item){
       else if(u.status==='faulty') statusBadge=`<span class="inv-badge-faulty">⚠️ Faulty${faultCount>0?' ('+faultCount+')':''}</span>`;
       else statusBadge=`<span class="inv-badge-working">✅ Working</span>`;
       const fcHtml=fc
-        ?`<div style="font-size:11px;font-weight:700;color:var(--accent);font-family:monospace">${fc.fcSerial||''}</div><div style="font-size:11px;color:var(--text3)">${fc.name}</div>`
+        ?`<div style="font-size:11px;font-weight:700;color:var(--accent);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${fc.fcSerial||''}</div><div style="font-size:11px;color:var(--text3)">${fc.name}</div>`
         :'<div style="font-size:12px;color:var(--text3)">—</div>';
       const whHtml=wh
         ?`<div style="font-size:12px;color:var(--text2)">${wh.name}</div>`
@@ -8443,8 +8443,8 @@ function renderUnitsHtml(item){
           <button class="btn btn-ghost btn-xs" onclick="showUnitQR('${item.id}','${u.unitId||u.id}')">QR</button>
           <button class="btn btn-red btn-xs" onclick="deleteUnit('${item.id}','${u.unitId||u.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`;
       return`<div class="units-grid-row" style="background:${u.discarded?'#f9fafb':u.status==='faulty'?'var(--red-bg)':'var(--white)'};border:1px solid ${u.discarded?'#e5e7eb':u.status==='faulty'?'var(--red-bd)':'var(--border)'};opacity:${u.discarded?'0.6':'1'}">
-        <div style="font-family:monospace;font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span class="units-cell-label">EM Serial</span>${u.serial}</div>
-        <div style="font-size:12px;color:var(--text2);font-family:monospace;overflow:hidden;text-overflow:ellipsis"><span class="units-cell-label">Item Serial</span>${u.itemSerial||'—'}${(u.qty||1)>1?` <span style="background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700">×${u.qty}</span>`:''}</div>
+        <div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span class="units-cell-label">EM Serial</span>${u.serial}</div>
+        <div style="font-size:12px;color:var(--text2);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis"><span class="units-cell-label">Item Serial</span>${u.itemSerial||'—'}${(u.qty||1)>1?` <span style="background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700">×${u.qty}</span>`:''}</div>
         <div><span class="units-cell-label">Status</span>${statusBadge}</div>
         <div style="min-width:0"><span class="units-cell-label">Flight Case</span><span style="min-width:0">${fcHtml}</span></div>
         <div style="min-width:0"><span class="units-cell-label">Location</span><span>${whHtml}</span></div>
@@ -8505,8 +8505,8 @@ function _unitInfoTab(item,unit,fc,wh,qrData){
         ${statusBadge}
       </div>
       <table style="font-size:13px;border-collapse:collapse;width:100%;margin-bottom:14px">
-        <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600;white-space:nowrap">EM Serial</td><td><span style="font-family:monospace;font-size:14px;font-weight:700;color:var(--accent)">${unit.serial}</span></td></tr>
-        <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Item Serial</td><td style="font-family:monospace">${unit.itemSerial||'—'}</td></tr>
+        <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600;white-space:nowrap">EM Serial</td><td><span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:14px;font-weight:700;color:var(--accent)">${unit.serial}</span></td></tr>
+        <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Item Serial</td><td style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit.itemSerial||'—'}</td></tr>
         <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Import Date</td><td>${unit.importDate?fmtDate(String(unit.importDate).slice(0,10)):'—'}</td></tr>
         <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Location</td><td>${wh?wh.name:'—'}</td></tr>
         <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Flight Case</td><td>${fc?fc.fcSerial+' — '+fc.name:'—'}</td></tr>
@@ -8716,7 +8716,7 @@ function openReportFault(parentId, unitId){
   document.getElementById('simpleModalTitle').textContent='⚠️ Report Fault';
   document.getElementById('simpleModalBody').innerHTML=`
     <div style="background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12.5px">
-      Item: <strong>${item?.name||''}</strong> · Serial: <strong style="font-family:monospace">${unit?.serial||''}</strong>
+      Item: <strong>${item?.name||''}</strong> · Serial: <strong style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit?.serial||''}</strong>
     </div>
     <div class="field"><label class="field-label">Fault Description *</label>
       <textarea id="fault_desc" rows="3" placeholder="Describe the fault in detail..." style="resize:vertical"></textarea></div>
@@ -8771,7 +8771,7 @@ function openMarkRepaired(parentId, unitId, faultId){
   document.getElementById('simpleModalTitle').textContent=isEdit?'✏️ Edit Repair Details':'✅ Mark as Repaired';
   document.getElementById('simpleModalBody').innerHTML=`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12.5px;color:var(--text2)">
-      <strong>${item?.name||''}</strong> · <span style="font-family:monospace">${unit?.serial||''}</span><br>
+      <strong>${item?.name||''}</strong> · <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit?.serial||''}</span><br>
       <span style="color:var(--text3)">Fault: ${fault?.fault||''}</span>
     </div>
     <div class="field"><label class="field-label">Date Repaired *</label>
@@ -8826,7 +8826,7 @@ function showUnitQR(parentId, unitId){
       <div style="display:inline-block;background:#fff;padding:10px;border-radius:8px;border:1px solid var(--border)">
         <img src="${generateQRDataURL(qrData,180)}" style="width:180px;height:180px;display:block">
       </div>
-      <div style="font-family:monospace;font-size:16px;font-weight:700;color:var(--accent);margin:12px 0 4px">${unit.serial}</div>
+      <div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:16px;font-weight:700;color:var(--accent);margin:12px 0 4px">${unit.serial}</div>
       <div style="font-size:13px;color:var(--text2)">${item.name}${unit.itemSerial?' · '+unit.itemSerial:''}</div>
     </div>
     <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;text-align:center">
@@ -8854,7 +8854,7 @@ async function openAddUnit(parentId){
   document.getElementById('simpleModalTitle').textContent='Add Unit';
   document.getElementById('simpleModalBody').innerHTML=`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:var(--text3)">
-      EM HUB serial (<span style="font-family:monospace;font-weight:700">EM-XXXXX</span>) is auto-generated and cannot be changed.
+      EM HUB serial (<span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:700">EM-XXXXX</span>) is auto-generated and cannot be changed.
     </div>
     <div class="field"><label class="field-label">Item Serial Number (manufacturer's)</label>
       <input type="text" id="unit_item_serial" placeholder="e.g. SHR-2024-001 (printed on the unit)"></div>
@@ -8906,7 +8906,7 @@ async function filterUnitFC(){
   dd.innerHTML=filtered.map(f=>`<div onclick="selectUnitFC('${f.id}','${f.fcSerial} — ${f.name.replace(/'/g,"&#39;")}')"
     style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)"
     onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
-    <span style="font-family:monospace;font-weight:700;color:var(--accent)">${f.fcSerial||''}</span> — ${f.name}
+    <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent)">${f.fcSerial||''}</span> — ${f.name}
   </div>`).join('');
 }
 function selectUnitFC(id,label){
@@ -8953,7 +8953,7 @@ function openEditUnit(parentId, unitId){
   document.getElementById('simpleModalBody').innerHTML=`
     <div style="background:var(--accent-bg);border:1px solid var(--accent-bd);border-radius:8px;padding:10px 14px;margin-bottom:12px">
       <div style="font-size:11px;color:var(--text3);margin-bottom:2px">EM SERIAL (cannot be changed)</div>
-      <div style="font-family:monospace;font-size:17px;font-weight:700;color:var(--accent)">${unit.serial}</div>
+      <div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:17px;font-weight:700;color:var(--accent)">${unit.serial}</div>
     </div>
     <div class="field"><label class="field-label">Item Serial Number (manufacturer's)</label>
       <input type="text" id="unit_item_serial" value="${unit.itemSerial||''}" placeholder="Serial printed on the physical unit"></div>
@@ -9358,7 +9358,7 @@ function renderFlightCases(){
       <div>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="cat-name">${fc.name}</div>
-          <div style="font-family:monospace;font-size:11px;font-weight:700;color:var(--accent)">${fc.fcSerial||''}</div>
+          <div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;font-weight:700;color:var(--accent)">${fc.fcSerial||''}</div>
         </div>
         ${fc.description?`<div class="cat-badge">${fc.description}</div>`:''}
         <div class="cat-badge" style="margin-top:2px">${unitCount} unit${unitCount!==1?'s':''} packed</div>
@@ -9383,7 +9383,7 @@ function showFCQR(id){
     <div style="margin-bottom:12px">
       <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:2px">${fc.name}</div>
       ${fc.description?`<div style="font-size:13px;color:var(--text3);margin-bottom:6px">${fc.description}</div>`:''}
-      <div style="font-family:monospace;font-size:14px;font-weight:700;color:var(--accent)">${fc.fcSerial||''}</div>
+      <div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:14px;font-weight:700;color:var(--accent)">${fc.fcSerial||''}</div>
     </div>
     <div style="display:inline-block;background:#fff;padding:10px;border-radius:10px;border:2px solid var(--border);margin-bottom:14px">
       <img src="${generateQRDataURL(qrData,180)}" style="width:180px;height:180px;display:block;border-radius:4px">
@@ -9429,7 +9429,7 @@ function editFlightCase(id){
   document.getElementById('simpleModalBody').innerHTML=`
     <div style="background:var(--accent-bg);border:1px solid var(--accent-bd);border-radius:8px;padding:10px 14px;margin-bottom:12px">
       <div style="font-size:11px;color:var(--text3);margin-bottom:2px">SERIAL (cannot be changed)</div>
-      <div style="font-family:monospace;font-size:16px;font-weight:700;color:var(--accent)">${fc.fcSerial}</div>
+      <div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:16px;font-weight:700;color:var(--accent)">${fc.fcSerial}</div>
     </div>
     <div class="field"><label class="field-label">Flight Case Name *</label>
       <input type="text" id="fc_name" value="${fc.name||''}"></div>
@@ -9522,7 +9522,7 @@ function renderFaultReports(){
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap">
           <span style="font-size:13px;font-weight:700;color:var(--text)">${f.itemName}</span>
-          <span style="font-family:monospace;font-size:11px;font-weight:700;background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:1px 5px">${f.serial}</span>
+          <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;font-weight:700;background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:1px 5px">${f.serial}</span>
           ${badge}
         </div>
         <div style="font-size:12.5px;color:var(--text2);margin-bottom:2px">${f.fault}</div>
@@ -10360,17 +10360,17 @@ function renderEventLists(){
                 const isBulk=liveTotalQty>1;
                 const qtyCell=isBulk
                   ? (isDone
-                      ? `<span style="font-family:monospace;font-size:12px;color:var(--text2)">${qtyUsed}/${liveTotalQty}</span>`
-                      : `<input type="number" min="1" max="${liveTotalQty}" value="${qtyUsed}" data-evid="${evId}" data-li="${li}" data-ii="${ii}" data-max="${liveTotalQty}" onchange="updateEquipListItemQty(this)" style="width:64px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;font-size:12px;text-align:center;font-family:monospace" title="of ${liveTotalQty} available"><div style="font-size:10px;color:var(--text3);margin-top:1px">of ${liveTotalQty}</div>`)
+                      ? `<span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;color:var(--text2)">${qtyUsed}/${liveTotalQty}</span>`
+                      : `<input type="number" min="1" max="${liveTotalQty}" value="${qtyUsed}" data-evid="${evId}" data-li="${li}" data-ii="${ii}" data-max="${liveTotalQty}" onchange="updateEquipListItemQty(this)" style="width:64px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;font-size:12px;text-align:center;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums" title="of ${liveTotalQty} available"><div style="font-size:10px;color:var(--text3);margin-top:1px">of ${liveTotalQty}</div>`)
                   : '<span style="color:var(--text3);font-size:12px">1</span>';
                 const coStatus=unit?.unit.checkout&&!unit?.unit.checkout.checkedInAt
                   ?`<span style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);border-radius:10px;padding:2px 7px;font-size:11px;font-weight:700">Out</span>`
                   :`<span class="inv-badge-working" style="font-size:11px">✅ In</span>`;
                 return`<tr style="border-top:1px solid var(--border)">
                   <td style="padding:7px 14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.parentName}</td>
-                  <td style="padding:7px 14px;font-family:monospace;color:var(--accent);font-weight:700">${item.emSerial}</td>
+                  <td style="padding:7px 14px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700">${item.emSerial}</td>
                   <td style="padding:7px 14px;text-align:center">${qtyCell}</td>
-                  <td style="padding:7px 14px;font-family:monospace;color:var(--text2)">${item.itemSerial||'—'}</td>
+                  <td style="padding:7px 14px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--text2)">${item.itemSerial||'—'}</td>
                   <td style="padding:7px 14px;overflow:hidden">${item.fcName?`<span style="font-size:12px">${item.fcSerial}</span><div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.fcName}</div>`:'—'}</td>
                   <td style="padding:7px 14px">${coStatus}</td>
                   <td style="padding:7px 14px;text-align:right">${!isDone?`<button class="btn btn-red btn-xs" onclick="guardAction('eel_add_item',()=>removeItemFromList('${evId}','${li}','${ii}'))">✕</button>`:''}</td>
@@ -10686,7 +10686,7 @@ function filterElItems(){
       style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)"
       onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
       <div style="font-weight:600">${item.name}</div>
-      <div style="font-size:11px;color:var(--text3)">${item.model||''}${item.model?' · ':''}${(item.units||[]).length} unit${(item.units||[]).length!==1?'s':''} · <span style="color:var(--accent);font-family:monospace">${fcStr}</span></div>
+      <div style="font-size:11px;color:var(--text3)">${item.model||''}${item.model?' · ':''}${(item.units||[]).length} unit${(item.units||[]).length!==1?'s':''} · <span style="color:var(--accent);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${fcStr}</span></div>
     </div>`;
   }).join('');
 }
@@ -10769,7 +10769,7 @@ function selectElParent(parentId){
       <input type="checkbox" class="el-unit-chk" value="${u.serial}" data-parent="${item.id}" data-parent-name="${item.name.replace(/"/g,'&quot;')}" data-total-qty="${totalQty}"
         ${isBlocked?'disabled':''} style="accent-color:var(--accent)">
       <div style="flex:1;min-width:0">
-        <div style="font-family:monospace;font-size:12px;font-weight:700;color:${coEvent||fullyReservedElsewhere?'var(--red)':'var(--accent)'}">${u.serial}${isBulk?` <span style="background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd);border-radius:8px;padding:0 6px;font-size:10px;margin-left:4px">×${totalQty}</span>`:''}</div>
+        <div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:${coEvent||fullyReservedElsewhere?'var(--red)':'var(--accent)'}">${u.serial}${isBulk?` <span style="background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd);border-radius:8px;padding:0 6px;font-size:10px;margin-left:4px">×${totalQty}</span>`:''}</div>
         <div style="font-size:11px;color:var(--text3)">${u.itemSerial?'Item S/N: '+u.itemSerial+' · ':''} ${fc?''+fc.fcSerial+' — '+fc.name:'No flight case'}</div>
         ${coEvent?`<div style="font-size:11px;color:var(--red);font-weight:600">Checked out to: ${coEvent.name}</div>`:''}
         ${fullyReservedElsewhere?`<div style="font-size:11px;color:var(--red);font-weight:600">⚠️ Fully booked on overlapping event${reservation.conflicts.length>1?'s':''}: ${conflictNames}</div>`:''}
@@ -10899,9 +10899,9 @@ function _buildEquipPDF(ev, lists){
     return `<tr>
       <td style="text-align:center;color:#6b7280">${i+1}</td>
       <td style="font-weight:600">${item.parentName}</td>
-      <td style="font-family:monospace;color:#1d4ed8;font-weight:700">${item.emSerial}</td>
-      <td style="text-align:center;font-family:monospace;font-weight:${total>1?'700':'400'}">${qtyDisp}</td>
-      <td style="font-family:monospace">${item.itemSerial||'—'}</td>
+      <td style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:#1d4ed8;font-weight:700">${item.emSerial}</td>
+      <td style="text-align:center;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:${total>1?'700':'400'}">${qtyDisp}</td>
+      <td style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${item.itemSerial||'—'}</td>
       <td>${item.fcName?`${item.fcSerial} — ${item.fcName}`:'—'}</td>
       <td style="text-align:center"><input type="checkbox" style="width:13px;height:13px"></td>
     </tr>`;
@@ -11017,7 +11017,7 @@ function renderCoEventList(){
           return`<tr style="border-top:1px solid var(--border)">
             <td style="padding:6px 12px">${!isOut?`<input type="checkbox" class="co-item-chk-${li}" data-serial="${item.emSerial}" data-event="${evId}" style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer">`:'<span style="color:var(--text3)">—</span>'}</td>
             <td style="padding:6px 12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.parentName}</td>
-            <td style="padding:6px 12px;font-family:monospace;color:var(--accent);font-weight:700">${item.emSerial}</td>
+            <td style="padding:6px 12px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700">${item.emSerial}</td>
             <td style="padding:6px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.fcName?''+item.fcSerial:'—'}</td>
             <td style="padding:6px 12px">${badge}</td>
           </tr>`;
@@ -11077,7 +11077,7 @@ function renderCoRecent(){
   el.innerHTML=recent.map(({unit,item})=>{
     const ev=calEvents.find(e=>String(e.id)===String(unit.checkout?.eventId));
     return`<div style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;font-size:12.5px">
-      <div><span style="font-weight:600">${item.name}</span><span style="font-family:monospace;font-size:11px;color:var(--accent);margin-left:8px">${unit.serial}</span></div>
+      <div><span style="font-weight:600">${item.name}</span><span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--accent);margin-left:8px">${unit.serial}</span></div>
       <div style="font-size:11px;color:var(--text3)">→ ${ev?.name||'?'}</div>
     </div>`;
   }).join('');
@@ -11094,7 +11094,7 @@ function coLookup(){
     if(unit.checkout&&!unit.checkout.checkedInAt){
       const ev=calEvents.find(e=>String(e.id)===String(unit.checkout.eventId));
       preview.style.display='block';
-      preview.innerHTML=`<div style="background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--amber)">⚠️ Already checked out to ${ev?.name||'?'}</div><div style="font-size:13px">${item.name} · <span style="font-family:monospace">${unit.serial}</span></div></div>`;
+      preview.innerHTML=`<div style="background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--amber)">⚠️ Already checked out to ${ev?.name||'?'}</div><div style="font-size:13px">${item.name} · <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit.serial}</span></div></div>`;
       confirmWrap.style.display='none'; _coTarget=null; return;
     }
     // Check if in event list — auto-select
@@ -11112,7 +11112,7 @@ function coLookup(){
         <div style="font-weight:700;color:var(--green);margin-bottom:8px">✅ Found — auto-selected event: ${ev?.name}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
           <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Item</div><div style="font-weight:600;font-size:13px">${item.name}</div></div>
-          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">EM Serial</div><div style="font-family:monospace;font-weight:700;font-size:13px;color:var(--accent)">${unit.serial}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">EM Serial</div><div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;color:var(--accent)">${unit.serial}</div></div>
           <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Flight Case</div><div style="font-size:13px">${fc?fc.fcSerial+' — '+fc.name:wh?wh.name:'—'}</div></div>
         </div>
       </div>`;
@@ -11123,7 +11123,7 @@ function coLookup(){
         <div style="font-weight:700;color:var(--green);margin-bottom:8px">✅ Found — select an event below to check out</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
           <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Item</div><div style="font-weight:600;font-size:13px">${item.name}</div></div>
-          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">EM Serial</div><div style="font-family:monospace;font-weight:700;font-size:13px;color:var(--accent)">${unit.serial}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">EM Serial</div><div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;color:var(--accent)">${unit.serial}</div></div>
           <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Flight Case</div><div style="font-size:13px">${fc?fc.fcSerial+' — '+fc.name:wh?wh.name:'—'}</div></div>
         </div>
         <div style="margin-top:8px;font-size:12px;color:var(--amber)">⚠️ Not found in any event equipment list</div>
@@ -11211,7 +11211,7 @@ function renderCiEventList(){
           return`<tr style="border-top:1px solid var(--border);background:${isOut?'var(--amber-bg)':''}">
             <td style="padding:6px 12px">${isOut?`<input type="checkbox" class="ci-item-chk-${li}" data-serial="${item.emSerial}" style="accent-color:var(--green);width:16px;height:16px;cursor:pointer">`:'<span style="color:var(--green)">✅</span>'}</td>
             <td style="padding:6px 12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.parentName}</td>
-            <td style="padding:6px 12px;font-family:monospace;color:var(--accent);font-weight:700">${item.emSerial}</td>
+            <td style="padding:6px 12px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700">${item.emSerial}</td>
             <td style="padding:6px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.fcName?''+item.fcSerial:'—'}</td>
             <td style="padding:6px 12px">${badge}</td>
           </tr>`;
@@ -11256,7 +11256,7 @@ function renderCiRecent(){
   invItems.forEach(item=>{(item.units||[]).forEach(u=>{if(u.checkout?.checkedInAt?.startsWith(today)) recent.push({unit:u,item});});});
   if(!recent.length){el.innerHTML='<div style="color:var(--text3);font-size:13px">Nothing checked in today</div>';return;}
   el.innerHTML=recent.map(({unit,item})=>`<div style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;font-size:12.5px">
-    <div><span style="font-weight:600">${item.name}</span><span style="font-family:monospace;font-size:11px;color:var(--accent);margin-left:8px">${unit.serial}</span></div>
+    <div><span style="font-weight:600">${item.name}</span><span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--accent);margin-left:8px">${unit.serial}</span></div>
     <span style="color:var(--green);font-size:11px;font-weight:600">✅ Returned</span>
   </div>`).join('');
 }
@@ -11271,14 +11271,14 @@ function ciLookup(){
     const {unit,item}=result;
     if(!unit.checkout||unit.checkout.checkedInAt){
       preview.style.display='block';
-      preview.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--text3)">ℹ️ Already in warehouse</div><div style="font-size:13px">${item.name} · <span style="font-family:monospace">${unit.serial}</span></div></div>`;
+      preview.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--text3)">ℹ️ Already in warehouse</div><div style="font-size:13px">${item.name} · <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit.serial}</span></div></div>`;
       confirmWrap.style.display='none'; _ciTarget=null; return;
     }
     const ev=calEvents.find(e=>String(e.id)===String(unit.checkout.eventId));
     const sel=document.getElementById('ciEventSel'); if(sel){sel.value=String(unit.checkout.eventId);renderCiEventList();}
     _ciTarget={type:'unit',unit,item};
     preview.style.display='block';
-    preview.innerHTML=`<div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--green)">✅ Ready to check in</div><div style="font-size:13px;font-weight:600">${item.name} <span style="font-family:monospace;font-size:12px;color:var(--accent)">${unit.serial}</span></div><div style="font-size:12px;color:var(--text3)">From: ${ev?.name||'?'}</div></div>`;
+    preview.innerHTML=`<div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--green)">✅ Ready to check in</div><div style="font-size:13px;font-weight:600">${item.name} <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;color:var(--accent)">${unit.serial}</span></div><div style="font-size:12px;color:var(--text3)">From: ${ev?.name||'?'}</div></div>`;
     confirmWrap.style.display='block'; return;
   }
   const fcResult=_findByFCSerial(serial);

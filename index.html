@@ -5477,10 +5477,11 @@ function renderCal(){
       dayEvs.forEach(ev=>{
         const isCompleted=ev.completed===true;
         const col=isCompleted?'#9ca3af':(ev.color||EVENT_COLORS[0]);
+        const statusTag = renderEventStatusBadge(ev.color, {small:true});
         html+=`<div class="cal-agenda-event" onclick="showCalPopup('${ev.id}',event)" style="${isCompleted?'opacity:0.6':''}">
           <div class="cal-agenda-dot" style="background:${col}"></div>
-          <div>
-            <div class="cal-agenda-name" style="${isCompleted?'text-decoration:line-through;color:var(--text3)':''}">${ev.name} ${isCompleted?'<span style="font-size:11px;color:var(--green);font-weight:600">✅</span>':''}</div>
+          <div style="flex:1;min-width:0">
+            <div class="cal-agenda-name" style="${isCompleted?'text-decoration:line-through;color:var(--text3)':''};display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span>${ev.name}</span> ${isCompleted?'<span style="font-size:11px;color:var(--green);font-weight:600">✅</span>':''}${statusTag}</div>
             <div class="cal-agenda-time">${calFmtDate(ev.eventDateFrom)} ${ev.eventDateFrom!==ev.eventDateTo?'→ '+calFmtDate(ev.eventDateTo):''}</div>
           </div>
         </div>`;
@@ -5496,10 +5497,14 @@ function renderCal(){
   if(upcoming){
     const todayDs=calDateStr(new Date());
     const future=calEvents.filter(e=>!e.completed&&String(e.eventDateTo||'').slice(0,10)>=todayDs).sort((a,b)=>String(a.eventDateFrom||'').slice(0,10)>String(b.eventDateFrom||'').slice(0,10)?1:-1).slice(0,5);
-    upcoming.innerHTML=future.length?future.map(e=>`<div style="margin-bottom:8px;cursor:pointer;border-radius:6px;padding:5px 7px;background:var(--surface);border:1px solid var(--border)" onclick="showCalPopup('${e.id}',null)">
-      <div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.name}</div>
-      <div style="font-size:11px;color:var(--text3)">${calFmtDate(e.eventDateFrom)}${e.venue?' · '+e.venue:''}</div>
-    </div>`).join(''):'<div style="font-size:12px;color:var(--text3)">No upcoming events</div>';
+    upcoming.innerHTML=future.length?future.map(e=>{
+      const tag = renderEventStatusBadge(e.color, {small:true});
+      return `<div style="margin-bottom:8px;cursor:pointer;border-radius:6px;padding:5px 7px;background:var(--surface);border:1px solid var(--border)" onclick="showCalPopup('${e.id}',null)">
+        <div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.name}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${calFmtDate(e.eventDateFrom)}${e.venue?' · '+e.venue:''}</div>
+        ${tag?`<div style="margin-top:4px">${tag}</div>`:''}
+      </div>`;
+    }).join(''):'<div style="font-size:12px;color:var(--text3)">No upcoming events</div>';
   }
 }
 
@@ -6452,10 +6457,14 @@ function renderAll(){
     const todayDs=calDateStr(new Date());
     const future=calEvents.filter(e=>!e.completed&&String(e.eventDateTo||'').slice(0,10)>=todayDs)
       .sort((a,b)=>String(a.eventDateFrom||'').slice(0,10)>String(b.eventDateFrom||'').slice(0,10)?1:-1).slice(0,5);
-    upcoming.innerHTML=future.length?future.map(e=>`<div style="margin-bottom:8px;cursor:pointer;border-radius:6px;padding:5px 7px;background:var(--surface);border:1px solid var(--border)" onclick="showCalPopup('${e.id}',null)">
-      <div style="font-size:12px;font-weight:600;color:var(--text)">${e.name}</div>
-      <div style="font-size:11px;color:var(--text3)">${calFmtDate(e.eventDateFrom)}</div>
-    </div>`).join(''):'<div style="font-size:12px;color:var(--text3)">No upcoming events</div>';
+    upcoming.innerHTML=future.length?future.map(e=>{
+      const tag = renderEventStatusBadge(e.color, {small:true});
+      return `<div style="margin-bottom:8px;cursor:pointer;border-radius:6px;padding:5px 7px;background:var(--surface);border:1px solid var(--border)" onclick="showCalPopup('${e.id}',null)">
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${e.name}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${calFmtDate(e.eventDateFrom)}</div>
+        ${tag?`<div style="margin-top:4px">${tag}</div>`:''}
+      </div>`;
+    }).join(''):'<div style="font-size:12px;color:var(--text3)">No upcoming events</div>';
   }
 }
 

@@ -657,14 +657,20 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .cal-day-header{padding:8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);text-align:center;background:var(--surface);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
 .cal-day{min-height:120px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;cursor:pointer;transition:background .1s;position:relative;vertical-align:top}
 .cal-day:hover{background:#fafbfc}
-.cal-day.today{background:#f0f7ff}
-.cal-day.other-month{background:var(--surface);opacity:.6}
-.cal-day-num{font-size:12.5px;font-weight:600;color:var(--text2);width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin-bottom:4px;flex-shrink:0}
-.cal-day.today .cal-day-num{background:var(--accent);color:#fff}
+.cal-day.today{background:transparent}
+.cal-day.other-month{background:var(--surface);opacity:.55}
+.cal-day-num{font-size:12.5px;font-weight:600;color:var(--text2);width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;margin-bottom:4px;flex-shrink:0}
+.cal-day.today .cal-day-num{background:#0f172a;color:#fff}
 .cal-event-chip{font-size:11px;font-weight:500;padding:2px 7px;border-radius:3px;margin-bottom:2px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.6}
 .cal-event-chip:hover{filter:brightness(.92)}
-.cal-more{font-size:11px;color:var(--text3);padding:1px 4px;cursor:pointer}
-.cal-more:hover{color:var(--accent)}
+.cal-more{font-size:11px;color:var(--text3);padding:1px 4px;cursor:pointer;font-weight:500}
+.cal-more:hover{color:var(--text)}
+/* Single-day event pill — light tinted bg, coloured dot, name, time */
+.cal-pill{display:flex;align-items:center;gap:5px;border-radius:5px;padding:2px 6px;margin-bottom:2px;font-size:11px;font-weight:500;cursor:pointer;overflow:hidden;line-height:1.55;transition:filter .12s}
+.cal-pill:hover{filter:brightness(.95)}
+.cal-pill .pill-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.cal-pill .pill-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-pill .pill-time{font-size:10px;font-weight:500;opacity:.7;flex-shrink:0;font-variant-numeric:tabular-nums}
 
 /* Week view */
 .cal-week-wrap{display:flex;flex-direction:column;height:100%}
@@ -5351,7 +5357,7 @@ function renderCal(){
     const daysInMonth=new Date(yr,mo+1,0).getDate();
     const daysInPrev=new Date(yr,mo,0).getDate();
 
-    // Build full grid of dates (always 6 rows x 7 cols = 42 cells)
+    // Build full grid of dates (6 rows x 7 cols)
     const gridDates=[];
     for(let i=0;i<firstDay;i++) gridDates.push(`${yr-+(mo===0)}-${String(mo===0?12:mo).padStart(2,'0')}-${String(daysInPrev-firstDay+1+i).padStart(2,'0')}`);
     for(let d=1;d<=daysInMonth;d++) gridDates.push(`${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
@@ -5360,150 +5366,125 @@ function renderCal(){
     for(let d=1;d<=remaining;d++) gridDates.push(`${ny}-${String(nm).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
     const rows=Math.ceil(gridDates.length/7);
 
-    // Build event layout: for each week row, figure out which events span which cells
-    // Each event gets a "track" (row within the day cell) for the week it spans
     const filteredEvents=calEvents.filter(e=>!search||e.name.toLowerCase().includes(search));
 
-    // For each week row, compute event spans
-    const weekLayouts=[]; // array of rows, each row has array of {ev, startCol, endCol, spanDays}
+    const isMulti=ev=>{
+      const f=String(ev.eventDateFrom||'').slice(0,10);
+      const t=String(ev.eventDateTo||'').slice(0,10);
+      return f && t && f!==t;
+    };
+    const tint=(hex,a)=>{
+      if(!hex||hex[0]!=='#') return `rgba(99,102,241,${a})`;
+      const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+      return `rgba(${r},${g},${b},${a})`;
+    };
+
+    // Per-week track assignment for MULTI-day events only
+    const weekLayouts=[];
     for(let row=0;row<rows;row++){
       const weekDates=gridDates.slice(row*7,(row+1)*7);
       const weekStart=weekDates[0], weekEnd=weekDates[6];
-      // Find all events that overlap this week
-      const weekEvs=filteredEvents.filter(e=>String(e.eventDateFrom||'').slice(0,10)<=weekEnd&&String(e.eventDateTo||'').slice(0,10)>=weekStart);
-      // Sort: longer spans first, then by start date
-      weekEvs.sort((a,b)=>{
-        const da=(String(a.eventDateFrom||'').slice(0,10)<weekStart?weekStart:String(a.eventDateFrom||'').slice(0,10));
-        const db=(String(b.eventDateFrom||'').slice(0,10)<weekStart?weekStart:String(b.eventDateFrom||'').slice(0,10));
-        const la=Math.min(weekDates.indexOf(String(a.eventDateTo||'').slice(0,10)<weekEnd?String(a.eventDateTo||'').slice(0,10):weekEnd),6)-weekDates.indexOf(da)+1;
-        const lb=Math.min(weekDates.indexOf(String(b.eventDateTo||'').slice(0,10)<weekEnd?String(b.eventDateTo||'').slice(0,10):weekEnd),6)-weekDates.indexOf(db)+1;
-        return lb-la||da.localeCompare(db);
+      const weekEvs=filteredEvents.filter(e=>{
+        if(!isMulti(e)) return false;
+        const f=String(e.eventDateFrom||'').slice(0,10);
+        const t=String(e.eventDateTo||'').slice(0,10);
+        return f<=weekEnd && t>=weekStart;
       });
-      // Assign tracks
-      const tracks=[]; // tracks[trackIdx] = array of {startCol, endCol}
+      weekEvs.sort((a,b)=>{
+        const af=String(a.eventDateFrom||'').slice(0,10);
+        const at=String(a.eventDateTo||'').slice(0,10);
+        const bf=String(b.eventDateFrom||'').slice(0,10);
+        const bt=String(b.eventDateTo||'').slice(0,10);
+        const la=Math.min(weekDates.indexOf(at>weekEnd?weekEnd:at),6)-weekDates.indexOf(af<weekStart?weekStart:af);
+        const lb=Math.min(weekDates.indexOf(bt>weekEnd?weekEnd:bt),6)-weekDates.indexOf(bf<weekStart?weekStart:bf);
+        return lb-la || af.localeCompare(bf);
+      });
+      const tracks=[];
       const evTrack=[];
       weekEvs.forEach(ev=>{
-        const startDs=String(ev.eventDateFrom||'').slice(0,10)<weekStart?weekStart:String(ev.eventDateFrom||'').slice(0,10);
-        const endDs=String(ev.eventDateTo||'').slice(0,10)>weekEnd?weekEnd:String(ev.eventDateTo||'').slice(0,10);
+        const f=String(ev.eventDateFrom||'').slice(0,10);
+        const t=String(ev.eventDateTo||'').slice(0,10);
+        const startDs=f<weekStart?weekStart:f;
+        const endDs=t>weekEnd?weekEnd:t;
         const sc=weekDates.indexOf(startDs), ec=weekDates.indexOf(endDs);
         if(sc<0||ec<0) return;
-        // Find first free track
         let track=0;
-        while(tracks[track]&&tracks[track].some(t=>!(t.endCol<sc||t.startCol>ec))) track++;
+        while(tracks[track]&&tracks[track].some(r=>!(r.endCol<sc||r.startCol>ec))) track++;
         if(!tracks[track]) tracks[track]=[];
         tracks[track].push({startCol:sc,endCol:ec});
-        evTrack.push({ev,startCol:sc,endCol:ec,track,isStart:String(ev.eventDateFrom||'').slice(0,10)>=weekStart,isEnd:String(ev.eventDateTo||'').slice(0,10)<=weekEnd});
+        evTrack.push({ev,startCol:sc,endCol:ec,track,isStart:f>=weekStart,isEnd:t<=weekEnd});
       });
       weekLayouts.push({evTrack, maxTrack:tracks.length});
     }
 
-    // Render grid
+    const MAX_PILLS=4;
+    const bandsTopOffset=36;
+    const bandHeight=22;
+
     let html=`<div class="cal-month-grid">`;
     DAYS.forEach(d=>html+=`<div class="cal-day-header">${d}</div>`);
 
     for(let row=0;row<rows;row++){
       const layout=weekLayouts[row];
-      const maxTrack=layout.maxTrack;
-      const cellHeight=Math.max(80, 44 + maxTrack*24);
-      for(let col=0;col<7;col++){
-        const cellIdx=row*7+col;
-        const ds=gridDates[cellIdx];
-        const [dy,dm,dd]=ds.split('-').map(Number);
-        const isCurrentMonth=(dm===mo+1&&dy===yr);
-        const isToday=ds===today;
-        html+=`<div class="cal-day${isToday?' today':''}${!isCurrentMonth?' other-month':''}" style="min-height:${cellHeight}px;position:relative" onclick="calDayClick('${ds}')">
-          <div class="cal-day-num"${isToday?' style="background:var(--accent);color:#fff"':''}>${dd}</div>
-        </div>`;
-      }
-      // Overlay event spans for this row
-      // We render them as absolutely positioned elements over the row
-      // We use a separate overlay row approach: insert spans as CSS grid overlays
-      // Actually, let's append event bars INSIDE the day cells with absolute positioning on the row
-
-      // For simplicity and correctness: render event bars as absolute divs over the grid row
-      // We'll use a row-relative container
-      html=html.replace(/<\/div>\s*$/, ''); // remove last closing tag to append overlay... not ideal
-      // Better: just use z-index positioning within each day cell
-    }
-    html+='</div>';
-
-    // Re-render with event overlays baked in
-    // Build the full grid in one pass properly
-    html=`<div class="cal-month-grid" style="position:relative">`;
-    DAYS.forEach(d=>html+=`<div class="cal-day-header">${d}</div>`);
-
-    for(let row=0;row<rows;row++){
-      const layout=weekLayouts[row];
-      const maxTrack=Math.max(0,layout.maxTrack);
-      const cellMinH=Math.max(80, 44 + maxTrack*24 + 4);
+      const maxTrack=Math.max(0, layout.maxTrack);
 
       for(let col=0;col<7;col++){
         const cellIdx=row*7+col;
         const ds=gridDates[cellIdx];
         const [dy,dm,dd]=ds.split('-').map(Number);
-        const isCurrentMonth=(dm===mo+1&&dy===yr);
-        const isToday=ds===today;
-        // Count how many events show on this cell (for +more)
-        const dayEvs=filteredEvents.filter(e=>e.eventDateFrom<=ds&&e.eventDateTo>=ds);
-        const tracked=layout.evTrack.filter(t=>t.startCol===col);
-        const spanHere=layout.evTrack.filter(t=>t.startCol<=col&&t.endCol>=col);
-        html+=`<div class="cal-day${isToday?' today':''}${!isCurrentMonth?' other-month':''}" style="min-height:${cellMinH}px;position:relative;vertical-align:top" onclick="calDayClick('${ds}')">
-          <div class="cal-day-num"${isToday?' style="background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center"':''}>${dd}</div>
-          ${maxTrack===0&&dayEvs.length>0?`<span style="font-size:11px;color:var(--text3)">+${dayEvs.length}</span>`:''}
-        </div>`;
-      }
-
-      // Now add event span bars as a separate set of absolutely positioned strips
-      // We'll inject them as a CSS grid overlay using a wrapper approach
-      // Since we're building HTML strings, we'll add them inside each day cell at the right track offset
-    }
-    html+='</div>';
-
-    // FINAL APPROACH: Build properly with event bars inside day cells, positioned by track
-    html=`<div class="cal-month-grid">`;
-    DAYS.forEach(d=>html+=`<div class="cal-day-header">${d}</div>`);
-    for(let row=0;row<rows;row++){
-      const layout=weekLayouts[row];
-      const maxTrack=Math.max(0,layout.maxTrack);
-      const cellMinH=Math.max(84, 44+maxTrack*24);
-
-      for(let col=0;col<7;col++){
-        const cellIdx=row*7+col;
-        const ds=gridDates[cellIdx];
-        const [dy,dm,dd]=ds.split('-').map(Number);
-        const isCurrentMonth=(dm===mo+1&&dy===yr);
+        const isCurrentMonth=(dm===mo+1 && dy===yr);
         const isToday=ds===today;
 
-        // Events that START on this col for this row
         const startingHere=layout.evTrack.filter(t=>t.startCol===col);
-        // Events that are "mid" (continuing through this cell but not starting here)
-        const passingThrough=layout.evTrack.filter(t=>t.startCol<col&&t.endCol>=col);
-        // Count of events visible on this day
-        const dayEvCount=layout.evTrack.filter(t=>t.startCol<=col&&t.endCol>=col).length;
-        const extraCount=filteredEvents.filter(e=>e.eventDateFrom<=ds&&e.eventDateTo>=ds).length - dayEvCount;
+        const singleDay=filteredEvents
+          .filter(e=>!isMulti(e) && String(e.eventDateFrom||'').slice(0,10)===ds)
+          .sort((a,b)=>(a.eventTimeFrom||'').localeCompare(b.eventTimeFrom||''));
+        const visiblePills=singleDay.slice(0, MAX_PILLS);
+        const hiddenCount=singleDay.length - visiblePills.length;
 
-        // Build event bars that START here (span across multiple cells)
         let bars='';
         startingHere.forEach(t=>{
           const ev=t.ev;
-          const isCompleted=ev.completed===true;
-          const col_=isCompleted?'#9ca3af':(ev.color||EVENT_COLORS[0]);
+          const completed=ev.completed===true;
+          const c=completed?'#9ca3af':(ev.color||EVENT_COLORS[0]);
           const spanCols=t.endCol-t.startCol+1;
-          const topOff=32+t.track*24;
+          const topOff=bandsTopOffset + t.track*bandHeight;
           const isStart=t.isStart, isEnd=t.isEnd;
-          const borderRadius=isStart&&isEnd?'10px':isStart?'10px 3px 3px 10px':isEnd?'3px 10px 10px 3px':'3px';
-          const opacity=isCompleted?'0.55':'1';
-          bars+=`<div style="position:absolute;top:${topOff}px;left:${isStart?'4px':'0'};width:calc(${spanCols}*100% + ${(spanCols-1)*1}px - ${isStart?8:0}px - ${isEnd?4:0}px);height:20px;background:${col_};border-radius:${borderRadius};z-index:2;display:flex;align-items:center;padding:0 7px;cursor:pointer;overflow:hidden;opacity:${opacity}" onclick="event.stopPropagation();showCalPopup('${ev.id}',event)">
-            <span style="font-size:11px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${isCompleted?'text-decoration:line-through;':''}">${isStart?ev.name:''}</span>
+          const br=isStart&&isEnd?'10px':isStart?'10px 3px 3px 10px':isEnd?'3px 10px 10px 3px':'3px';
+          const op=completed?'0.55':'1';
+          bars+=`<div style="position:absolute;top:${topOff}px;left:${isStart?'4px':'0'};width:calc(${spanCols}*100% + ${(spanCols-1)*1}px - ${isStart?8:0}px - ${isEnd?4:0}px);height:20px;background:${c};border-radius:${br};z-index:2;display:flex;align-items:center;padding:0 7px;cursor:pointer;overflow:hidden;opacity:${op}" onclick="event.stopPropagation();showCalPopup('${ev.id}',event)">
+            <span style="font-size:11px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${completed?'text-decoration:line-through;':''}">${isStart?ev.name:''}</span>
           </div>`;
         });
-        // Continuing events (just color fill, no text, handled by the starting cell's wide bar)
-        // We don't add anything for mid-spans since the starting cell's bar covers them
 
-        html+=`<div class="cal-day${isToday?' today':''}${!isCurrentMonth?' other-month':''}" style="min-height:${cellMinH}px;position:relative" onclick="calDayClick('${ds}')">
-          <div class="cal-day-num"${isToday?' style="background:var(--accent);color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center"':''}>${dd}</div>
+        let pills='';
+        visiblePills.forEach(ev=>{
+          const completed=ev.completed===true;
+          const c=completed?'#9ca3af':(ev.color||EVENT_COLORS[0]);
+          const bg=tint(c, completed?0.08:0.13);
+          const tm=(ev.eventTimeFrom||'').slice(0,5);
+          const tmStr=tm?calFmtTime(tm):'';
+          const txtStyle=completed?`color:${c};opacity:.6;text-decoration:line-through`:`color:${c}`;
+          pills+=`<div class="cal-pill" style="background:${bg};${txtStyle}" onclick="event.stopPropagation();showCalPopup('${ev.id}',event)">
+            <span class="pill-dot" style="background:${c}"></span>
+            <span class="pill-name">${ev.name}</span>
+            ${tmStr?`<span class="pill-time">${tmStr}</span>`:''}
+          </div>`;
+        });
+
+        const moreText = hiddenCount>0
+          ? `<div class="cal-more" onclick="event.stopPropagation();calDayClick('${ds}')">${hiddenCount} more…</div>`
+          : '';
+
+        const spacerH = maxTrack>0 ? (maxTrack*bandHeight) : 0;
+        const cellMinH = Math.max(96, bandsTopOffset + maxTrack*bandHeight + visiblePills.length*20 + (hiddenCount>0?16:0) + 6);
+
+        html+=`<div class="cal-day${isToday?' today':''}${!isCurrentMonth?' other-month':''}" style="min-height:${cellMinH}px" onclick="calDayClick('${ds}')">
+          <div class="cal-day-num">${dd}</div>
           ${bars}
-          ${extraCount>0?`<div class="cal-more" style="position:absolute;bottom:4px;left:6px" onclick="event.stopPropagation()">+${extraCount} more</div>`:''}
+          ${spacerH>0?`<div style="height:${spacerH}px"></div>`:''}
+          ${pills}
+          ${moreText}
         </div>`;
       }
     }

@@ -2022,6 +2022,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="toolbar" style="margin-bottom:14px">
                 <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;width:fit-content">
                   <button id="frTab-all" class="staff-tab active" onclick="setFRTab('')" style="border-radius:0;border:none;padding:7px 16px;font-size:13px">All</button>
+                  <button id="frTab-mine" class="staff-tab" onclick="setFRTab('mine')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">🛠 Mine</button>
                   <button id="frTab-open" class="staff-tab" onclick="setFRTab('open')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">🔴 Open</button>
                   <button id="frTab-repaired" class="staff-tab" onclick="setFRTab('repaired')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">✅ Repaired</button>
                   <button id="frTab-discarded" class="staff-tab" onclick="setFRTab('discarded')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">🗑️ Discarded</button>
@@ -8925,24 +8926,101 @@ function _faultCard(item,unit,f){
   const isClosed=repaired||discarded;
   const borderColor=discarded?'#d1d5db':repaired?'var(--green-bd)':'var(--red-bd)';
   const bgColor=discarded?'#f9fafb':repaired?'var(--green-bg)':'var(--red-bg)';
+  const assigneeName = f.assignedToUserName || '';
+  const isMine = f.assignedToUserId && String(f.assignedToUserId) === String(currentUser?.id);
+  const assignedLine = assigneeName && !isClosed
+    ? `<div style="display:inline-flex;align-items:center;gap:6px;background:${isMine?'var(--accent-bg)':'#eef2ff'};color:${isMine?'var(--accent)':'#4338ca'};border:1px solid ${isMine?'var(--accent-bd)':'#c7d2fe'};border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;margin-top:4px">🛠 Assigned to: ${assigneeName}${isMine?' (you)':''}${f.assignedAt?` <span style="opacity:.7;font-weight:500">· ${new Date(f.assignedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</span>`:''}</div>`
+    : '';
   return`<div style="border:1px solid ${borderColor};background:${bgColor};border-radius:8px;padding:12px 14px;margin-bottom:8px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
       <div style="flex:1">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
           <div style="font-size:13px;font-weight:700;color:var(--text)">${f.fault}</div>
           ${discarded?`<span style="background:#e5e7eb;color:#6b7280;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700">Discarded</span>`:repaired?`<span style="background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700">Repaired</span>`:`<span style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700">Open</span>`}
         </div>
         <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Reported by <strong>${f.reportedBy||'—'}</strong> on ${f.reportedDate||'—'}</div>
+        ${assignedLine}
         ${repaired?`<div style="font-size:12px;color:var(--green);font-weight:600;margin-top:6px">✅ Repaired on ${f.repairedDate}${f.repairedBy?' by '+f.repairedBy:''}</div>${f.repairNote?`<div style="font-size:12px;color:var(--text2);margin-top:2px">${f.repairNote}</div>`:''}`:''}
         ${discarded&&!repaired?`<div style="font-size:12px;color:#6b7280;margin-top:6px">🗑️ Closed — unit discarded (${unit.discardReason||''})</div>`:''}
       </div>
-      <div style="display:flex;gap:5px;flex-shrink:0">
+      <div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+        ${!isClosed?`<button class="btn btn-ghost btn-xs" onclick="guardAction('fault_assign',()=>openAssignFault('${item.id}','${unit.unitId||unit.id}','${f.faultId}'))">${assigneeName?'Reassign':'🛠 Assign'}</button>`:''}
         ${!isClosed?`<button class="btn btn-green btn-xs" onclick="guardAction('fault_repair',()=>openMarkRepaired('${item.id}','${unit.unitId||unit.id}','${f.faultId}'))">✓ Mark Repaired</button>`:''}
         ${repaired&&!discarded?`<button class="btn btn-ghost btn-xs" onclick="guardAction('fault_repair',()=>openMarkRepaired('${item.id}','${unit.unitId||unit.id}','${f.faultId}'))">Edit Repair</button>`:''}
         <button class="btn btn-red btn-xs" onclick="deleteFault('${item.id}','${unit.unitId||unit.id}','${f.faultId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
       </div>
     </div>
   </div>`;
+}
+
+// Open a small modal to pick a user to assign the fault to. The picker
+// includes only active users so we don't accidentally route work to someone
+// who no longer has an account.
+function openAssignFault(parentId, unitId, faultId){
+  const item = invItems.find(x=>String(x.id)===String(parentId)); if(!item) return;
+  const unit = (item.units||[]).find(u=>String(u.unitId||u.id)===String(unitId)); if(!unit) return;
+  const fault = (unit.faults||[]).find(f=>f.faultId===faultId); if(!fault) return;
+  const opts = (users||[]).map(u =>
+    `<option value="${u.id}" ${String(fault.assignedToUserId||'')===String(u.id)?'selected':''}>${u.name}${u.username?` (${u.username})`:''}</option>`
+  ).join('');
+  document.getElementById('simpleModalTitle').textContent = '🛠 Assign Fault for Repair';
+  document.getElementById('simpleModalBody').innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12.5px">
+      <div style="font-weight:700;color:var(--text)">${item.name} · <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent)">${unit.serial}</span></div>
+      <div style="font-size:12px;color:var(--text3);margin-top:3px">Fault: ${fault.fault}</div>
+    </div>
+    <div class="field"><label class="field-label">Assign To *</label>
+      <select id="fa_user"><option value="">— Select person —</option>${opts}</select>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">The assignee will see this fault in their "Mine" tab on the Fault Reports page.</div>
+    </div>
+    ${fault.assignedToUserId?`<button class="btn btn-red btn-xs" onclick="unassignFault('${parentId}','${unitId}','${faultId}')" style="margin-top:6px">✕ Unassign current assignee</button>`:''}`;
+  document.getElementById('simpleModalSave').textContent = 'Assign';
+  document.getElementById('simpleModalSave').onclick = () => saveAssignFault(parentId, unitId, faultId);
+  window._simpleModalFn = () => saveAssignFault(parentId, unitId, faultId);
+  document.getElementById('simpleModal').style.display = 'flex';
+}
+
+async function saveAssignFault(parentId, unitId, faultId){
+  const userId = document.getElementById('fa_user')?.value;
+  if(!userId){ toast('Pick a user to assign to'); return; }
+  const item = invItems.find(x=>String(x.id)===String(parentId)); if(!item) return;
+  const unit = (item.units||[]).find(u=>String(u.unitId||u.id)===String(unitId)); if(!unit) return;
+  const fault = (unit.faults||[]).find(f=>f.faultId===faultId); if(!fault) return;
+  const target = (users||[]).find(u=>String(u.id)===String(userId));
+  if(!target){ toast('User not found'); return; }
+  fault.assignedToUserId   = target.id;
+  fault.assignedToUserName = target.name;
+  fault.assignedAt         = new Date().toISOString();
+  fault.assignedBy         = currentUser?.name || '';
+  const dbUnitId = unit.id || unit.unitId;
+  const res = await api('PATCH','/inventory/units/'+dbUnitId+'/faults',{ faults: unit.faults, status: unit.status });
+  if(!res){ toast('Failed to assign'); return; }
+  invItems = await api('GET','/inventory/items') || invItems;
+  closeSimpleModal();
+  const fresh = invItems.find(x=>String(x.id)===String(parentId));
+  if(fresh && _detailParentId === String(parentId)) renderUnitDetailModal();
+  renderInventory();
+  if(document.getElementById('faultReportsList')) renderFaultReports();
+  toast(`Fault assigned to ${target.name} ✓`);
+}
+
+async function unassignFault(parentId, unitId, faultId){
+  const item = invItems.find(x=>String(x.id)===String(parentId)); if(!item) return;
+  const unit = (item.units||[]).find(u=>String(u.unitId||u.id)===String(unitId)); if(!unit) return;
+  const fault = (unit.faults||[]).find(f=>f.faultId===faultId); if(!fault) return;
+  delete fault.assignedToUserId;
+  delete fault.assignedToUserName;
+  delete fault.assignedAt;
+  delete fault.assignedBy;
+  const dbUnitId = unit.id || unit.unitId;
+  const res = await api('PATCH','/inventory/units/'+dbUnitId+'/faults',{ faults: unit.faults, status: unit.status });
+  if(!res){ toast('Failed to unassign'); return; }
+  invItems = await api('GET','/inventory/items') || invItems;
+  closeSimpleModal();
+  if(_detailParentId === String(parentId)) renderUnitDetailModal();
+  renderInventory();
+  if(document.getElementById('faultReportsList')) renderFaultReports();
+  toast('Assignment cleared');
 }
 
 // ── Unit Actions ──────────────────────────────────────────────────────────────
@@ -9910,7 +9988,7 @@ function _getAllFaults(){
 let _frTab='';
 function setFRTab(tab){
   _frTab=tab;
-  ['all','open','repaired','discarded'].forEach(t=>{
+  ['all','mine','open','repaired','discarded'].forEach(t=>{
     const btn=document.getElementById('frTab-'+t);
     if(btn) btn.classList.toggle('active', (t==='all'&&tab==='')||(t===tab));
   });
@@ -9921,6 +9999,7 @@ function renderFaultReports(){
   const el=document.getElementById('faultReportsList'); if(!el) return;
   const fStatus=_frTab||'';
   let faults=_getAllFaults();
+  if(fStatus==='mine') faults=faults.filter(f=>String(f.assignedToUserId||'')===String(currentUser?.id||'')&&!f.repairedDate&&!f.unitDiscarded);
   if(fStatus==='open') faults=faults.filter(f=>!f.repairedDate&&!f.unitDiscarded);
   if(fStatus==='repaired') faults=faults.filter(f=>f.repairedDate&&!f.unitDiscarded);
   if(fStatus==='discarded') faults=faults.filter(f=>f.unitDiscarded);
@@ -9939,12 +10018,17 @@ function renderFaultReports(){
       :repaired
         ?`<span style="font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)">✅ Fixed</span>`
         :`<span style="font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)">🔴 Open</span>`;
+    const isMine = f.assignedToUserId && String(f.assignedToUserId) === String(currentUser?.id);
+    const assignedBadge = f.assignedToUserName && !isClosed
+      ? `<span style="display:inline-flex;align-items:center;gap:4px;background:${isMine?'var(--accent-bg)':'#eef2ff'};color:${isMine?'var(--accent)':'#4338ca'};border:1px solid ${isMine?'var(--accent-bd)':'#c7d2fe'};border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:6px">🛠 ${f.assignedToUserName}${isMine?' (you)':''}</span>`
+      : '';
     return`<div style="border:1px solid ${borderColor};background:${bgColor};border-radius:8px;padding:10px 14px;margin-bottom:6px;display:flex;gap:10px;align-items:flex-start">
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap">
           <span style="font-size:13px;font-weight:700;color:var(--text)">${f.itemName}</span>
           <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;font-weight:700;background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:1px 5px">${f.serial}</span>
           ${badge}
+          ${assignedBadge}
         </div>
         <div style="font-size:12.5px;color:var(--text2);margin-bottom:2px">${f.fault}</div>
         <div style="font-size:11.5px;color:var(--text3)">By <strong>${f.reportedBy||'—'}</strong> · ${f.reportedDate||'—'}${repaired?` · Fixed ${f.repairedDate}${f.repairedBy?' by '+f.repairedBy:''}`:discarded?` · Unit discarded`:''}</div>
@@ -9953,6 +10037,7 @@ function renderFaultReports(){
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
         <button class="btn btn-ghost btn-xs" onclick="openInvParent('${f.parentId}');setTimeout(()=>openUnitDetail('${f.parentId}','${f.unitId}','faults'),300)">View</button>
+        ${!isClosed?`<button class="btn btn-ghost btn-xs" onclick="guardAction('fault_assign',()=>openAssignFault('${f.parentId}','${f.unitId}','${f.faultId}'))">${f.assignedToUserName?'Reassign':'🛠 Assign'}</button>`:''}
         ${!isClosed?`<button class="btn btn-green btn-xs" onclick="guardAction('fault_repair',()=>openMarkRepaired('${f.parentId}','${f.unitId}','${f.faultId}'))">✓ Fix</button>`:''}
         ${repaired&&!discarded?`<button class="btn btn-ghost btn-xs" onclick="guardAction('fault_repair',()=>openMarkRepaired('${f.parentId}','${f.unitId}','${f.faultId}'))">Edit</button>`:''}
       </div>
@@ -12396,6 +12481,7 @@ const PERM_TREE = [
     { label:'Delete Flight Case', key:'fc_delete', actions:['edit'] },
     { label:'Fault Reports Page', key:'fault_page', actions:['view'] },
     { label:'Add Fault Report', key:'fault_add', actions:['edit'] },
+    { label:'Assign Fault to Repairer', key:'fault_assign', actions:['edit'] },
     { label:'Mark Repaired', key:'fault_repair', actions:['edit'] },
     { label:'Edit Repair Details', key:'fault_edit_repair', actions:['edit'] },
     { label:'Event Equipment Lists', key:'eel_page', actions:['view'] },

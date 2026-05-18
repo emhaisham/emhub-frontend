@@ -11048,7 +11048,7 @@ function filterElItems(){
       style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)"
       onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
       <div style="font-weight:600">${item.name}</div>
-      <div style="font-size:11px;color:var(--text3)">${item.model||''}${item.model?' · ':''}${(item.units||[]).length} unit${(item.units||[]).length!==1?'s':''} · <span style="color:var(--accent);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${fcStr}</span></div>
+      <div style="font-size:11px;color:var(--text3)">${item.model||''}${item.model?' · ':''}${(item.units||[]).filter(u=>!u.discarded).length} unit${(item.units||[]).filter(u=>!u.discarded).length!==1?'s':''} · <span style="color:var(--accent);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${fcStr}</span></div>
     </div>`;
   }).join('');
 }

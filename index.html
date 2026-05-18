@@ -1365,6 +1365,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="nav-item" onclick="hrNav('pension')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v1a3 3 0 006 0V7m0 1a3 3 0 006 0V7m0 1a3 3 0 006 0V7L12 2 3 7z"/></svg></span>Pension</div>
               <div class="nav-item" onclick="hrNav('bonus')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>Bonus</div>
               <div class="nav-lbl">Other</div>
+              <div class="nav-item" onclick="hrNav('dept-leave')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Department Leave</div>
               <div class="nav-item" onclick="hrNav('leave')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></span>Leave</div>
               <div class="nav-item" onclick="hrNav('letters')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>Staff Letters</div>
             </div>
@@ -1493,6 +1494,35 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <div class="stat-card"><div class="stat-top"><span class="stat-label">Outstanding</span></div><div class="stat-val red" id="bnStatOutstanding">MVR 0</div></div>
               </div>
               <div id="bonusList"></div>
+            </div>
+
+            <!-- ── DEPARTMENT LEAVE CALENDAR ── -->
+            <div class="page" id="hr-page-dept-leave">
+              <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
+                <div>
+                  <div class="page-title">Department Leave</div>
+                  <div class="page-sub">Plan around your colleagues — only names + dates are shown (leave type is private)</div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <select id="dlvDeptSel" onchange="renderDeptLeave()" style="font-size:13px;padding:6px 10px;min-width:140px"></select>
+                  <button class="btn btn-ghost btn-sm" onclick="dlvToday()">Today</button>
+                  <div style="display:flex;gap:2px">
+                    <button class="btn btn-ghost btn-sm" onclick="dlvNav(-1)" style="padding:6px 10px">‹</button>
+                    <button class="btn btn-ghost btn-sm" onclick="dlvNav(1)"  style="padding:6px 10px">›</button>
+                  </div>
+                  <span id="dlvTitle" style="font-size:16px;font-weight:700;color:var(--text);min-width:140px;text-align:center"></span>
+                  <div style="position:relative">
+                    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('dlvMonthPicker').showPicker?.()||document.getElementById('dlvMonthPicker').click()">Month ▾</button>
+                    <input type="month" id="dlvMonthPicker" onchange="dlvJumpToMonth(this.value)" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;pointer-events:none">
+                  </div>
+                </div>
+              </div>
+              <div id="dlvCalBody" style="background:var(--white);border:1px solid var(--border);border-radius:8px;overflow:auto"></div>
+              <div id="dlvLegend" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--text3)">
+                <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--green);border-radius:3px"></span>Approved</span>
+                <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--amber);border-radius:3px"></span>Pending</span>
+                <span style="margin-left:auto" id="dlvCount"></span>
+              </div>
             </div>
 
             <!-- ── LEAVE ── -->
@@ -4020,7 +4050,7 @@ function hrNav(page, extra){
   const pageEl = document.getElementById('hr-page-'+page);
   if(pageEl) pageEl.classList.add('active');
   const items = document.querySelectorAll('#mod-hr .nav-item');
-  const map = {employees:0,'add-employee':1,disciplinary:2,'staff-assets':3,payroll:4,loans:5,pension:6,bonus:7,leave:8,letters:9};
+  const map = {employees:0,'add-employee':1,disciplinary:2,'staff-assets':3,payroll:4,loans:5,pension:6,bonus:7,'dept-leave':8,leave:9,letters:10};
   if(items[map[page]]) items[map[page]].classList.add('active');
   hrActivePage = page;
   if(page==='employees')     { populateHRFilters(); renderEmployees(); }
@@ -4046,6 +4076,7 @@ function hrNav(page, extra){
       api('GET','/hr/leave').then(r=>{ if(r){ hrLeave=r; markFresh('hrLeave'); } populateLeaveFilter(); renderLeave(); });
     }
   }
+  if(page==='dept-leave')    { initDeptLeave(); }
   if(page==='letters')       { populateLetterEmp(); document.getElementById('ltDate').valueAsDate=new Date(); }
   updateHRSidebar();
 }
@@ -6056,8 +6087,48 @@ function calcLeaveDays(){
   el.textContent=days>0?`${days} day${days!==1?'s':''}`:days===0?'Same day':'Invalid date range';
 }
 
+// Check the department-leave endpoint for colleagues whose leave overlaps the
+// dates the user just picked. We don't block submission — just surface a
+// soft warning so the planner can see clashes at decision time.
+let _lvConflictCache = null;     // {dept, leave:[]} for the current employee
+let _lvConflictTimer = null;
+async function checkLeaveConflicts(){
+  const noticeEl = document.getElementById('lvConflictNotice'); if(!noticeEl) return;
+  const empId = document.getElementById('lv_emp')?.value || document.getElementById('lv_emp_hidden')?.value;
+  const from  = document.getElementById('lv_from')?.value;
+  const to    = document.getElementById('lv_to')?.value;
+  if(!empId || !from || !to || from > to){ noticeEl.style.display='none'; return; }
+  clearTimeout(_lvConflictTimer);
+  _lvConflictTimer = setTimeout(async () => {
+    const emp = hrEmployees.find(e => String(e.id)===String(empId));
+    const dept = emp?.dept || '';
+    if(!dept){ noticeEl.style.display='none'; return; }
+    // Cache the dept-leave dataset between keystrokes
+    if(!_lvConflictCache || _lvConflictCache.dept !== dept){
+      const params = new URLSearchParams({ dept, from, to });
+      const r = await api('GET', '/hr/leave/department?' + params.toString());
+      _lvConflictCache = r || { dept, leave: [] };
+    }
+    // Filter: same dept, overlap, exclude self
+    const fromD = from, toD = to;
+    const overlaps = (_lvConflictCache.leave||[]).filter(l =>
+      String(l.empName||'') !== String(emp.name) &&
+      String(l.fromDate||'').slice(0,10) <= toD &&
+      String(l.toDate||'').slice(0,10) >= fromD
+    );
+    if(!overlaps.length){ noticeEl.style.display='none'; return; }
+    noticeEl.style.display='block';
+    const lines = overlaps.slice(0,5).map(l => {
+      const status = l.status==='approved' ? '' : ' (pending)';
+      return `<strong>${l.empName}</strong>${status}: ${String(l.fromDate).slice(0,10)} → ${String(l.toDate).slice(0,10)}`;
+    }).join('<br>');
+    const extra = overlaps.length>5 ? `<br><span style="opacity:.8">+${overlaps.length-5} more in ${dept}</span>` : '';
+    noticeEl.innerHTML = `⚠️ Colleague leave overlap in <strong>${dept}</strong>:<br>${lines}${extra}`;
+  }, 300);
+}
+
 async function saveLeave(){
-  const empId=document.getElementById('lv_emp')?.value;
+  const empId=document.getElementById('lv_emp')?.value || document.getElementById('lv_emp_hidden')?.value;
   const type=document.getElementById('lv_type')?.value;
   const from=document.getElementById('lv_from')?.value;
   const to=document.getElementById('lv_to')?.value;
@@ -6073,12 +6144,28 @@ async function saveLeave(){
   }
   const days=Math.round((new Date(to)-new Date(from))/86400000)+1;
   if(days<=0)return toast('Invalid date range');
-  const res=await api('POST','/hr/leave',{empId,leaveType:type,type,fromDate:from,from,toDate:to,to,days,reason:notes});
-  if(!res)return;
-  // Merge response into local cache instead of refetching whole list
-  _upsertById(hrLeave, res, true);
-  markFresh('hrLeave');
-  closeUserModal();renderLeave();toast('Leave request submitted ✓');
+
+  const submit = async () => {
+    const res=await api('POST','/hr/leave',{empId,leaveType:type,type,fromDate:from,from,toDate:to,to,days,reason:notes});
+    if(!res)return;
+    _upsertById(hrLeave, res, true);
+    markFresh('hrLeave');
+    closeUserModal();renderLeave();toast('Leave request submitted ✓');
+  };
+
+  // If the inline notice is showing overlaps, double-check with the user
+  // before posting. This is the "planning" guardrail without being a block.
+  const noticeEl = document.getElementById('lvConflictNotice');
+  if(noticeEl && noticeEl.style.display !== 'none'){
+    openConfirm(
+      'Overlap with colleagues in your department',
+      noticeEl.innerHTML + '<br><br>Submit this leave request anyway?',
+      'Submit Anyway',
+      submit
+    );
+    return;
+  }
+  submit();
 }
 
 async function updateLeaveStatus(lvId,status){
@@ -6353,16 +6440,205 @@ function openAddLeave(preEmpId){
     })()}
     <div class="field"><label class="field-label">Leave Type *</label><select id="lv_type">${typeOptions}</select></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="field"><label class="field-label">From Date *</label><input type="date" id="lv_from" oninput="calcLeaveDays()"></div>
-      <div class="field"><label class="field-label">To Date *</label><input type="date" id="lv_to" oninput="calcLeaveDays()"></div>
+      <div class="field"><label class="field-label">From Date *</label><input type="date" id="lv_from" oninput="calcLeaveDays();checkLeaveConflicts()"></div>
+      <div class="field"><label class="field-label">To Date *</label><input type="date" id="lv_to" oninput="calcLeaveDays();checkLeaveConflicts()"></div>
     </div>
     <div id="lvDaysPreview" style="font-size:12.5px;color:var(--accent);font-weight:600;min-height:18px"></div>
+    <div id="lvConflictNotice" style="display:none;font-size:12px;background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber);border-radius:7px;padding:8px 12px;margin:6px 0"></div>
     <div class="field"><label class="field-label">Reason / Notes</label><textarea id="lv_notes" rows="2" style="resize:vertical" placeholder="Optional notes…"></textarea></div>
     <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:8px;border-top:1px solid var(--border)">
       <button class="btn btn-ghost btn-sm" onclick="closeUserModal()">Cancel</button>
       <button class="btn btn-primary btn-sm" onclick="saveLeave()">Submit Request</button>
     </div>`;
   document.getElementById('userModal').classList.add('open');
+}
+
+// ══════════════════════════════════════════════════════
+// DEPARTMENT LEAVE CALENDAR
+// Privacy-respecting view: shows colleague names + dates + status only.
+// Leave type / reason live in the regular Leave Management page (HR/admin).
+// ══════════════════════════════════════════════════════
+let _dlvDate = new Date();            // anchor month
+let _dlvData = null;                  // {dept, leave:[...]}
+let _dlvDept = '';                    // selected dept (empty = caller's own)
+let _dlvLastFetchKey = '';            // memo key so navigating months reuses the data
+
+async function initDeptLeave(){
+  _dlvDate = new Date();
+  // Determine which dept dropdown options to show. Admins / hr_leave_edit see
+  // all departments + an "All my dept" default. Regular staff see only their
+  // own department (auto-locked).
+  const lvPerms = appRoles.find(r=>String(r.id)===String(currentUser?.roleId))?.perms || currentUser?.rolePerms || {};
+  const canPickAny = currentUser?.role==='admin' || lvPerms['hr_leave_edit']===true;
+  const sel = document.getElementById('dlvDeptSel'); if(!sel) return;
+  if(canPickAny){
+    sel.innerHTML = '<option value="">— My department (auto) —</option>'
+      + DEPTS.map(d => `<option value="${d}">${d}</option>`).join('');
+    sel.disabled = false;
+  } else {
+    sel.innerHTML = '<option value="">My department</option>';
+    sel.disabled = true;
+  }
+  _dlvDept = '';
+  await _dlvFetch();
+  renderDeptLeave();
+}
+
+async function _dlvFetch(){
+  // We pull a generous window so the calendar can browse a few months without
+  // hitting the network on every prev/next click.
+  const center = new Date(_dlvDate);
+  const from = new Date(center); from.setDate(1); from.setMonth(from.getMonth()-2);
+  const to   = new Date(center); to.setDate(1);   to.setMonth(to.getMonth()+3); to.setDate(0);
+  const fmt = d => d.toISOString().slice(0,10);
+  const params = new URLSearchParams({ from: fmt(from), to: fmt(to) });
+  if(_dlvDept) params.set('dept', _dlvDept);
+  const key = params.toString();
+  if(key === _dlvLastFetchKey && _dlvData) return; // memoed
+  _dlvLastFetchKey = key;
+  const r = await api('GET', '/hr/leave/department?' + key);
+  _dlvData = r || { dept:null, leave:[] };
+}
+
+async function dlvNav(dir){
+  _dlvDate.setMonth(_dlvDate.getMonth()+dir);
+  // If we navigated outside the cached window, refetch
+  const center = new Date(_dlvDate);
+  const cachedFrom = _dlvData ? new Date(_dlvData.from) : null;
+  const cachedTo   = _dlvData ? new Date(_dlvData.to) : null;
+  if(!cachedFrom || !cachedTo || center < cachedFrom || center > cachedTo){
+    _dlvLastFetchKey = ''; // bust memo
+    await _dlvFetch();
+  }
+  renderDeptLeave();
+}
+
+function dlvToday(){ _dlvDate = new Date(); renderDeptLeave(); }
+function dlvJumpToMonth(v){
+  if(!v) return;
+  const [y,m] = v.split('-').map(Number);
+  if(!y||!m) return;
+  _dlvDate = new Date(y, m-1, 1);
+  _dlvLastFetchKey = '';
+  _dlvFetch().then(renderDeptLeave);
+}
+
+async function renderDeptLeave(){
+  // Re-fetch if dept dropdown changed
+  const sel = document.getElementById('dlvDeptSel');
+  if(sel && sel.value !== _dlvDept){
+    _dlvDept = sel.value;
+    _dlvLastFetchKey = '';
+    await _dlvFetch();
+  }
+  const body = document.getElementById('dlvCalBody'); if(!body) return;
+  const titleEl = document.getElementById('dlvTitle');
+  const countEl = document.getElementById('dlvCount');
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const yr = _dlvDate.getFullYear(), mo = _dlvDate.getMonth();
+  if(titleEl) titleEl.textContent = MONTHS[mo] + ' ' + yr;
+
+  const data = _dlvData || { leave: [] };
+  const todayDs = new Date().toISOString().slice(0,10);
+  const firstDay = new Date(yr,mo,1).getDay();
+  const daysInMonth = new Date(yr,mo+1,0).getDate();
+  const daysInPrev = new Date(yr,mo,0).getDate();
+  const pad2 = n => String(n).padStart(2,'0');
+
+  const gridDates = [];
+  for(let i=0;i<firstDay;i++) gridDates.push(`${mo===0?yr-1:yr}-${pad2(mo===0?12:mo)}-${pad2(daysInPrev-firstDay+1+i)}`);
+  for(let d=1;d<=daysInMonth;d++) gridDates.push(`${yr}-${pad2(mo+1)}-${pad2(d)}`);
+  const rem = (7-gridDates.length%7)%7;
+  const nm=mo===11?1:mo+2, ny=mo===11?yr+1:yr;
+  for(let d=1;d<=rem;d++) gridDates.push(`${ny}-${pad2(nm)}-${pad2(d)}`);
+  const rows = gridDates.length/7;
+
+  // Per-week: assign tracks for leave bands (same approach as the events calendar)
+  // Each leave record is "{empName, from, to, status}" — bands span every cell
+  // in its date range, grouped by row.
+  const leaveAll = (data.leave||[]).map(l => ({
+    ...l,
+    fromDs: String(l.fromDate||'').slice(0,10),
+    toDs:   String(l.toDate||'').slice(0,10)
+  })).filter(l => l.fromDs && l.toDs);
+
+  const weekLayouts = [];
+  for(let row=0; row<rows; row++){
+    const weekDates = gridDates.slice(row*7,(row+1)*7);
+    const ws = weekDates[0], we = weekDates[6];
+    const weekEvs = leaveAll.filter(l => l.fromDs <= we && l.toDs >= ws);
+    // Longest first, then earliest
+    weekEvs.sort((a,b) => {
+      const lenA = Math.min(weekDates.indexOf(a.toDs>we?we:a.toDs),6) - weekDates.indexOf(a.fromDs<ws?ws:a.fromDs);
+      const lenB = Math.min(weekDates.indexOf(b.toDs>we?we:b.toDs),6) - weekDates.indexOf(b.fromDs<ws?ws:b.fromDs);
+      return lenB - lenA || a.fromDs.localeCompare(b.fromDs);
+    });
+    const tracks=[], evTrack=[];
+    weekEvs.forEach(l => {
+      const sd = l.fromDs<ws?ws:l.fromDs;
+      const ed = l.toDs>we?we:l.toDs;
+      const sc = weekDates.indexOf(sd), ec = weekDates.indexOf(ed);
+      if(sc<0||ec<0) return;
+      let t=0;
+      while(tracks[t] && tracks[t].some(r=>!(r.endCol<sc||r.startCol>ec))) t++;
+      if(!tracks[t]) tracks[t]=[];
+      tracks[t].push({startCol:sc,endCol:ec});
+      evTrack.push({ leave:l, startCol:sc, endCol:ec, track:t,
+                     isStart:l.fromDs>=ws, isEnd:l.toDs<=we });
+    });
+    weekLayouts.push({evTrack, maxTrack:tracks.length});
+  }
+
+  let html = `<div style="display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid var(--border);border-top:1px solid var(--border)">`;
+  DAYS.forEach(d => html += `<div style="padding:8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);text-align:center;background:var(--surface);border-right:1px solid var(--border);border-bottom:1px solid var(--border)">${d}</div>`);
+
+  const bandTop = 32, bandH = 22;
+  for(let row=0;row<rows;row++){
+    const layout = weekLayouts[row];
+    const maxTrack = Math.max(0, layout.maxTrack);
+    for(let col=0;col<7;col++){
+      const ds = gridDates[row*7+col];
+      const [dy,dm,dd] = ds.split('-').map(Number);
+      const isCurrent = dm===mo+1 && dy===yr;
+      const isToday   = ds===todayDs;
+      const starting = layout.evTrack.filter(t => t.startCol===col);
+      let bars = '';
+      starting.forEach(t => {
+        const l = t.leave;
+        const span = t.endCol - t.startCol + 1;
+        const top = bandTop + t.track*bandH;
+        const isStart = t.isStart, isEnd = t.isEnd;
+        const isApproved = l.status === 'approved';
+        const bg = isApproved
+          ? 'rgba(5,150,105,0.18)'                // green tint
+          : 'rgba(217,119,6,0.18)';               // amber tint
+        const fg = isApproved ? '#047857' : '#b45309';
+        const br = isStart && isEnd ? '10px' : isStart ? '10px 3px 3px 10px' : isEnd ? '3px 10px 10px 3px' : '3px';
+        bars += `<div title="${l.empName} — On leave (${l.fromDs} → ${l.toDs})${isApproved?'':' · pending'}"
+          style="position:absolute;top:${top}px;left:${isStart?'4px':'0'};width:calc(${span}*100% + ${(span-1)}px - ${isStart?8:0}px - ${isEnd?4:0}px);height:20px;background:${bg};border-radius:${br};display:flex;align-items:center;gap:5px;padding:0 8px;overflow:hidden;color:${fg};font-size:11px;font-weight:600">
+            ${isStart?`<span style="width:5px;height:5px;border-radius:50%;background:${fg};flex-shrink:0"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.empName}${isApproved?'':' (pending)'}</span>`:''}
+          </div>`;
+      });
+      const cellH = Math.max(90, bandTop + maxTrack*bandH + 8);
+      html += `<div style="min-height:${cellH}px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;position:relative;background:${isCurrent?'var(--white)':'var(--surface)'};opacity:${isCurrent?'1':'.55'}">
+        <div style="font-size:12.5px;font-weight:600;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:${isToday?'#fff':'var(--text2)'};background:${isToday?'#0f172a':'transparent'}">${dd}</div>
+        ${bars}
+      </div>`;
+    }
+  }
+  html += '</div>';
+
+  if(!data.dept){
+    body.innerHTML = `<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px">No department assigned to your account. Ask an admin to link your user account to an HR employee record.</div>`;
+  } else {
+    body.innerHTML = html;
+  }
+
+  if(countEl){
+    const visibleInMonth = leaveAll.filter(l => l.fromDs <= gridDates[gridDates.length-1] && l.toDs >= gridDates[0]).length;
+    countEl.textContent = `${data.dept || ''} · ${visibleInMonth} leave record${visibleInMonth!==1?'s':''} in view`;
+  }
 }
 
 // ══════════════════════════════════════════════════════

@@ -8988,6 +8988,8 @@ async function saveAssignFault(parentId, unitId, faultId){
   const fault = (unit.faults||[]).find(f=>f.faultId===faultId); if(!fault) return;
   const target = (users||[]).find(u=>String(u.id)===String(userId));
   if(!target){ toast('User not found'); return; }
+  // Don't re-notify if the assignment isn't actually changing.
+  const isNew = String(fault.assignedToUserId||'') !== String(target.id);
   fault.assignedToUserId   = target.id;
   fault.assignedToUserName = target.name;
   fault.assignedAt         = new Date().toISOString();
@@ -8995,6 +8997,21 @@ async function saveAssignFault(parentId, unitId, faultId){
   const dbUnitId = unit.id || unit.unitId;
   const res = await api('PATCH','/inventory/units/'+dbUnitId+'/faults',{ faults: unit.faults, status: unit.status });
   if(!res){ toast('Failed to assign'); return; }
+
+  // Fire-and-forget notification to the assignee. Failures are non-fatal —
+  // the assignment is already saved; the worst case is no push toast.
+  if(isNew && String(target.id) !== String(currentUser?.id)){
+    try {
+      await api('POST','/notifications',{
+        title: '🛠 New fault assigned to you',
+        body:  `${item.name} · ${unit.serial}: ${fault.fault}`,
+        type:  'reminder',
+        recipient: 'specific',
+        recipientId: target.id
+      });
+    } catch (e) { /* swallow; assignment already persisted */ }
+  }
+
   invItems = await api('GET','/inventory/items') || invItems;
   closeSimpleModal();
   const fresh = invItems.find(x=>String(x.id)===String(parentId));

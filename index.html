@@ -8756,10 +8756,12 @@ function openInvParent(parentId){
 
 function renderUnitsHtml(item){
   const units=item.units||[];
-  // Sort: discard last, then working, then faulty
+  // Sort: pending discard requests FIRST (need attention),
+  // then working, then faulty, then approved-discards (already disposed)
   const sorted=[
-    ...units.filter(u=>!u.discarded&&u.status!=='faulty'),
-    ...units.filter(u=>!u.discarded&&u.status==='faulty'),
+    ...units.filter(u=>!u.discarded&&u.discardStatus==='requested'),
+    ...units.filter(u=>!u.discarded&&u.discardStatus!=='requested'&&u.status!=='faulty'),
+    ...units.filter(u=>!u.discarded&&u.discardStatus!=='requested'&&u.status==='faulty'),
     ...units.filter(u=>u.discarded)
   ];
   if(!sorted.length) return '<div style="color:var(--text3);font-size:13px;padding:20px 0;text-align:center">No units yet. Click "＋ Add Unit" to add individual items.</div>';
@@ -8780,7 +8782,9 @@ function renderUnitsHtml(item){
       const faultCount=(u.faults||[]).filter(f=>!f.repairedDate).length;
       const coEvent=u.checkout&&!u.checkout.checkedInAt?calEvents.find(e=>String(e.id)===String(u.checkout.eventId)):null;
       let statusBadge;
+      const isPendingDiscard = !u.discarded && u.discardStatus==='requested';
       if(u.discarded) statusBadge=`<span style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">🗑️ Discarded</span>`;
+      else if(isPendingDiscard) statusBadge=`<span style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700" title="Reason: ${(u.discardReason||'').replace(/"/g,'&quot;')}">⏳ Pending Discard</span>`;
       else if(coEvent) statusBadge=`<span style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">Out: ${coEvent.name}</span>`;
       else if(u.status==='faulty') statusBadge=`<span class="inv-badge-faulty">⚠️ Faulty${faultCount>0?' ('+faultCount+')':''}</span>`;
       else statusBadge=`<span class="inv-badge-working">✅ Working</span>`;
@@ -8792,11 +8796,15 @@ function renderUnitsHtml(item){
         :'<div style="font-size:12px;color:var(--text3)">—</div>';
       const actionBtns=u.discarded
         ?`<button class="btn btn-red btn-xs" onclick="deleteUnit('${item.id}','${u.unitId||u.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`
-        :`<button class="btn btn-ghost btn-xs" onclick="openUnitDetail('${item.id}','${u.unitId||u.id}')">View</button>
-          <button class="btn btn-ghost btn-xs" onclick="guardAction('inv_edit',()=>openEditUnit('${item.id}','${u.unitId||u.id}'))">✏️</button>
-          <button class="btn btn-ghost btn-xs" onclick="showUnitQR('${item.id}','${u.unitId||u.id}')">QR</button>
-          <button class="btn btn-red btn-xs" onclick="deleteUnit('${item.id}','${u.unitId||u.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`;
-      return`<div class="units-grid-row" style="background:${u.discarded?'#f9fafb':u.status==='faulty'?'var(--red-bg)':'var(--white)'};border:1px solid ${u.discarded?'#e5e7eb':u.status==='faulty'?'var(--red-bd)':'var(--border)'};opacity:${u.discarded?'0.6':'1'}">
+        : isPendingDiscard
+          ?`<button class="btn btn-green btn-xs" onclick="guardAction('inv_discard_approve',()=>approveDiscardUnit('${item.id}','${u.unitId||u.id}'))" title="Approve discard">✓</button>
+            <button class="btn btn-ghost btn-xs" onclick="guardAction('inv_discard_approve',()=>rejectDiscardUnit('${item.id}','${u.unitId||u.id}'))" title="Reject discard request">✕</button>
+            <button class="btn btn-ghost btn-xs" onclick="openUnitDetail('${item.id}','${u.unitId||u.id}')">View</button>`
+          :`<button class="btn btn-ghost btn-xs" onclick="openUnitDetail('${item.id}','${u.unitId||u.id}')">View</button>
+            <button class="btn btn-ghost btn-xs" onclick="guardAction('inv_edit',()=>openEditUnit('${item.id}','${u.unitId||u.id}'))">✏️</button>
+            <button class="btn btn-ghost btn-xs" onclick="showUnitQR('${item.id}','${u.unitId||u.id}')">QR</button>
+            <button class="btn btn-red btn-xs" onclick="deleteUnit('${item.id}','${u.unitId||u.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`;
+      return`<div class="units-grid-row" style="background:${u.discarded?'#f9fafb':isPendingDiscard?'var(--amber-bg)':u.status==='faulty'?'var(--red-bg)':'var(--white)'};border:1px solid ${u.discarded?'#e5e7eb':isPendingDiscard?'var(--amber-bd)':u.status==='faulty'?'var(--red-bd)':'var(--border)'};opacity:${u.discarded?'0.6':'1'}">
         <div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span class="units-cell-label">EM Serial</span>${u.serial}</div>
         <div style="font-size:12px;color:var(--text2);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis"><span class="units-cell-label">Item Serial</span>${u.itemSerial||'—'}${(u.qty||1)>1?` <span style="background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700">×${u.qty}</span>`:''}</div>
         <div><span class="units-cell-label">Status</span>${statusBadge}</div>
@@ -8866,10 +8874,16 @@ function _unitInfoTab(item,unit,fc,wh,qrData){
         <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Flight Case</td><td>${fc?fc.fcSerial+' — '+fc.name:'—'}</td></tr>
         ${unit.notes?`<tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Notes</td><td>${unit.notes}</td></tr>`:''}
         ${unit.discarded?`<tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Discarded</td><td>${unit.discardReason||'—'}${unit.discardReasonOther?' — '+unit.discardReasonOther:''}</td></tr>`:''}
+        ${unit.discardStatus==='requested'?`<tr><td style="color:var(--amber);padding:6px 14px 6px 0;font-weight:600">⏳ Pending Discard</td><td>Reason: ${unit.discardReason||'—'}${unit.discardRequestedAt?` · requested ${new Date(unit.discardRequestedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}`:''}</td></tr>`:''}
       </table>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="openEditUnit('${item.id}','${unit.unitId}')">Edit</button>
-        ${unit.discarded?`<button class="btn btn-ghost btn-sm" onclick="undoDiscard('${item.id}','${unit.unitId}')">↩ Restore</button>`:`<button class="btn btn-ghost btn-sm" onclick="openDiscardUnit('${item.id}','${unit.unitId}')">Discard</button>`}
+        ${unit.discarded
+          ? `<button class="btn btn-ghost btn-sm" onclick="undoDiscard('${item.id}','${unit.unitId}')">↩ Restore</button>`
+          : unit.discardStatus==='requested'
+            ? `<button class="btn btn-green btn-sm" onclick="guardAction('inv_discard_approve',()=>approveDiscardUnit('${item.id}','${unit.unitId}'))">✓ Approve Discard</button>
+               <button class="btn btn-ghost btn-sm" onclick="guardAction('inv_discard_approve',()=>rejectDiscardUnit('${item.id}','${unit.unitId}'))">✕ Reject</button>`
+            : `<button class="btn btn-ghost btn-sm" onclick="guardAction('inv_discard_request',()=>openDiscardUnit('${item.id}','${unit.unitId}'))">Request Discard</button>`}
         <button class="btn btn-red btn-sm" onclick="deleteUnit('${item.id}','${unit.unitId}')">Delete</button>
       </div>
     </div>
@@ -8953,9 +8967,11 @@ function deleteUnit(parentId, unitId){
 // ── Discard ────────────────────────────────────────────────────────────────────
 function openDiscardUnit(parentId, unitId){
   _editUnitParentId=String(parentId); _editUnitId=unitId;
-  document.getElementById('simpleModalTitle').textContent='Discard Unit';
+  document.getElementById('simpleModalTitle').textContent='Request Discard';
   document.getElementById('simpleModalBody').innerHTML=`
-    <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Mark this unit as discarded. It will remain in records but appear last in the list.</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:7px;padding:9px 12px">
+      📝 This will submit a <strong>discard request</strong>. A different user with approval permission must confirm before the unit is removed from active inventory.
+    </div>
     <div class="field"><label class="field-label">Reason *</label>
       <select id="discard_reason" onchange="toggleDiscardOther()">
         <option value="">— Select reason —</option>
@@ -8968,7 +8984,7 @@ function openDiscardUnit(parentId, unitId){
     <div class="field" id="discard_other_wrap" style="display:none">
       <label class="field-label">Specify Reason *</label>
       <input type="text" id="discard_other" placeholder="Enter reason..."></div>`;
-  document.getElementById('simpleModalSave').textContent='Confirm Discard';
+  document.getElementById('simpleModalSave').textContent='Submit Request';
   document.getElementById('simpleModalSave').onclick=saveDiscardUnit;
   window._simpleModalFn=saveDiscardUnit;
   document.getElementById('simpleModal').style.display='flex';
@@ -8987,23 +9003,57 @@ async function saveDiscardUnit(){
   const unit=(item.units||[]).find(u=>String(u.unitId||u.id)===String(_editUnitId)); if(!unit) return;
   const dbUnitId=unit.id||unit.unitId;
   const discardReason=reason==='other'?other:reason;
-  const res=await api('PUT','/inventory/units/'+dbUnitId,{
-    itemSerial:unit.itemSerial||null,
-    importDate:unit.importDate?String(unit.importDate).slice(0,10):null,
-    warehouseId:unit.warehouseId||null,
-    fcId:unit.fcId||unit.flightCaseId||null,
-    notes:unit.notes||null,
-    discarded:true,
-    discardReason
-  });
-  if(!res){toast('Failed to discard unit');return;}
+  const res=await api('POST','/inventory/units/'+dbUnitId+'/discard-request',{ reason: discardReason });
+  if(!res){toast('Failed to submit request');return;}
   invItems=await api('GET','/inventory/items')||invItems;
   closeSimpleModal();
-  // Re-open the parent item panel with fresh data
   const freshItem = invItems.find(x=>String(x.id)===String(_editUnitParentId));
   if(freshItem) openInvParent(freshItem.id);
   renderInventory();
-  toast('Unit marked as discarded');
+  toast('Discard request submitted — awaiting approval');
+}
+
+// Approve a pending discard request. Requester != approver is enforced
+// server-side; on success the unit moves to `discarded=true` and drops out
+// of the active inventory listings.
+async function approveDiscardUnit(parentId, unitId){
+  const item = invItems.find(x => String(x.id)===String(parentId)); if(!item) return;
+  const unit = (item.units||[]).find(u => String(u.unitId||u.id)===String(unitId)); if(!unit) return;
+  const dbUnitId = unit.id||unit.unitId;
+  openConfirm(
+    'Approve discard?',
+    `<strong>${item.name} · ${unit.serial}</strong><br>Reason: ${unit.discardReason||'—'}<br><br>This permanently moves the unit to discarded status.`,
+    'Approve Discard',
+    async () => {
+      const res = await api('POST','/inventory/units/'+dbUnitId+'/discard-approve');
+      if(!res) return;
+      invItems = await api('GET','/inventory/items')||invItems;
+      const fresh = invItems.find(x=>String(x.id)===String(parentId));
+      if(fresh) openInvParent(fresh.id);
+      renderInventory();
+      toast('Discard approved ✓');
+    }
+  );
+}
+
+async function rejectDiscardUnit(parentId, unitId){
+  const item = invItems.find(x => String(x.id)===String(parentId)); if(!item) return;
+  const unit = (item.units||[]).find(u => String(u.unitId||u.id)===String(unitId)); if(!unit) return;
+  const dbUnitId = unit.id||unit.unitId;
+  openConfirm(
+    'Reject discard request?',
+    `<strong>${item.name} · ${unit.serial}</strong><br>The discard request will be cleared and the unit stays in active inventory.`,
+    'Reject',
+    async () => {
+      const res = await api('POST','/inventory/units/'+dbUnitId+'/discard-reject');
+      if(!res) return;
+      invItems = await api('GET','/inventory/items')||invItems;
+      const fresh = invItems.find(x=>String(x.id)===String(parentId));
+      if(fresh) openInvParent(fresh.id);
+      renderInventory();
+      toast('Discard request rejected');
+    }
+  );
 }
 
 async function undoDiscard(parentId, unitId){
@@ -12325,6 +12375,8 @@ const PERM_TREE = [
     { label:'Inventory List', key:'inv_list', actions:['view','edit'] },
     { label:'Add Inventory Item', key:'inv_add', actions:['edit'] },
     { label:'Edit Parent & Child Item', key:'inv_edit', actions:['edit'] },
+    { label:'Request Discard Unit', key:'inv_discard_request', actions:['edit'] },
+    { label:'Approve / Reject Discard', key:'inv_discard_approve', actions:['edit'] },
     { label:'Import CSV', key:'inv_import', actions:['edit'] },
     { label:'Categories Page', key:'cat_page', actions:['view'] },
     { label:'Add Category', key:'cat_add', actions:['edit'] },

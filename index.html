@@ -10698,24 +10698,182 @@ function deleteEquipList(evId,li){
 // ── Add item to list ──────────────────────────────────────────────────────────
 let _addListEvId=null, _addListIdx=null;
 
+let _addItemMode = 'item'; // 'item' or 'fc' — tab state in the add-to-list modal
 function openAddItemToList(evId,li){
   _addListEvId=evId; _addListIdx=li;
-  document.getElementById('simpleModalTitle').textContent='Add Item to List';
+  _addItemMode = 'item';
+  document.getElementById('simpleModalTitle').textContent='Add to Equipment List';
   document.getElementById('simpleModalBody').innerHTML=`
-    <div class="field">
-      <label class="field-label">Search Parent Item</label>
-      <input type="text" id="el_item_search" placeholder="Type item name…" oninput="filterElItems()" autocomplete="off">
-      <div id="el_item_dd" style="display:none;border:1px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;background:var(--white);box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:4px"></div>
+    <!-- Mode tabs -->
+    <div style="display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:3px;margin-bottom:14px">
+      <button type="button" id="addmode_item" onclick="setAddItemMode('item')" style="flex:1;padding:7px 10px;border:none;border-radius:6px;background:var(--white);color:var(--text);font-weight:600;font-size:12.5px;cursor:pointer;box-shadow:var(--shadow-sm)">By Parent Item</button>
+      <button type="button" id="addmode_fc" onclick="setAddItemMode('fc')" style="flex:1;padding:7px 10px;border:none;border-radius:6px;background:transparent;color:var(--text3);font-weight:600;font-size:12.5px;cursor:pointer">By Flight Case</button>
     </div>
-    <div id="el_units_wrap" style="display:none">
-      <div class="field-label" style="margin-bottom:8px">Select Unit(s)</div>
-      <div id="el_units_list" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
+
+    <!-- Mode A: Parent item search (existing flow) -->
+    <div id="addmode_item_panel">
+      <div class="field">
+        <label class="field-label">Search Parent Item</label>
+        <input type="text" id="el_item_search" placeholder="Type item name…" oninput="filterElItems()" autocomplete="off">
+        <div id="el_item_dd" style="display:none;border:1px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;background:var(--white);box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:4px"></div>
+      </div>
+      <div id="el_units_wrap" style="display:none">
+        <div class="field-label" style="margin-bottom:8px">Select Unit(s)</div>
+        <div id="el_units_list" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- Mode B: Flight Case picker — adds every unit in the chosen FC in one shot -->
+    <div id="addmode_fc_panel" style="display:none">
+      <div class="field">
+        <label class="field-label">Search Flight Case</label>
+        <input type="text" id="el_fc_search" placeholder="Type FC serial or name…" oninput="filterElFCs()" autocomplete="off">
+        <div id="el_fc_dd" style="border:1px solid var(--border);border-radius:8px;max-height:280px;overflow-y:auto;background:var(--white);margin-top:4px"></div>
+      </div>
     </div>`;
   document.getElementById('simpleModalSave').textContent='Add Selected';
   document.getElementById('simpleModalSave').onclick=saveItemsToList;
   window._simpleModalFn=saveItemsToList;
   document.getElementById('simpleModal').style.display='flex';
   setTimeout(()=>document.getElementById('el_item_search')?.focus(),100);
+  // Show all FCs initially in mode B
+  filterElFCs();
+}
+
+function setAddItemMode(mode){
+  _addItemMode = mode;
+  const itemBtn=document.getElementById('addmode_item');
+  const fcBtn=document.getElementById('addmode_fc');
+  const itemPanel=document.getElementById('addmode_item_panel');
+  const fcPanel=document.getElementById('addmode_fc_panel');
+  if(mode==='item'){
+    itemBtn.style.cssText='flex:1;padding:7px 10px;border:none;border-radius:6px;background:var(--white);color:var(--text);font-weight:600;font-size:12.5px;cursor:pointer;box-shadow:var(--shadow-sm)';
+    fcBtn.style.cssText='flex:1;padding:7px 10px;border:none;border-radius:6px;background:transparent;color:var(--text3);font-weight:600;font-size:12.5px;cursor:pointer';
+    itemPanel.style.display='block'; fcPanel.style.display='none';
+    document.getElementById('simpleModalSave').textContent='Add Selected';
+    document.getElementById('simpleModalSave').onclick=saveItemsToList;
+  } else {
+    fcBtn.style.cssText='flex:1;padding:7px 10px;border:none;border-radius:6px;background:var(--white);color:var(--text);font-weight:600;font-size:12.5px;cursor:pointer;box-shadow:var(--shadow-sm)';
+    itemBtn.style.cssText='flex:1;padding:7px 10px;border:none;border-radius:6px;background:transparent;color:var(--text3);font-weight:600;font-size:12.5px;cursor:pointer';
+    itemPanel.style.display='none'; fcPanel.style.display='block';
+    document.getElementById('simpleModalSave').textContent='Add Flight Case Contents';
+    document.getElementById('simpleModalSave').onclick=saveFlightCaseToList;
+  }
+}
+
+// Render filtered flight case list with the units they currently contain
+function filterElFCs(){
+  const q=(document.getElementById('el_fc_search')?.value||'').toLowerCase();
+  const dd=document.getElementById('el_fc_dd'); if(!dd) return;
+  const matching=(invFlightCases||[]).filter(fc => {
+    if(!q) return true;
+    return (fc.fcSerial||'').toLowerCase().includes(q)
+        || (fc.name||'').toLowerCase().includes(q);
+  });
+  if(!matching.length){
+    dd.innerHTML='<div style="padding:14px;color:var(--text3);font-size:13px;text-align:center">No flight cases match</div>';
+    return;
+  }
+  dd.innerHTML=matching.map(fc => {
+    // Gather every unit assigned to this FC across all parent items
+    const units=[];
+    (invItems||[]).forEach(item => {
+      (item.units||[]).forEach(u => {
+        if(u.discarded) return;
+        if(String(u.fcId||u.flightCaseId)===String(fc.id)){
+          units.push({item, unit:u});
+        }
+      });
+    });
+    const id=`fc_${fc.id}`;
+    return `<label style="display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer">
+      <input type="radio" name="el_fc_pick" value="${fc.id}" id="${id}" style="margin-top:3px;accent-color:var(--accent)">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:13px;color:var(--text)">
+          <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent)">${fc.fcSerial||''}</span>
+          <span style="margin-left:6px">${fc.name||''}</span>
+          <span style="font-size:11px;color:var(--text3);font-weight:500;margin-left:6px">${units.length} unit${units.length!==1?'s':''}</span>
+        </div>
+        ${units.length
+          ? `<div style="font-size:11.5px;color:var(--text3);margin-top:3px;line-height:1.5">${
+              units.slice(0,4).map(x=>`${x.item.name} <span style="color:var(--accent)">${x.unit.serial}</span>`).join(' · ')
+            }${units.length>4?` <span style="color:var(--text3)">+${units.length-4} more</span>`:''}</div>`
+          : `<div style="font-size:11px;color:var(--amber);margin-top:3px">⚠️ Empty — no units assigned</div>`}
+      </div>
+    </label>`;
+  }).join('');
+}
+
+async function saveFlightCaseToList(){
+  const picked = document.querySelector('input[name="el_fc_pick"]:checked');
+  if(!picked){ toast('Pick a flight case'); return; }
+  const fcId = picked.value;
+  const fc = invFlightCases.find(f=>String(f.id)===String(fcId)); if(!fc){toast('Flight case not found');return;}
+  const ev=calEvents.find(e=>String(e.id)===String(_addListEvId||_elEventId)); if(!ev){toast('Event not found');return;}
+  const list=ev.equipLists[_addListIdx]; if(!list){toast('List not found');return;}
+
+  // Gather every (not-discarded) unit in this FC
+  const candidates=[];
+  (invItems||[]).forEach(item => (item.units||[]).forEach(u => {
+    if(u.discarded) return;
+    if(String(u.fcId||u.flightCaseId)!==String(fc.id)) return;
+    if(list.items.find(i=>i.emSerial===u.serial)) return; // already in list
+    candidates.push({item, unit:u});
+  }));
+
+  if(!candidates.length){
+    toast(`${fc.fcSerial} has no new units to add`);
+    return;
+  }
+
+  // Compute conflicts per unit for the confirmation prompt
+  const toAdd = candidates.map(({item, unit}) => {
+    const reservation = _reservationOnSerial(unit.serial, ev.id, ev.eventDateFrom, ev.eventDateTo);
+    const totalQty = parseInt(unit.qty)||1;
+    return {
+      parentId: item.id, parentName: item.name, emSerial: unit.serial,
+      itemSerial: unit.itemSerial||'',
+      fcId: fc.id, fcSerial: fc.fcSerial||'', fcName: fc.name||'',
+      qtyUsed: totalQty, totalQty,
+      conflicts: reservation.conflicts
+    };
+  });
+
+  const doPush = async () => {
+    toAdd.forEach(x => list.items.push({
+      parentId: x.parentId, parentName: x.parentName, emSerial: x.emSerial,
+      itemSerial: x.itemSerial, fcId: x.fcId,
+      fcSerial: x.fcSerial, fcName: x.fcName,
+      qtyUsed: x.qtyUsed, totalQty: x.totalQty,
+      packed: false
+    }));
+    const res=await api('PATCH','/events/'+ev.id+'/equip-lists',{equipLists:ev.equipLists});
+    if(!res){toast('Failed to save');return;}
+    const rawEvts=await api('GET','/events')||[];
+    calEvents=rawEvts.map(e=>({...e,
+      eventDateFrom:normalizeDate(e.eventDateFrom),
+      eventDateTo:normalizeDate(e.eventDateTo)
+    }));
+    events=calEvents;
+    closeSimpleModal(); renderEventLists();
+    toast(`${toAdd.length} unit${toAdd.length>1?'s':''} from ${fc.fcSerial} added ✓`);
+  };
+
+  const conflicting = toAdd.filter(x => x.conflicts.length);
+  if(conflicting.length){
+    const lines = conflicting.map(x => {
+      const eventList = x.conflicts.map(c=>`${c.eventName} (${c.from}→${c.to})`).join(', ');
+      return `• ${x.parentName} — ${x.emSerial}: ${eventList}`;
+    }).join('<br>');
+    openConfirm(
+      `Add ${toAdd.length} unit${toAdd.length>1?'s':''} from ${fc.fcSerial} despite ${conflicting.length} conflict${conflicting.length>1?'s':''}?`,
+      `Some units in this flight case are already assigned to another event during this event's dates:<br><br><span style="font-size:12px;color:var(--text2)">${lines}</span><br><br>Adding will double-book these units. Continue?`,
+      'Add Anyway',
+      doPush
+    );
+    return;
+  }
+  doPush();
 }
 
 function filterElItems(){

@@ -7946,7 +7946,7 @@ function renderInvCats(){
     const count=invItems.filter(x=>String(x.catId)===String(c.id)).length;
     return`<div class="cat-row">
       <div>
-        <div class="cat-name">${c.name}</div>
+        <div class="cat-name">${c.name} ${c.fcPrefix?`<span style="font-size:10px;background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd);border-radius:6px;padding:1px 6px;margin-left:6px;font-weight:700;letter-spacing:.05em">FC${c.fcPrefix}</span>`:''}</div>
         <div class="cat-badge">${count} item${count!==1?'s':''}</div>
       </div>
       <div style="display:flex;gap:6px">
@@ -7980,27 +7980,39 @@ function renderInvSubCats(){
 }
 
 let _editCatId=null;
+function _catModalBody(cat){
+  return `
+    <div class="field"><label class="field-label">Category Name *</label>
+      <input type="text" id="cat_name" value="${cat?.name||''}" placeholder="e.g. Sound, Lighting, Video"></div>
+    <div class="field"><label class="field-label">FC Prefix (2 letters)</label>
+      <input type="text" id="cat_fc_prefix" maxlength="2" value="${cat?.fcPrefix||''}" placeholder="e.g. SN, LD, LT" style="text-transform:uppercase;width:120px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:700;letter-spacing:.05em" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,2)">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Used in flight case serials (e.g. <strong>FC<span id="prefix_preview">${cat?.fcPrefix||'SN'}</span>-00001</strong>). Leave blank to use the legacy <strong>FC-NNNN</strong> format.</div>
+    </div>`;
+}
 function openAddInvCat(){
   _editCatId=null;
   document.getElementById('simpleModalTitle').textContent='Add Category';
-  document.getElementById('simpleModalBody').innerHTML=`
-    <div class="field"><label class="field-label">Category Name *</label>
-      <input type="text" id="cat_name" placeholder="e.g. Sound, Lighting, Video"></div>`;
+  document.getElementById('simpleModalBody').innerHTML=_catModalBody(null);
   document.getElementById('simpleModalSave').textContent='Add Category';
   document.getElementById('simpleModalSave').onclick=saveInvCatNew;
   window._simpleModalFn=saveInvCatNew;
   document.getElementById('simpleModal').style.display='flex';
+  // Live-update prefix preview as the user types
+  document.getElementById('cat_fc_prefix')?.addEventListener('input', e => {
+    const p=document.getElementById('prefix_preview'); if(p) p.textContent=e.target.value||'SN';
+  });
   setTimeout(()=>document.getElementById('cat_name')?.focus(),100);
 }
 async function saveInvCatNew(){
   const name=document.getElementById('cat_name')?.value.trim();
+  const fcPrefix=document.getElementById('cat_fc_prefix')?.value.trim().toUpperCase()||'';
   if(!name){toast('Enter a category name');return;}
   if(_editCatId){
-    const res=await api('PUT','/inventory/categories/'+_editCatId,{name});
+    const res=await api('PUT','/inventory/categories/'+_editCatId,{name,fcPrefix});
     if(!res) return;
     invCats=await api('GET','/inventory/categories')||invCats;
   } else {
-    const res=await api('POST','/inventory/categories',{name});
+    const res=await api('POST','/inventory/categories',{name,fcPrefix});
     if(!res) return;
     invCats=await api('GET','/inventory/categories')||invCats;
   }
@@ -8011,13 +8023,14 @@ function editInvCat(id){
   _editCatId=id;
   const cat=invCats.find(c=>String(c.id)===String(id)); if(!cat) return;
   document.getElementById('simpleModalTitle').textContent='Edit Category';
-  document.getElementById('simpleModalBody').innerHTML=`
-    <div class="field"><label class="field-label">Category Name *</label>
-      <input type="text" id="cat_name" value="${cat.name}"></div>`;
+  document.getElementById('simpleModalBody').innerHTML=_catModalBody(cat);
   document.getElementById('simpleModalSave').textContent='Save';
   document.getElementById('simpleModalSave').onclick=saveInvCatNew;
   window._simpleModalFn=saveInvCatNew;
   document.getElementById('simpleModal').style.display='flex';
+  document.getElementById('cat_fc_prefix')?.addEventListener('input', e => {
+    const p=document.getElementById('prefix_preview'); if(p) p.textContent=e.target.value||'SN';
+  });
   setTimeout(()=>document.getElementById('cat_name')?.focus(),100);
 }
 function deleteInvCat(id){
@@ -9420,13 +9433,21 @@ function showFCQR(id){
 }
 
 let _editFCId=null;
+function _fcCatOptions(selectedId){
+  return [`<option value="">— No category (legacy FC-NNNN serial) —</option>`]
+    .concat((invCats||[]).map(c =>
+      `<option value="${c.id}" ${String(selectedId||'')===String(c.id)?'selected':''}>${c.name}${c.fcPrefix?` (FC${c.fcPrefix}-)`:''}</option>`
+    )).join('');
+}
 function openAddFlightCase(){
   _editFCId=null;
   document.getElementById('simpleModalTitle').textContent='Add Flight Case';
   document.getElementById('simpleModalBody').innerHTML=`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:var(--text3)">
-      A unique serial number (e.g. <strong>FC-00001</strong>) will be auto-generated and printed on the QR code.
+      The serial number is auto-generated. Pick a category to get a categorised serial like <strong>FCSN-00001</strong> (Sound) or <strong>FCLD-00001</strong> (LED). Without a category it falls back to <strong>FC-00001</strong>.
     </div>
+    <div class="field"><label class="field-label">Category</label>
+      <select id="fc_cat">${_fcCatOptions(null)}</select></div>
     <div class="field"><label class="field-label">Flight Case Name *</label>
       <input type="text" id="fc_name" placeholder="e.g. PA Sub Case, Lighting Case A, Cable Box 1"></div>
     <div class="field"><label class="field-label">Description (optional)</label>
@@ -9441,11 +9462,12 @@ async function saveFlightCaseNew(){
   const name=document.getElementById('fc_name')?.value.trim();
   if(!name){toast('Enter a name for this flight case');return;}
   const desc=document.getElementById('fc_desc')?.value.trim()||'';
-  const res=await api('POST','/inventory/flightcases',{name,description:desc});
+  const catId=document.getElementById('fc_cat')?.value||null;
+  const res=await api('POST','/inventory/flightcases',{name,description:desc,catId});
   if(!res) return;
   invFlightCases=await api('GET','/inventory/flightcases')||invFlightCases;
   renderFlightCases(); closeSimpleModal();
-  toast('Flight case created ✓ — click QR to view its QR code');
+  toast(`Flight case ${res.fcSerial||''} created ✓`);
 }
 
 function editFlightCase(id){
@@ -9454,13 +9476,16 @@ function editFlightCase(id){
   document.getElementById('simpleModalTitle').textContent='Edit Flight Case';
   document.getElementById('simpleModalBody').innerHTML=`
     <div style="background:var(--accent-bg);border:1px solid var(--accent-bd);border-radius:8px;padding:10px 14px;margin-bottom:12px">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:2px">SERIAL (cannot be changed)</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:2px">CURRENT SERIAL</div>
       <div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:16px;font-weight:700;color:var(--accent)">${fc.fcSerial}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Changing the category will regenerate the serial to match the new prefix.</div>
     </div>
+    <div class="field"><label class="field-label">Category</label>
+      <select id="fc_cat">${_fcCatOptions(fc.catId)}</select></div>
     <div class="field"><label class="field-label">Flight Case Name *</label>
-      <input type="text" id="fc_name" value="${fc.name||''}"></div>
+      <input type="text" id="fc_name" value="${(fc.name||'').replace(/"/g,'&quot;')}"></div>
     <div class="field"><label class="field-label">Description</label>
-      <input type="text" id="fc_desc" value="${fc.description||''}"></div>`;
+      <input type="text" id="fc_desc" value="${(fc.description||'').replace(/"/g,'&quot;')}"></div>`;
   document.getElementById('simpleModalSave').textContent='Save Changes';
   document.getElementById('simpleModalSave').onclick=saveFlightCaseEdit;
   window._simpleModalFn=saveFlightCaseEdit;
@@ -9471,10 +9496,12 @@ async function saveFlightCaseEdit(){
   const name=document.getElementById('fc_name')?.value.trim();
   if(!name){toast('Enter a name');return;}
   const desc=document.getElementById('fc_desc')?.value.trim()||'';
-  const res=await api('PUT','/inventory/flightcases/'+_editFCId,{name,description:desc});
+  const catId=document.getElementById('fc_cat')?.value||null;
+  const res=await api('PUT','/inventory/flightcases/'+_editFCId,{name,description:desc,catId});
   if(!res) return;
   invFlightCases=await api('GET','/inventory/flightcases')||invFlightCases;
-  renderFlightCases(); closeSimpleModal(); toast('Flight case updated ✓');
+  renderFlightCases(); closeSimpleModal();
+  toast(`Flight case updated ✓${res.fcSerial?' — serial is now '+res.fcSerial:''}`);
 }
 
 function deleteFlightCase(id){

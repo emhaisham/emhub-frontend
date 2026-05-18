@@ -3818,7 +3818,10 @@ function populateMonths(){
 let _confirmCallback=null;
 function openConfirm(title,sub,okLabel,cb){
   document.getElementById('confirmTitle').textContent=title;
-  document.getElementById('confirmSub').textContent=sub;
+  // sub is allowed to contain markup (<br>, <strong>, coloured spans, etc.)
+  // because several callers build a multi-line summary of items/conflicts
+  // before confirmation. Title and OK label stay plain text.
+  document.getElementById('confirmSub').innerHTML=sub;
   document.getElementById('confirmOkBtn').textContent=okLabel;
   _confirmCallback=cb;
   document.getElementById('confirmModal').classList.add('open');

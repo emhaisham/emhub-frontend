@@ -10476,9 +10476,12 @@ function renderEventLists(){
                       ? `<div style="font-size:11px"><span style="color:var(--accent);font-weight:700">${inFc.fcSerial}</span><div style="color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${inFc.name||''}</div></div>`
                       : '<span style="color:var(--text3);font-size:11px">—</span>')
                   : `<select onchange="setItemContainer('${evId}',${li},${ii},this.value)" style="width:100%;font-size:11px;padding:3px 4px;border:1px solid var(--border);border-radius:5px;background:${inFc?'var(--accent-bg)':'var(--white)'};color:${inFc?'var(--accent)':'var(--text2)'};font-weight:${inFc?'600':'400'}">${fcOptions}</select>`;
-                return`<tr style="border-top:1px solid var(--border)">
-                  <td style="padding:7px 14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.parentName}</td>
-                  <td style="padding:7px 14px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700">${item.emSerial}</td>
+                const liveOpenFaults = (unit?.unit?.faults||[]).filter(f => !f.repairedDate);
+                const liveFaulty = unit?.unit?.status === 'faulty' || liveOpenFaults.length > 0;
+                const faultBadge = liveFaulty ? ` <span class="inv-badge-faulty" style="font-size:9.5px;padding:1px 5px;font-weight:700;margin-left:4px" title="${(liveOpenFaults[liveOpenFaults.length-1]?.description||'reported damaged').replace(/"/g,'&quot;')}">⚠️</span>` : '';
+                return`<tr style="border-top:1px solid var(--border);${liveFaulty?'background:var(--red-bg)':''}">
+                  <td style="padding:7px 14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.parentName}${faultBadge}</td>
+                  <td style="padding:7px 14px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:${liveFaulty?'var(--red)':'var(--accent)'};font-weight:700">${item.emSerial}</td>
                   <td style="padding:7px 14px;text-align:center">${qtyCell}</td>
                   <td style="padding:7px 14px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--text2)">${item.itemSerial||'—'}</td>
                   <td style="padding:7px 14px;overflow:hidden">${item.fcName?`<span style="font-size:12px">${item.fcSerial}</span><div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.fcName}</div>`:'—'}</td>
@@ -10919,6 +10922,7 @@ function filterElFCs(){
         }
       });
     });
+    const faultyCount = units.filter(x => x.unit.status==='faulty' || (x.unit.faults||[]).some(f=>!f.repairedDate)).length;
     const id=`fc_${fc.id}`;
     return `<label style="display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer">
       <input type="radio" name="el_fc_pick" value="${fc.id}" id="${id}" style="margin-top:3px;accent-color:var(--accent)">
@@ -10927,10 +10931,14 @@ function filterElFCs(){
           <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent)">${fc.fcSerial||''}</span>
           <span style="margin-left:6px">${fc.name||''}</span>
           <span style="font-size:11px;color:var(--text3);font-weight:500;margin-left:6px">${units.length} unit${units.length!==1?'s':''}</span>
+          ${faultyCount>0?`<span class="inv-badge-faulty" style="font-size:10px;padding:1px 6px;margin-left:6px">⚠️ ${faultyCount} damaged</span>`:''}
         </div>
         ${units.length
           ? `<div style="font-size:11.5px;color:var(--text3);margin-top:3px;line-height:1.5">${
-              units.slice(0,4).map(x=>`${x.item.name} <span style="color:var(--accent)">${x.unit.serial}</span>`).join(' · ')
+              units.slice(0,4).map(x=>{
+                const dmg = x.unit.status==='faulty' || (x.unit.faults||[]).some(f=>!f.repairedDate);
+                return `${x.item.name} <span style="color:${dmg?'var(--red)':'var(--accent)'};font-weight:${dmg?'700':'500'}">${x.unit.serial}${dmg?' ⚠️':''}</span>`;
+              }).join(' · ')
             }${units.length>4?` <span style="color:var(--text3)">+${units.length-4} more</span>`:''}</div>`
           : `<div style="font-size:11px;color:var(--amber);margin-top:3px">⚠️ Empty — no units assigned</div>`}
       </div>
@@ -11106,6 +11114,10 @@ function selectElParent(parentId){
     const coEvent=u.checkout&&!u.checkout.checkedInAt?calEvents.find(e=>String(e.id)===String(u.checkout.eventId)):null;
     const totalQty=parseInt(u.qty)||1;
     const isBulk=totalQty>1;
+    // Open fault reports against this unit — soft warning only, doesn't block.
+    const openFaults = (u.faults||[]).filter(f => !f.repairedDate);
+    const isFaulty = u.status === 'faulty' || openFaults.length > 0;
+    const latestFault = openFaults[openFaults.length-1];
     // Cross-event reservation: how many of this serial are committed to other
     // events whose dates overlap this one's? Bulk units can be partially shared.
     const reservation = _reservationOnSerial(u.serial, _addListEvId, evFrom, evTo);
@@ -11116,23 +11128,27 @@ function selectElParent(parentId){
     // We now only HARD-block units that are either already in this event's list,
     // or physically checked out to another event right now. Date-overlap
     // conflicts are soft — the unit is still selectable; on save the user gets
-    // a confirmation popup listing the conflicting events.
+    // a confirmation popup listing the conflicting events. Damaged units are
+    // also soft — selectable with a visible warning.
     const isBlocked = alreadyAdded || !!coEvent;
     const hasDateConflict = reservedQty > 0;
     const bg = coEvent ? 'var(--red-bg)'
+             : isFaulty ? 'var(--red-bg)'
              : fullyReservedElsewhere ? 'var(--amber-bg)'
              : hasDateConflict ? 'var(--amber-bg)'
              : alreadyAdded ? 'var(--surface)' : 'var(--white)';
     const border = coEvent ? 'var(--red-bd)'
+                 : isFaulty ? 'var(--red-bd)'
                  : hasDateConflict ? 'var(--amber-bd)' : 'var(--border)';
     // Default qty for bulk: take everything still free, or 1 if fully reserved
     const defaultQty = isBulk ? (available>0 ? available : 1) : 1;
     return`<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid ${border};border-radius:8px;cursor:${isBlocked?'not-allowed':'pointer'};background:${bg}">
-      <input type="checkbox" class="el-unit-chk" value="${u.serial}" data-parent="${item.id}" data-parent-name="${item.name.replace(/"/g,'&quot;')}" data-total-qty="${totalQty}" data-conflicts="${reservation.conflicts.map(c=>c.eventName).join('|').replace(/"/g,'&quot;')}"
+      <input type="checkbox" class="el-unit-chk" value="${u.serial}" data-parent="${item.id}" data-parent-name="${item.name.replace(/"/g,'&quot;')}" data-total-qty="${totalQty}" data-conflicts="${reservation.conflicts.map(c=>c.eventName).join('|').replace(/"/g,'&quot;')}" data-faulty="${isFaulty?'1':''}"
         ${isBlocked?'disabled':''} style="accent-color:var(--accent)">
       <div style="flex:1;min-width:0">
-        <div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:${coEvent?'var(--red)':hasDateConflict?'var(--amber)':'var(--accent)'}">${u.serial}${isBulk?` <span style="background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd);border-radius:8px;padding:0 6px;font-size:10px;margin-left:4px">×${totalQty}</span>`:''}</div>
+        <div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:${coEvent||isFaulty?'var(--red)':hasDateConflict?'var(--amber)':'var(--accent)'}">${u.serial}${isBulk?` <span style="background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd);border-radius:8px;padding:0 6px;font-size:10px;margin-left:4px">×${totalQty}</span>`:''}${isFaulty?` <span class="inv-badge-faulty" style="font-size:10px;padding:1px 6px;margin-left:4px;font-weight:700">⚠️ Damaged${openFaults.length>1?` (${openFaults.length})`:''}</span>`:''}</div>
         <div style="font-size:11px;color:var(--text3)">${u.itemSerial?'Item S/N: '+u.itemSerial+' · ':''} ${fc?''+fc.fcSerial+' — '+fc.name:'No flight case'}</div>
+        ${isFaulty&&latestFault?.description?`<div style="font-size:11px;color:var(--red);font-weight:600;margin-top:2px">⚠️ Fault: ${latestFault.description}</div>`:''}
         ${coEvent?`<div style="font-size:11px;color:var(--red);font-weight:600">Checked out to: ${coEvent.name}</div>`:''}
         ${fullyReservedElsewhere?`<div style="font-size:11px;color:var(--amber);font-weight:600">⚠️ Already assigned to overlapping event${reservation.conflicts.length>1?'s':''}: ${conflictNames} — confirm on add</div>`:''}
         ${!fullyReservedElsewhere&&hasDateConflict?`<div style="font-size:11px;color:var(--amber);font-weight:600">⚠️ ${reservedQty} of ${totalQty} reserved on: ${conflictNames} — ${available} free</div>`:''}
@@ -11178,6 +11194,9 @@ async function saveItemsToList(){
     }
     // Skip if already in this list (silent dedupe)
     if(list.items.find(i=>i.emSerial===emSerial)) return;
+    // Open fault reports — soft warning only.
+    const openFaults = (unit.faults||[]).filter(f => !f.repairedDate);
+    const isFaulty = unit.status === 'faulty' || openFaults.length > 0;
     toAdd.push({
       parentId, parentName, emSerial,
       itemSerial: unit.itemSerial||'',
@@ -11185,7 +11204,9 @@ async function saveItemsToList(){
       fcSerial: fc?.fcSerial||'',
       fcName: fc?.name||'',
       qtyUsed, totalQty,
-      conflicts: reservation.conflicts
+      conflicts: reservation.conflicts,
+      isFaulty,
+      faultDesc: isFaulty ? (openFaults[openFaults.length-1]?.description || 'reported damaged') : ''
     });
   });
 
@@ -11213,19 +11234,30 @@ async function saveItemsToList(){
     toast(`${toAdd.length} unit${toAdd.length>1?'s':''} added to list ✓`);
   };
 
-  // If any selected unit overlaps another event, ask for confirmation first.
+  // If any selected unit overlaps another event OR is damaged, ask for
+  // confirmation first. We bundle both reasons into a single dialog so the
+  // user gets one decision, not two.
   const conflicting = toAdd.filter(x => x.conflicts.length);
-  if(conflicting.length){
-    const lines = conflicting.map(x => {
-      const eventList = x.conflicts.map(c=>`${c.eventName} (${c.from}→${c.to})`).join(', ');
-      return `• ${x.parentName} — ${x.emSerial}: ${eventList}`;
-    }).join('<br>');
-    openConfirm(
-      `Add ${conflicting.length} item${conflicting.length>1?'s':''} despite event conflicts?`,
-      `The following item${conflicting.length>1?'s are':' is'} already assigned to another event during this event's dates:<br><br><span style="font-size:12px;color:var(--text2)">${lines}</span><br><br>Adding will double-book the unit. Continue?`,
-      'Add Anyway',
-      doPush
-    );
+  const damaged = toAdd.filter(x => x.isFaulty);
+  if(conflicting.length || damaged.length){
+    const blocks = [];
+    if(damaged.length){
+      const dl = damaged.map(x => `• ${x.parentName} — ${x.emSerial}: ${x.faultDesc}`).join('<br>');
+      blocks.push(`<div style="font-size:12px;color:var(--red);font-weight:600;margin-bottom:4px">⚠️ Reported damaged (${damaged.length}):</div><div style="font-size:12px;color:var(--text2)">${dl}</div>`);
+    }
+    if(conflicting.length){
+      const cl = conflicting.map(x => {
+        const eventList = x.conflicts.map(c=>`${c.eventName} (${c.from}→${c.to})`).join(', ');
+        return `• ${x.parentName} — ${x.emSerial}: ${eventList}`;
+      }).join('<br>');
+      blocks.push(`<div style="font-size:12px;color:var(--amber);font-weight:600;margin-top:${damaged.length?'10px':'0'};margin-bottom:4px">⚠️ Date conflicts (${conflicting.length}):</div><div style="font-size:12px;color:var(--text2)">${cl}</div>`);
+    }
+    const title = damaged.length && conflicting.length
+      ? `Add ${toAdd.length} item${toAdd.length>1?'s':''} despite damage and conflicts?`
+      : damaged.length
+        ? `Add ${damaged.length} damaged item${damaged.length>1?'s':''}?`
+        : `Add ${conflicting.length} item${conflicting.length>1?'s':''} despite event conflicts?`;
+    openConfirm(title, blocks.join('') + '<br><br>Continue anyway?', 'Add Anyway', doPush);
     return;
   }
 

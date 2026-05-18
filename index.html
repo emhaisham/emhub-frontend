@@ -10391,14 +10391,15 @@ function renderEventLists(){
           ${!list.items||!list.items.length?`<div style="padding:10px 18px;color:var(--text3);font-size:13px">No items added yet.</div>`:
           `<table style="width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed">
             <colgroup>
-              <col style="width:160px">
-              <col style="width:110px">
-              <col style="width:90px">
-              <col style="width:140px">
-              <col style="width:160px">
+              <col style="width:150px">
+              <col style="width:100px">
               <col style="width:80px">
+              <col style="width:120px">
+              <col style="width:140px">
+              <col style="width:130px">
               <col style="width:70px">
-              <col style="width:50px">
+              <col style="width:60px">
+              <col style="width:40px">
             </colgroup>
               <thead><tr style="background:var(--surface)">
                 <th style="padding:7px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)">Item</th>
@@ -10406,6 +10407,7 @@ function renderEventLists(){
                 <th style="padding:7px 14px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)">Qty</th>
                 <th style="padding:7px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)">Item Serial</th>
                 <th style="padding:7px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)">Flight Case</th>
+                <th style="padding:7px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)" title="For this event, pack this item into another flight case (e.g. cables in an empty case)">Packed In</th>
                 <th style="padding:7px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)">Status</th>
                 <th style="padding:7px 14px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)">Packed</th>
                 <th style="padding:7px 14px;text-align:right;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3)">${!isDone?'Remove':''}</th>
@@ -10425,12 +10427,28 @@ function renderEventLists(){
                   ?`<span style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);border-radius:10px;padding:2px 7px;font-size:11px;font-weight:700">Out</span>`
                   :`<span class="inv-badge-working" style="font-size:11px">✅ In</span>`;
                 const packed = !!item.packed;
+                // "Packed In" column — the FC this item is dynamically packed
+                // into for THIS event. Defaults to '' (use the item's permanent
+                // FC). User can choose any flight case from the dropdown to
+                // re-pack cables/accessories into an empty case for this event.
+                const inFcId = item.containerFcId || '';
+                const inFc = invFlightCases.find(f=>String(f.id)===String(inFcId));
+                const fcOptions = ['<option value="">— Use permanent FC —</option>']
+                  .concat((invFlightCases||[]).map(f =>
+                    `<option value="${f.id}" ${String(inFcId)===String(f.id)?'selected':''}>${f.fcSerial||''} — ${f.name||''}</option>`
+                  )).join('');
+                const packedInCell = isDone
+                  ? (inFc
+                      ? `<div style="font-size:11px"><span style="color:var(--accent);font-weight:700">${inFc.fcSerial}</span><div style="color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${inFc.name||''}</div></div>`
+                      : '<span style="color:var(--text3);font-size:11px">—</span>')
+                  : `<select onchange="setItemContainer('${evId}',${li},${ii},this.value)" style="width:100%;font-size:11px;padding:3px 4px;border:1px solid var(--border);border-radius:5px;background:${inFc?'var(--accent-bg)':'var(--white)'};color:${inFc?'var(--accent)':'var(--text2)'};font-weight:${inFc?'600':'400'}">${fcOptions}</select>`;
                 return`<tr style="border-top:1px solid var(--border)">
                   <td style="padding:7px 14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.parentName}</td>
                   <td style="padding:7px 14px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700">${item.emSerial}</td>
                   <td style="padding:7px 14px;text-align:center">${qtyCell}</td>
                   <td style="padding:7px 14px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--text2)">${item.itemSerial||'—'}</td>
                   <td style="padding:7px 14px;overflow:hidden">${item.fcName?`<span style="font-size:12px">${item.fcSerial}</span><div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.fcName}</div>`:'—'}</td>
+                  <td style="padding:5px 10px;overflow:hidden">${packedInCell}</td>
                   <td style="padding:7px 14px">${coStatus}</td>
                   <td style="padding:7px 14px;text-align:center">${isDone
                     ? (packed?'<span style="color:var(--green);font-weight:700">✓</span>':'<span style="color:var(--text3)">—</span>')
@@ -11098,6 +11116,26 @@ async function saveItemsToList(){
   doPush();
 }
 
+// Set / clear the container FC for a single equip-list item. Empty value
+// means "use this item's permanent FC" (no override). Persists via the same
+// PATCH endpoint as Packed. Re-renders so the badge / dropdown styling update.
+async function setItemContainer(evId, li, ii, fcId){
+  const ev = calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
+  const item = ev.equipLists?.[li]?.items?.[ii]; if(!item) return;
+  if(fcId){
+    const fc = invFlightCases.find(f=>String(f.id)===String(fcId));
+    item.containerFcId = fc?.id || null;
+    item.containerFcSerial = fc?.fcSerial || '';
+    item.containerFcName = fc?.name || '';
+  } else {
+    delete item.containerFcId;
+    delete item.containerFcSerial;
+    delete item.containerFcName;
+  }
+  await api('PATCH','/events/'+ev.id+'/equip-lists',{equipLists:ev.equipLists});
+  renderEventLists();
+}
+
 // Toggle the per-item Packed checkbox. We update local state, save in the
 // background, and don't re-render the table — the native checkbox already
 // reflects the user's click instantly. A debounce avoids saving on every
@@ -11178,7 +11216,7 @@ function _buildEquipPDF(ev, lists){
       <td style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:#1d4ed8;font-weight:700">${item.emSerial}</td>
       <td style="text-align:center;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:${total>1?'700':'400'}">${qtyDisp}</td>
       <td style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${item.itemSerial||'—'}</td>
-      <td>${item.fcName?`${item.fcSerial} — ${item.fcName}`:'—'}</td>
+      <td>${item.fcName?`${item.fcSerial}${item.fcName?` — ${item.fcName}`:''}`:'—'}${item.containerFcSerial?`<div style="font-size:9px;color:#b45309;font-weight:600;margin-top:1px">↳ Packed in ${item.containerFcSerial}</div>`:''}</td>
       <td style="text-align:center">${statusCell}</td>
       <td style="text-align:center">${packedCell}</td>
     </tr>`;
@@ -11250,10 +11288,29 @@ function _findUnitBySerial(serial){
 function _findByFCSerial(fcSerial){
   const fc=invFlightCases.find(f=>f.fcSerial===fcSerial); if(!fc) return null;
   const units=[];
+  const seenSerials=new Set();
+  // (a) Units permanently assigned to this FC
   invItems.forEach(item=>{
     (item.units||[]).forEach(u=>{
-      if(String(u.fcId||u.flightCaseId)===String(fc.id)) units.push({unit:u,item,fc});
+      if(String(u.fcId||u.flightCaseId)===String(fc.id)){
+        units.push({unit:u,item,fc});
+        seenSerials.add(u.serial);
+      }
     });
+  });
+  // (b) Units dynamically packed into this FC by an active event's equip list.
+  // This covers cables / accessories packed into an empty flight case for the
+  // duration of one event — they should travel with the FC on check-out.
+  (calEvents||[]).filter(ev => !ev.completed).forEach(ev => {
+    (ev.equipLists||[]).forEach(list => (list.items||[]).forEach(it => {
+      if(String(it.containerFcId||'')!==String(fc.id)) return;
+      if(seenSerials.has(it.emSerial)) return;
+      const res = _findUnitBySerial(it.emSerial);
+      if(res?.unit){
+        units.push({unit:res.unit, item:res.item, fc, dynamic:true, eventId:ev.id});
+        seenSerials.add(it.emSerial);
+      }
+    }));
   });
   return {fc,units};
 }
@@ -11578,6 +11635,32 @@ function ciLookup(){
   confirmWrap.style.display='none'; _ciTarget=null;
 }
 
+// When a flight case is checked back in, any items that were dynamically
+// packed into it for an event should have their `containerFcId` cleared so
+// the FC is "empty again" for the next event. Updates each affected event's
+// equip-lists JSONB in one PATCH per event.
+async function _clearContainerForFC(fcId){
+  if(!fcId) return;
+  const touched = new Map(); // eventId -> ev (deduped)
+  (calEvents||[]).forEach(ev => {
+    let mutated = false;
+    (ev.equipLists||[]).forEach(list => (list.items||[]).forEach(it => {
+      if(String(it.containerFcId||'')===String(fcId)){
+        delete it.containerFcId;
+        delete it.containerFcSerial;
+        delete it.containerFcName;
+        mutated = true;
+      }
+    }));
+    if(mutated) touched.set(ev.id, ev);
+  });
+  for(const ev of touched.values()){
+    try {
+      await api('PATCH','/events/'+ev.id+'/equip-lists',{equipLists:ev.equipLists});
+    } catch(e){ console.warn('clearContainer save failed for event',ev.id,e); }
+  }
+}
+
 async function doCheckIn(){
   if(!_ciTarget) return;
   const now=new Date().toISOString();
@@ -11594,9 +11677,17 @@ async function doCheckIn(){
       await api('PUT','/inventory/units/'+dbId,{itemSerial:unit.itemSerial||null,importDate:unit.importDate?String(unit.importDate).slice(0,10):null,warehouseId:unit.warehouseId||null,fcId:unit.fcId||unit.flightCaseId||null,notes:unit.notes||null,checkoutData:unit.checkout});
       count++;
     }
+    // FC check-in completed — clear any dynamic per-event packing into this case
+    await _clearContainerForFC(_ciTarget.fc?.id);
     toast(`${count} units checked in ✓`);
   }
   invItems=await api('GET','/inventory/items')||invItems;
+  const rawEvts=await api('GET','/events')||[];
+  calEvents=rawEvts.map(e=>({...e,
+    eventDateFrom:normalizeDate(e.eventDateFrom),
+    eventDateTo:normalizeDate(e.eventDateTo)
+  }));
+  events=calEvents;
   document.getElementById('ciItemPreview').style.display='none';
   document.getElementById('ciConfirmWrap').style.display='none';
   document.getElementById('ciSearchInput').value='';

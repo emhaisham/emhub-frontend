@@ -4612,7 +4612,8 @@ function renderProfile(empId){
       <button class="profile-tab ${profileActiveTab==='loans'?'active':''}" onclick="profileActiveTab='loans';renderProfile('${emp.id}')">Loans</button>
       <button class="profile-tab ${profileActiveTab==='disciplinary'?'active':''}" onclick="profileActiveTab='disciplinary';renderProfile('${emp.id}')">Disciplinary</button>
       <button class="profile-tab ${profileActiveTab==='assets'?'active':''}" onclick="profileActiveTab='assets';renderProfile('${emp.id}')">Assets</button>
-      <button class="profile-tab ${profileActiveTab==='payment'?'active':''}" onclick="profileActiveTab='payment';renderProfile('${emp.id}')">Bank Details & Emergency Contact</button>
+      <button class="profile-tab ${profileActiveTab==='bank'?'active':''}" onclick="profileActiveTab='bank';renderProfile('${emp.id}')">Bank Details</button>
+      <button class="profile-tab ${profileActiveTab==='emergency'?'active':''}" onclick="profileActiveTab='emergency';renderProfile('${emp.id}')">Emergency Contact</button>
     </div>
     <div class="profile-panel ${profileActiveTab==='info'?'active':''}" id="ptab-info">
       <div class="info-grid">
@@ -4663,15 +4664,19 @@ function renderProfile(empId){
     <div class="profile-panel ${profileActiveTab==='assets'?'active':''}" id="ptab-assets">
       ${renderAssetsPanel(emp)}
     </div>
-    <div class="profile-panel ${profileActiveTab==='payment'?'active':''}" id="ptab-payment">
+    <div class="profile-panel ${profileActiveTab==='bank'?'active':''}" id="ptab-bank">
       <div class="info-grid">
-        <div class="info-item"><div class="info-label">Emergency Contact</div><div class="info-val">${emp.emgName||'—'}</div></div>
-        <div class="info-item"><div class="info-label">Relationship</div><div class="info-val">${emp.emgRelation||'—'}</div></div>
-        <div class="info-item"><div class="info-label">Emergency Phone</div><div class="info-val">${emp.emgPhone||'—'}</div></div>
         <div class="info-item"><div class="info-label">Payment Method</div><div class="info-val">${emp.payMethod==='cash'?'Cash':emp.payMethod==='cheque'?'Cheque':'Bank Transfer'}</div></div>
         <div class="info-item"><div class="info-label">Bank Name</div><div class="info-val">${emp.bankName||'—'}</div></div>
         <div class="info-item"><div class="info-label">Bank Account Name</div><div class="info-val">${emp.bankAcctName||'—'}</div></div>
         <div class="info-item"><div class="info-label">Bank Account No.</div><div class="info-val">${emp.bankAcct||'—'}</div></div>
+      </div>
+    </div>
+    <div class="profile-panel ${profileActiveTab==='emergency'?'active':''}" id="ptab-emergency">
+      <div class="info-grid">
+        <div class="info-item"><div class="info-label">Emergency Contact</div><div class="info-val">${emp.emgName||'—'}</div></div>
+        <div class="info-item"><div class="info-label">Relationship</div><div class="info-val">${emp.emgRelation||'—'}</div></div>
+        <div class="info-item"><div class="info-label">Emergency Phone</div><div class="info-val">${emp.emgPhone||'—'}</div></div>
       </div>
     </div>`;
 }
@@ -4954,7 +4959,9 @@ function exportPayrollSheet(){
       <td>${e.dept||'—'}</td>
       <td style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;text-align:right;font-weight:700">${fmtAmt(parseFloat(pr.net_pay)||0,curr)}</td>
       <td>${e.payMethod==='cash'?'Cash':' Bank'}</td>
-      <td>${e.payMethod!=='cash'?(e.bankName||'—')+' · '+(e.bankAcct||'—'):'—'}</td>
+      <td>${e.payMethod!=='cash'
+        ? `<div style="font-weight:600">${e.bankName||'—'}</div><div style="font-size:11px;color:#374151">${e.bankAcctName||'—'}</div><div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:#374151">${e.bankAcct||'—'}</div>`
+        : '—'}</td>
       <td><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;${pr.status==='paid'?'background:#d1fae5;color:#065f46':'background:#fef3c7;color:#92400e'}">${pr.status==='paid'?'PAID':'PENDING'}</span></td>
     </tr>`;
   }).filter(Boolean).join('');

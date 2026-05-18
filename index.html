@@ -7677,6 +7677,7 @@ function equipCardHtml(r){
         <span> Requested by: <strong>${r.requestedBy}</strong></span><br>
         <span>Handed to: <strong>${r.handedTo}</strong>${r.contact?' · '+r.contact:''}</span><br>
         <span> Given: <strong>${fmtDate(String(r.requestDate||'').slice(0,10))}</strong>${r.returnDate?' &nbsp;·&nbsp; Return by: <strong>'+fmtDate(String(r.returnDate).slice(0,10))+'</strong>':''}</span>
+        ${r.approvedBy?`<br><span>Approved by: <strong>${r.approvedBy}</strong></span>`:''}
         ${r.notes?`<br><span>${r.notes}</span>`:''}
       </div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -7864,7 +7865,9 @@ function _equipFormHtml(r){
         <input type="text" id="eq_contact" value="${r?.contact||''}" placeholder="+960 xxxxxxx"></div>
       <div class="field"><label class="field-label">Expected Return Date</label>
         <input type="date" id="eq_returnDate" value="${r?.returnDate||''}"></div>
-      <div class="field"><label class="field-label">Notes</label>
+      <div class="field"><label class="field-label">Approved By</label>
+        <input type="text" id="eq_approvedBy" value="${r?.approvedBy||''}" placeholder="Manager / authoriser name"></div>
+      <div class="field" style="grid-column:1 / -1"><label class="field-label">Notes</label>
         <textarea id="eq_notes" rows="1" style="resize:none">${r?.notes||''}</textarea></div>
     </div>
 
@@ -7919,6 +7922,7 @@ async function saveEquipRequest(){
   const handedTo = document.getElementById('eq_handedTo')?.value.trim();
   const contact = document.getElementById('eq_contact')?.value.trim();
   const returnDate = document.getElementById('eq_returnDate')?.value;
+  const approvedBy = document.getElementById('eq_approvedBy')?.value.trim();
   const notes = document.getElementById('eq_notes')?.value.trim();
 
   if(!requestedBy) return toast('Enter who requested this');
@@ -7932,7 +7936,7 @@ async function saveEquipRequest(){
     : `${validItems[0].name} ×${validItems[0].qty} +${validItems.length-1} more`;
 
   const data = {
-    requestedBy, requestDate, handedTo, contact, returnDate, notes,
+    requestedBy, requestDate, handedTo, contact, returnDate, approvedBy, notes,
     items: validItems.map(x=>({id:x.id,name:x.name.trim(),qty:x.qty})),
     itemName: itemSummary,
     quantity: validItems.reduce((s,x)=>s+x.qty,0),

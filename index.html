@@ -5562,8 +5562,8 @@ function renderCal(){
           const br=isStart&&isEnd?'5px':isStart?'5px 2px 2px 5px':isEnd?'2px 5px 5px 2px':'2px';
           const txtDeco=completed?'text-decoration:line-through;opacity:.6':'';
           bars+=`<div style="position:absolute;top:${topOff}px;left:${isStart?'4px':'0'};width:calc(${spanCols}*100% + ${(spanCols-1)*1}px - ${isStart?8:0}px - ${isEnd?4:0}px);height:20px;background:${bg};border-radius:${br};z-index:2;display:flex;align-items:center;gap:5px;padding:0 6px;cursor:pointer;overflow:hidden;color:${c};${txtDeco}" onclick="event.stopPropagation();showCalPopup('${ev.id}',event)">
-            ${isStart?`<span style="width:5px;height:5px;border-radius:50%;background:${c};flex-shrink:0"></span>`:''}
-            <span style="font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0">${isStart?ev.name:''}</span>
+            <span style="width:5px;height:5px;border-radius:50%;background:${c};flex-shrink:0"></span>
+            <span style="font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0">${isStart?'':'… '}${ev.name}</span>
           </div>`;
         });
 
@@ -6617,7 +6617,8 @@ async function renderDeptLeave(){
         const br = isStart && isEnd ? '10px' : isStart ? '10px 3px 3px 10px' : isEnd ? '3px 10px 10px 3px' : '3px';
         bars += `<div title="${l.empName} — On leave (${l.fromDs} → ${l.toDs})${isApproved?'':' · pending'}"
           style="position:absolute;top:${top}px;left:${isStart?'4px':'0'};width:calc(${span}*100% + ${(span-1)}px - ${isStart?8:0}px - ${isEnd?4:0}px);height:20px;background:${bg};border-radius:${br};z-index:2;display:flex;align-items:center;gap:5px;padding:0 8px;overflow:hidden;color:${fg};font-size:11px;font-weight:600">
-            ${isStart?`<span style="width:5px;height:5px;border-radius:50%;background:${fg};flex-shrink:0"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.empName}${isApproved?'':' (pending)'}</span>`:''}
+            <span style="width:5px;height:5px;border-radius:50%;background:${fg};flex-shrink:0"></span>
+            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${isStart?'':'… '}${l.empName}${isApproved?'':' (pending)'}</span>
           </div>`;
       });
       const cellH = Math.max(90, bandTop + maxTrack*bandH + 8);

@@ -2493,6 +2493,10 @@ function saveAll(){
   // Sync payments to API for each event (only UUID events)
   crewEvents.forEach(ev=>{
     if(!ev.id) return;
+    // Skip events that are currently being created — their initial POST is
+    // in flight from saveEvent(). Without this guard saveAll would fire a
+    // SECOND POST and produce duplicate ghost records.
+    if(ev._pendingCreate) return;
     if(!_uuidRegex.test(ev.id)){
       // Old localStorage event - migrate to DB
       api('POST','/crewpay/events',{
@@ -3091,15 +3095,18 @@ function saveEvent(){
     groups.push({id:uid(),label:fg.label,days});
   }
   const eid=uid();
-  const newEv={id:eid,name,date,groups,createdBy:currentUser?.username};
+  const newEv={id:eid,name,date,groups,createdBy:currentUser?.username,_pendingCreate:true};
   events.unshift(newEv);
   crewEvents.unshift(newEv);
   ensurePay(eid,groups);
-  // Save to API
+  // Save to API. We mark `_pendingCreate:true` so saveAll() below skips this
+  // event — without that guard, saveAll() would POST it a SECOND time
+  // (because its id is still a local UID, not a UUID), producing duplicate
+  // database rows that linger as ghost records after edits/deletes.
   api('POST','/crewpay/events',{name,date,groups,payments:payments[eid]||{}}).then(res=>{
     if(res?.id){ newEv.id=res.id; }
-  });
-  saveAll();
+    delete newEv._pendingCreate;
+  }).catch(()=>{ delete newEv._pendingCreate; });
   document.getElementById('newName').value='';
   document.getElementById('newDate').valueAsDate=new Date();
   initForm();populateMonths();renderAll();

@@ -4561,12 +4561,19 @@ function renderEmployees(){
   }
   const _p = _paginate(list, 'emp', 'renderEmployees');
   el.innerHTML=_p.shown.map(emp=>{
-    const photoHtml=emp.name[0].toUpperCase(); // photo loaded async below
+    // Photo key: most records store it on emp.photo (the storage key), some
+    // legacy ones nest it under emp.docs.photo.key. Prefer the former.
+    const photoKey = emp.photo || emp.docs?.photo?.key || '';
+    const initial = emp.name[0].toUpperCase();
+    const avatarBg = hrAvColor(emp.name);
     const statusBadge = formerStatuses.includes(emp.status)
       ? `<span class="tag" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);font-size:11px">${emp.status==='resigned'?'Resigned':emp.status==='terminated'?'Terminated':'Inactive'}</span>`
       : (emp.status==='probation'?`<span class="tag" style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);font-size:11px">Probation</span>`:'');
     return`<div class="emp-card">
-      <div style="width:44px;height:44px;border-radius:50%;background:${hrAvColor(emp.name)};display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden">${photoHtml}</div>
+      <div style="width:44px;height:44px;border-radius:50%;background:${avatarBg};display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;position:relative">
+        <span>${initial}</span>
+        ${photoKey?`<img data-key="${photoKey}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.remove()">`:''}
+      </div>
       <div class="emp-info">
         <div class="emp-name">${emp.name} <span style="font-size:11px;color:var(--text3);font-weight:400">${emp.empId||''}</span></div>
         <div class="emp-role">${emp.title||'—'} · ${emp.dept||'—'}</div>
@@ -4582,6 +4589,9 @@ function renderEmployees(){
       </div>
     </div>`;
   }).join('')+_p.footer;
+  // Trigger the same lazy-load pipeline the inventory list uses to fetch
+  // signed URLs for the data-key imgs (staff avatars).
+  loadInvPhotos();
 }
 
 function deleteEmployee(id){
@@ -8711,7 +8721,7 @@ function invParentRowHtml(item){
   const discarded=units.filter(u=>u.discarded).reduce((s,u)=>s+(u.qty||1),0);
   const totalActiveQty=activeUnits.reduce((s,u)=>s+(u.qty||1),0);
   const photoHtml=item.photoUrl
-    ?`<div class="inv-row-thumb"><img data-key="${item.photoUrl}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:7px;display:none" onload="this.style.display='block'" onerror="this.parentElement.innerHTML='<svg width=\\'20\\' height=\\'20\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><path d=\\'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z\\'/></svg>'"></div>`
+    ?`<div class="inv-row-thumb"><img data-key="${item.photoUrl}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:7px" onerror="this.parentElement.innerHTML='<svg width=\\'20\\' height=\\'20\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><path d=\\'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z\\'/></svg>'"></div>`
     :`<div class="inv-row-thumb"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`;
   const catLabel=[cat?.name,sub?.name].filter(Boolean).join(' › ')||'—';
   const modelLine=[item.model,item.manufacturer].filter(Boolean).join(' · ');
@@ -12440,6 +12450,16 @@ function trLookup(){
   confirmWrap.style.display='none'; _trTarget=null;
 }
 
+// True iff the EM serial is listed (in any team list) on the destination
+// event. Dynamic-container packing (containerFcId) also counts — if a cable
+// is packed into a flight case for the dest event, that's an allocation.
+function _isUnitInDestEvent(emSerial, destEv){
+  if(!destEv) return false;
+  return (destEv.equipLists||[]).some(list =>
+    (list.items||[]).some(it => it.emSerial === emSerial)
+  );
+}
+
 async function doTransfer(){
   if(!_trTarget) return;
   const destId=document.getElementById('trDestEventSel')?.value;
@@ -12447,16 +12467,34 @@ async function doTransfer(){
   const destEv=calEvents.find(e=>String(e.id)===String(destId));
   if(!destEv){ toast('Destination event not found'); return; }
 
+  // Pre-flight: verify the units being transferred are actually allocated
+  // to the destination event's equipment list. We refuse to transfer items
+  // that aren't on the destination's list — otherwise the warehouse would
+  // lose visibility of which items belong to which event.
+  const toCheck = _trTarget.type==='unit'
+    ? [{ unit:_trTarget.unit, item:_trTarget.item }]
+    : _trTarget.units;
+  const notAllocated = toCheck.filter(({unit}) => !_isUnitInDestEvent(unit.serial, destEv));
+  if(notAllocated.length){
+    const lines = notAllocated.slice(0,8).map(({unit,item}) =>
+      `• ${item.name} — <strong>${unit.serial}</strong>`
+    ).join('<br>');
+    const extra = notAllocated.length>8 ? `<br><span style="opacity:.7">+${notAllocated.length-8} more</span>` : '';
+    openConfirm(
+      `Not on ${destEv.name}'s equipment list`,
+      `The following unit${notAllocated.length>1?'s are':' is'} not currently allocated to <strong>${destEv.name}</strong>'s equipment list:<br><br>${lines}${extra}<br><br>Add ${notAllocated.length>1?'them':'it'} to that event's equipment list first, then come back to transfer.`,
+      'OK',
+      ()=>{ /* no-op: blocks the transfer */ }
+    );
+    return;
+  }
+
   const now=new Date().toISOString();
   const transferUnit = async (unit, item) => {
     if(unit.checkout && String(unit.checkout.eventId)===String(destId)){
-      // Already at destination — nothing to do
       return false;
     }
     const fromName = unit.checkout?.eventName || (calEvents.find(e=>String(e.id)===String(unit.checkout?.eventId))?.name || '?');
-    // Overwrite checkout pointer with the new event. The previous event's
-    // record is lost; we surface the transfer in the audit trail and in the
-    // local "Transferred Today" panel.
     const newCheckout = {
       eventId: destId, eventName: destEv.name || '',
       checkedOutAt: now, checkedInAt: null,
@@ -12487,7 +12525,6 @@ async function doTransfer(){
     toast(`${count} unit${count!==1?'s':''} transferred to ${destEv.name} ✓`);
   }
   invItems = await api('GET','/inventory/items')||invItems;
-  // Reset preview
   document.getElementById('trItemPreview').style.display='none';
   document.getElementById('trConfirmWrap').style.display='none';
   document.getElementById('trSearchInput').value='';

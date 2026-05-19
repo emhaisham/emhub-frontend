@@ -4154,11 +4154,13 @@ function addAllowanceRow(){
   renderAllowanceRows();
 }
 function removeAllowanceRow(id){
-  _empAllowances = _empAllowances.filter(a => a.id !== id);
+  // String() because uid() returns a Number but the inline handler hands
+  // us a string from the rendered HTML — strict === would never match.
+  _empAllowances = _empAllowances.filter(a => String(a.id) !== String(id));
   renderAllowanceRows();
 }
 function onAllowanceChange(id, field, value){
-  const row = _empAllowances.find(a => a.id === id); if(!row) return;
+  const row = _empAllowances.find(a => String(a.id) === String(id)); if(!row) return;
   if(field === 'amount') row.amount = parseFloat(value)||0;
   else row[field] = value;
 }

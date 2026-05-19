@@ -2940,10 +2940,25 @@ function cpNav(page){
   const map={dashboard:0,events:1,localcrew:2,payments:3,reports:4};
   if(items[map[page]])items[map[page]].classList.add('active');
   cpActivePage=page;
-  if(page==='payments') _ensureLocalCrewLoaded().then(renderPayments);
-  if(page==='reports')renderReports();
-  if(page==='dashboard')renderDashboard();
-  if(page==='localcrew')loadLocalCrew();
+  // The shared `events` global flips between calEvents (calendar) and
+  // crewEvents (CrewPay) depending on which module touched it last. When
+  // landing on a CrewPay-driven page, rehydrate `events` from `crewEvents`
+  // and re-render so we don't show stale calendar rows here.
+  if(page==='events'){
+    events = (crewEvents||[]).map(e=>({...e, groups:e.groups||[]}));
+    populateMonths();
+    renderEvents();
+  }
+  if(page==='payments'){
+    events = (crewEvents||[]).map(e=>({...e, groups:e.groups||[]}));
+    _ensureLocalCrewLoaded().then(renderPayments);
+  }
+  if(page==='reports'){
+    events = (crewEvents||[]).map(e=>({...e, groups:e.groups||[]}));
+    renderReports();
+  }
+  if(page==='dashboard') renderDashboard();
+  if(page==='localcrew') loadLocalCrew();
 }
 
 function usrNav(page){

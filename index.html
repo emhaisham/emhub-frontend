@@ -7125,7 +7125,7 @@ function openLocalCrew(id){
   document.getElementById('userModalForm').innerHTML = `
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:14px">
       <div class="field"><label class="field-label">Event Name *</label><input type="text" id="lc_name" value="${_lcEditing?.name||''}" placeholder="e.g. Easter Pool Party"></div>
-      <div class="field"><label class="field-label">Date</label><input type="date" id="lc_date" value="${(_lcEditing?.date||'').toString().slice(0,10)}"></div>
+      <div class="field"><label class="field-label">Date</label><input type="date" id="lc_date" value="${normalizeDate(_lcEditing?.date)||''}"></div>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="font-size:13px;font-weight:700;color:var(--text)">Staff</div>

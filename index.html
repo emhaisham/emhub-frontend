@@ -10522,11 +10522,20 @@ function filterDiscEmp(){
   const filtered=hrEmployees.filter(e=>!q||e.name.toLowerCase().includes(q)||(e.empId||'').toLowerCase().includes(q));
   if(!filtered.length){dd.style.display='none';return;}
   dd.style.display='block';
-  dd.innerHTML=filtered.slice(0,10).map(e=>`<div onclick="selectDiscEmp('${e.id}','${e.name.replace(/'/g,"\\'")} ('${e.empId||e.id}')')"
-    style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)"
-    onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
-    ${e.name} <span style="color:var(--text3);font-size:11px">${e.empId||''}</span>
-  </div>`).join('');
+  // Use data-attributes + this.dataset so we don't have to escape quotes
+  // inside the onclick handler. The previous version embedded the label
+  // (e.g. "John Doe (EMP-001)") into a JS string literal — the parentheses
+  // were fine but if a name contained a quote the onclick handler broke
+  // silently, leaving the dropdown unclickable.
+  dd.innerHTML=filtered.slice(0,10).map(e=>{
+    const label = `${e.name} (${e.empId||e.id})`;
+    const safe = label.replace(/"/g,'&quot;');
+    return `<div data-id="${e.id}" data-label="${safe}" onclick="selectDiscEmp(this.dataset.id,this.dataset.label)"
+      style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)"
+      onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
+      ${e.name} <span style="color:var(--text3);font-size:11px">${e.empId||''}</span>
+    </div>`;
+  }).join('');
 }
 function selectDiscEmp(id,label){
   document.getElementById('disc_emp_id').value=id;
@@ -10798,12 +10807,17 @@ function renderAllStaffAssets(){
 }
 
 function openAddAssetFromAllStaff(){
-  // Searchable staff picker then open asset form
   document.getElementById('simpleModalTitle').textContent='Hand Over Asset';
-  const empOpts=hrEmployees.map(e=>`<option value="${e.id}">${e.name} (${e.empId||''})</option>`).join('');
   document.getElementById('simpleModalBody').innerHTML=`
     <div class="field"><label class="field-label">Staff Member *</label>
-      <select id="aa_emp"><option value="">— Select staff —</option>${empOpts}</select></div>
+      <input type="text" id="aa_emp_search" placeholder="Type name or EMP-ID…" oninput="filterAaEmp()" autocomplete="off">
+      <div id="aa_emp_dd" style="display:none;border:1px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;background:var(--white);box-shadow:var(--shadow-md);margin-top:4px"></div>
+      <div id="aa_emp_sel" style="display:none;background:var(--accent-bg);border:1px solid var(--accent-bd);border-radius:8px;padding:8px 12px;margin-top:6px;font-size:12.5px">
+        <span id="aa_emp_sel_label"></span>
+        <button onclick="clearAaEmp()" style="float:right;background:none;border:none;cursor:pointer;color:var(--text3)">✕</button>
+      </div>
+      <input type="hidden" id="aa_emp">
+    </div>
     <div class="field"><label class="field-label">Asset / Equipment Name *</label>
       <input type="text" id="sa_name" placeholder="e.g. Company Laptop, Radio Set, iPhone"></div>
     <div class="field"><label class="field-label">Date Handed Over *</label>
@@ -10814,6 +10828,35 @@ function openAddAssetFromAllStaff(){
   document.getElementById('simpleModalSave').onclick=saveAssetFromAllStaff;
   window._simpleModalFn=saveAssetFromAllStaff;
   document.getElementById('simpleModal').style.display='flex';
+  setTimeout(()=>document.getElementById('aa_emp_search')?.focus(),100);
+}
+
+function filterAaEmp(){
+  const q=(document.getElementById('aa_emp_search')?.value||'').toLowerCase();
+  const dd=document.getElementById('aa_emp_dd'); if(!dd) return;
+  const filtered=hrEmployees.filter(e=>e.status!=='inactive'&&(!q||e.name.toLowerCase().includes(q)||(e.empId||'').toLowerCase().includes(q)));
+  if(!filtered.length){dd.style.display='none';return;}
+  dd.style.display='block';
+  dd.innerHTML=filtered.slice(0,10).map(e=>{
+    const label = `${e.name} (${e.empId||e.id})`;
+    const safe = label.replace(/"/g,'&quot;');
+    return `<div data-id="${e.id}" data-label="${safe}" onclick="selectAaEmp(this.dataset.id,this.dataset.label)"
+      style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)"
+      onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
+      ${e.name} <span style="color:var(--text3);font-size:11px">${e.empId||''}${e.dept?' · '+e.dept:''}</span>
+    </div>`;
+  }).join('');
+}
+function selectAaEmp(id, label){
+  document.getElementById('aa_emp').value=id;
+  document.getElementById('aa_emp_sel_label').textContent=label;
+  document.getElementById('aa_emp_sel').style.display='block';
+  document.getElementById('aa_emp_dd').style.display='none';
+  document.getElementById('aa_emp_search').value='';
+}
+function clearAaEmp(){
+  document.getElementById('aa_emp').value='';
+  document.getElementById('aa_emp_sel').style.display='none';
 }
 
 async function saveAssetFromAllStaff(){

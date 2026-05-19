@@ -8072,7 +8072,7 @@ function loanEquipNav(page){
   document.querySelectorAll('#mod-loans .nav-item').forEach(n=>n.classList.remove('active'));
   const pg = document.getElementById('eq-page-'+page); if(pg) pg.classList.add('active');
   // nav order: inventory(0), categories(1), warehouses(2), flightcases(3), faultreports(4), eventlists(5), listtemplates(6), checkout(7), checkin(8), dashboard(9), requests(10), overdue(11)
-  const navMap = {inventory:0, categories:1, warehouses:2, flightcases:3, faultreports:4, eventlists:5, listtemplates:6, checkout:7, checkin:8, dashboard:9, requests:10, overdue:11};
+  const navMap = {inventory:0, categories:1, warehouses:2, flightcases:3, faultreports:4, eventlists:5, listtemplates:6, checkout:7, checkin:8, transfer:9, dashboard:10, requests:11, overdue:12};
   const items = document.querySelectorAll('#mod-loans .nav-item');
   if(items[navMap[page]] !== undefined) items[navMap[page]].classList.add('active');
   if(page==='dashboard'){

@@ -4123,11 +4123,68 @@ function updateHRSidebar(){
 let editingEmpId = null;
 let empDocs = {};
 
+// Itemized allowances working state during emp form editing.
+// Each row: { id, name, amount, currency }
+let _empAllowances = [];
+function _seedAllowances(emp){
+  if(emp?.allowances && Array.isArray(emp.allowances) && emp.allowances.length){
+    _empAllowances = emp.allowances.map(a => ({
+      id: a.id || uid(),
+      name: a.name || '',
+      amount: parseFloat(a.amount)||0,
+      currency: a.currency || emp.salaryCurrency || 'MVR'
+    }));
+    return;
+  }
+  // Backward compat: if there's a legacy single allowance > 0, seed one row.
+  if(emp && parseFloat(emp.allowance) > 0){
+    _empAllowances = [{
+      id: uid(),
+      name: 'Allowance',
+      amount: parseFloat(emp.allowance),
+      currency: emp.salaryCurrency || 'MVR'
+    }];
+    return;
+  }
+  _empAllowances = [];
+}
+function addAllowanceRow(){
+  const currency = document.getElementById('ef_salcurr')?.value || 'MVR';
+  _empAllowances.push({ id: uid(), name: '', amount: 0, currency });
+  renderAllowanceRows();
+}
+function removeAllowanceRow(id){
+  _empAllowances = _empAllowances.filter(a => a.id !== id);
+  renderAllowanceRows();
+}
+function onAllowanceChange(id, field, value){
+  const row = _empAllowances.find(a => a.id === id); if(!row) return;
+  if(field === 'amount') row.amount = parseFloat(value)||0;
+  else row[field] = value;
+}
+function renderAllowanceRows(){
+  const el = document.getElementById('ef_allowances_list'); if(!el) return;
+  if(!_empAllowances.length){
+    el.innerHTML = '<div style="color:var(--text3);font-size:12.5px;padding:8px 0">No allowances. Click "＋ Add Allowance" to add a named line item (e.g. Food, Phone, Living).</div>';
+    return;
+  }
+  el.innerHTML = _empAllowances.map(a => `<div style="display:grid;grid-template-columns:1.4fr 1fr 110px auto;gap:8px;align-items:center;margin-bottom:6px">
+    <input type="text" placeholder="Allowance name (e.g. Food, Phone)" value="${(a.name||'').replace(/"/g,'&quot;')}" oninput="onAllowanceChange('${a.id}','name',this.value)">
+    <input type="number" placeholder="Amount" value="${a.amount||''}" oninput="onAllowanceChange('${a.id}','amount',this.value)" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">
+    <select onchange="onAllowanceChange('${a.id}','currency',this.value)">
+      <option value="MVR" ${a.currency==='MVR'?'selected':''}>MVR</option>
+      <option value="USD" ${a.currency==='USD'?'selected':''}>USD</option>
+    </select>
+    <button type="button" class="btn btn-red btn-xs" onclick="removeAllowanceRow('${a.id}')">✕</button>
+  </div>`).join('');
+}
+
 function renderEmpForm(empId){
   _empExtraDocs = [];
   editingEmpId = empId||null;
   const emp = empId ? hrEmployees.find(e=>String(e.id)===String(empId)) : null;
   _empExtraDocs = emp?.extraDocs || [];
+  _seedAllowances(emp);
   // Populate empDocs from existing employee docs
   if(emp && emp.docs) {
     empDocs = {...emp.docs};
@@ -4226,10 +4283,16 @@ function renderEmpForm(empId){
           <option value="USD" ${emp?.salaryCurrency==='USD'?'selected':''}>USD (US Dollar)</option>
         </select></div>
       <div class="field"><label class="field-label">Basic Salary (<span class="sal-curr-label">${emp?.salaryCurrency||'MVR'}</span>) *</label><input type="number" id="ef_basic" value="${emp?.basicSalary||''}" placeholder="8000"></div>
-      <div class="field"><label class="field-label">Allowance (<span class="sal-curr-label">${emp?.salaryCurrency||'MVR'}</span>)</label><input type="number" id="ef_allow" value="${emp?.allowance||''}" placeholder="2000"></div>
       <div class="field"><label class="field-label">Payment Method</label><select id="ef_paymethod"><option value="bank" ${(!emp||emp.payMethod==='bank')?'selected':''}>Bank Transfer</option><option value="cash" ${emp?.payMethod==='cash'?'selected':''}>Cash</option></select></div>
       <div class="field"><label class="field-label">Pension Eligible</label><select id="ef_pension"><option value="yes" ${(!emp||emp.pensionEligible!=='no')?'selected':''}>Yes</option><option value="no" ${emp?.pensionEligible==='no'?'selected':''}>No</option></select></div>
     </div>
+
+    <!-- Itemized allowances. Each line: name + amount + currency. This lets
+         you separate e.g. "Food MVR 3000" + "Phone MVR 500" + "Living USD 200"
+         for the same staff member (common for expat contracts). -->
+    <div class="form-section" style="margin-top:6px">Allowances</div>
+    <div id="ef_allowances_list" style="margin-bottom:8px"></div>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="addAllowanceRow()" style="margin-bottom:14px">＋ Add Allowance</button>
     <div id="bankDetailsSection" style="display:${(!emp||emp.payMethod!=='cash')?'block':'none'}">
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
         <div class="field"><label class="field-label">Bank Name</label><input type="text" id="ef_bank" value="${emp?.bankName||''}" placeholder="e.g. Bank of Maldives"></div>
@@ -4322,6 +4385,7 @@ function renderEmpForm(empId){
     document.getElementById('bankDetailsSection').style.display=this.value==='cash'?'none':'block';
   });
   refreshExpatFields();
+  renderAllowanceRows();
 }
 
 function refreshStatusFields(){
@@ -4402,7 +4466,19 @@ function saveEmployee(){
     phone: document.getElementById('ef_phone')?.value.trim(),
     email: document.getElementById('ef_email')?.value.trim(),
     status: document.getElementById('ef_status')?.value,
-    basicSalary, allowance: parseFloat(document.getElementById('ef_allow')?.value)||0,
+    basicSalary,
+    // Persist the full itemized list. Also keep the legacy single `allowance`
+    // populated with the sum of rows in the salary currency, so dashboards
+    // and old reports that read `emp.allowance` continue to work.
+    allowances: _empAllowances.filter(a => a.name?.trim() || a.amount > 0).map(a => ({
+      id: a.id, name: a.name?.trim() || 'Allowance',
+      amount: parseFloat(a.amount)||0,
+      currency: a.currency || 'MVR'
+    })),
+    allowance: (function(){
+      const cur = document.getElementById('ef_salcurr')?.value || 'MVR';
+      return _empAllowances.filter(a => a.currency === cur).reduce((s,a)=>s+(parseFloat(a.amount)||0), 0);
+    })(),
     salaryCurrency: document.getElementById('ef_salcurr')?.value||'MVR',
     payMethod, pensionEligible: document.getElementById('ef_pension')?.value,
     bankName: document.getElementById('ef_bank')?.value.trim(),
@@ -4446,6 +4522,7 @@ function saveEmployee(){
     dept:emp.dept, status:emp.status, joinDate:emp.joined||null,
     salary:emp.basicSalary||null, allowance:emp.allowance||0,
     salaryCurrency:emp.salaryCurrency||'MVR',
+    allowances: emp.allowances || [],
     phone:emp.phone||null, email:emp.email||null, address:emp.address||null,
     nidNo:emp.nidNo||null, nidExpiry:emp.nidExpiry||null,
     passportNo:emp.passportNo||null, passportExpiry:emp.passportExpiry||null,
@@ -4684,8 +4761,29 @@ function renderProfile(empId){
     <div class="profile-panel ${profileActiveTab==='payroll'?'active':''}" id="ptab-payroll">
       <div class="info-grid" style="margin-bottom:16px">
         <div class="info-item"><div class="info-label">Basic Salary</div><div class="info-val" style="color:var(--green);font-weight:600">${emp.salaryCurrency==='USD'?'USD '+Number(emp.basicSalary||0).toLocaleString():fmtMVR(emp.basicSalary)}</div></div>
-        <div class="info-item"><div class="info-label">Allowance</div><div class="info-val" style="color:var(--green)">${emp.salaryCurrency==='USD'?'USD '+Number(emp.allowance||0).toLocaleString():fmtMVR(emp.allowance)}</div></div>
-        <div class="info-item"><div class="info-label">Gross Monthly</div><div class="info-val" style="color:var(--green);font-weight:700">${emp.salaryCurrency==='USD'?'USD '+Number((parseFloat(emp.basicSalary)||0)+(parseFloat(emp.allowance)||0)).toLocaleString():fmtMVR((parseFloat(emp.basicSalary)||0)+(parseFloat(emp.allowance)||0))}</div></div>
+        ${(()=>{
+          // Show each allowance as its own line; if none, fall back to legacy single value.
+          const lines = (emp.allowances && emp.allowances.length) ? emp.allowances : null;
+          const fmtA = (v,c) => (c||emp.salaryCurrency||'MVR')==='USD'
+            ? 'USD '+Number(v||0).toLocaleString()
+            : fmtMVR(v);
+          if(lines){
+            const rows = lines.map(a => `<div class="info-item"><div class="info-label">${a.name||'Allowance'}${a.currency&&a.currency!==(emp.salaryCurrency||'MVR')?` <span style="font-size:9px;color:var(--text3);background:var(--surface);border-radius:4px;padding:0 4px">${a.currency}</span>`:''}</div><div class="info-val" style="color:var(--green)">${fmtA(a.amount,a.currency)}</div></div>`).join('');
+            // Per-currency totals
+            const byCur = {};
+            lines.forEach(a => { const c=a.currency||emp.salaryCurrency||'MVR'; byCur[c]=(byCur[c]||0)+(parseFloat(a.amount)||0); });
+            const baseCur = emp.salaryCurrency||'MVR';
+            const basicNum = parseFloat(emp.basicSalary)||0;
+            const grossSame = basicNum + (byCur[baseCur]||0);
+            const otherCurTotals = Object.entries(byCur).filter(([c])=>c!==baseCur);
+            const grossHtml = `<div class="info-item"><div class="info-label">Gross Monthly</div><div class="info-val" style="color:var(--green);font-weight:700">${fmtA(grossSame, baseCur)}${otherCurTotals.length?'<div style="font-size:11px;font-weight:500;margin-top:2px">'+otherCurTotals.map(([c,v])=>'+ '+fmtA(v,c)).join(' &middot; ')+'</div>':''}</div></div>`;
+            return rows + grossHtml;
+          }
+          // Legacy single field
+          const allow = parseFloat(emp.allowance)||0;
+          return `<div class="info-item"><div class="info-label">Allowance</div><div class="info-val" style="color:var(--green)">${fmtA(allow)}</div></div>
+            <div class="info-item"><div class="info-label">Gross Monthly</div><div class="info-val" style="color:var(--green);font-weight:700">${fmtA((parseFloat(emp.basicSalary)||0)+allow)}</div></div>`;
+        })()}
         <div class="info-item"><div class="info-label">Pension</div><div class="info-val">${emp.pensionEligible==='no'?'Not eligible':'Eligible (7.5% + 7.5%)'}</div></div>
       </div>
       <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Payslips</div>
@@ -4780,10 +4878,25 @@ async function runPayroll(){
       const monthDate=new Date(py,pm-1,1);
       if(monthDate>=probStart&&monthDate<probEnd){basic=parseFloat(emp.probationSalary);isOnProbation=true;}
     }
-    const allow=parseFloat(emp.allowance)||0;
-    const empPension=emp.pensionEligible!=='no'?+(basic*0.075).toFixed(2):0;
     const currency=emp.salaryCurrency||'MVR';
-    batch.push({empId:emp.id,month,basic,allowances:allow,deductions:empPension,loanDeduction:loanDeduct,netPay:basic+allow-loanDeduct-empPension,currency,isOnProbation});
+    // Snapshot allowance lines at generation time. If the employee uses the
+    // new itemized list, capture each entry; otherwise fall back to one
+    // synthetic entry from the legacy `allowance` field.
+    const allowLines = (emp.allowances && emp.allowances.length)
+      ? emp.allowances.map(a => ({
+          id: a.id, name: a.name || 'Allowance',
+          amount: parseFloat(a.amount)||0,
+          currency: a.currency || currency
+        }))
+      : (parseFloat(emp.allowance) > 0
+          ? [{ id: uid(), name: 'Allowance', amount: parseFloat(emp.allowance), currency }]
+          : []);
+    // Sum-of-allowances in the same currency as basic — used for the legacy
+    // single-number `allowances` column and the same-currency net_pay calc.
+    const allow = allowLines.filter(a => a.currency === currency)
+                            .reduce((s,a) => s + a.amount, 0);
+    const empPension = emp.pensionEligible !== 'no' ? +(basic*0.075).toFixed(2) : 0;
+    batch.push({empId:emp.id,month,basic,allowances:allow,allowanceLines:allowLines,deductions:empPension,loanDeduction:loanDeduct,netPay:basic+allow-loanDeduct-empPension,currency,isOnProbation});
     created++;
   }
   if(batch.length>0){
@@ -4892,7 +5005,22 @@ function renderPayslipCard(pr,emp,showBtn){
     </div>
     <div class="payslip-body">
       <div class="payslip-row"><span class="payslip-row-label">Basic Salary</span><span class="payslip-row-val">${fmt(parseFloat(pr.basic)||0)}</span></div>
-      <div class="payslip-row"><span class="payslip-row-label">Allowance</span><span class="payslip-row-val">${fmt(parseFloat(pr.allowances)||0)}</span></div>
+      ${(()=>{
+        // Itemized allowances (one line each); fall back to single legacy line
+        // for older payroll records.
+        const lines = pr.allowanceLines || pr.allowance_lines || [];
+        if(lines.length){
+          return lines.map(a => {
+            const amt = parseFloat(a.amount)||0;
+            const c = a.currency || curr;
+            const fmtA = c==='USD'
+              ? '$ '+amt.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+              : 'MVR '+amt.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+            return `<div class="payslip-row"><span class="payslip-row-label">${a.name||'Allowance'}${c!==curr?` <span style="font-size:10px;color:var(--text3);font-weight:600;background:var(--surface);border-radius:6px;padding:0 5px;margin-left:4px">${c}</span>`:''}</span><span class="payslip-row-val">${fmtA}</span></div>`;
+          }).join('');
+        }
+        return `<div class="payslip-row"><span class="payslip-row-label">Allowance</span><span class="payslip-row-val">${fmt(parseFloat(pr.allowances)||0)}</span></div>`;
+      })()}
       ${(parseFloat(pr.loan_deduction)||0)>0?`<div class="payslip-row deduction"><span class="payslip-row-label">Loan Deduction</span><span class="payslip-row-val">- ${fmt(parseFloat(pr.loan_deduction)||0)}</span></div>`:''}
       ${(parseFloat(pr.deductions)||0)>0?`<div class="payslip-row pension-row"><span class="payslip-row-label">Pension (Employee 7.5%)</span><span class="payslip-row-val">- ${fmt(parseFloat(pr.deductions)||0)}</span></div>`:''}
       <div class="payslip-row total-row"><span class="payslip-row-label">Net Payable</span><span class="payslip-row-val">${fmt(parseFloat(pr.net_pay)||0)}</span></div>
@@ -4936,14 +5064,34 @@ function getPayslipHTML(pr,emp){
     <div><div class="lbl">Payment</div><div class="val">${isBank?'Bank Transfer':'Cash'}</div></div>
     ${pr.paidDate?`<div><div class="lbl">Paid On</div><div class="val">${pr.paidDate}</div></div>`:''}
   </div><div class="divider"></div>
-  <table><thead><tr><th>Description</th><th>Amount (MVR)</th></tr></thead><tbody>
-    <tr><td>Basic Salary</td><td>${fmtMVR(parseFloat(pr.basic)||0)}</td></tr>
-    <tr><td>Allowance</td><td>${fmtMVR(pr.allowances||0)}</td></tr>
-    <tr><td style="color:#6b7280;font-style:italic">Gross</td><td style="color:#6b7280;font-style:italic">${fmtMVR((parseFloat(pr.basic)||0)+(parseFloat(pr.allowances)||0))}</td></tr>
-    ${(parseFloat(pr.loan_deduction)||0)>0?`<tr><td class="ded">Loan Deduction</td><td class="ded">− ${fmtMVR(parseFloat(pr.loan_deduction)||0)}</td></tr>`:''}
-    ${(parseFloat(pr.deductions)||0)>0?`<tr><td class="pens">Pension (Employee 7.5%)</td><td class="pens">− ${fmtMVR(parseFloat(pr.deductions)||0)}</td></tr>`:''}
-    <tr class="total-row"><td>NET PAYABLE</td><td>${fmtMVR(parseFloat(pr.net_pay)||0)}</td></tr>
-  </tbody></table>
+  ${(()=>{
+    const baseCur = pr.currency || emp.salaryCurrency || 'MVR';
+    const fmtCur = (v, c) => (c||baseCur)==='USD'
+      ? '$ '+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+      : 'MVR '+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const lines = pr.allowanceLines || pr.allowance_lines || [];
+    const allowanceRowsHtml = lines.length
+      ? lines.map(a => {
+          const c = a.currency || baseCur;
+          const label = a.name || 'Allowance';
+          return `<tr><td>${label}${c!==baseCur?` <span style="font-size:10px;color:#6b7280;background:#f1f5f9;border-radius:4px;padding:1px 5px;margin-left:4px">${c}</span>`:''}</td><td>${fmtCur(a.amount,c)}</td></tr>`;
+        }).join('')
+      : `<tr><td>Allowance</td><td>${fmtCur(pr.allowances||0)}</td></tr>`;
+    // Gross-in-primary-currency = basic + same-currency allowance sum.
+    // Allowances in other currencies are shown but excluded from this sum
+    // and from net pay (they're paid alongside, not converted).
+    const sameCurAllow = lines.length
+      ? lines.filter(a => (a.currency||baseCur)===baseCur).reduce((s,a)=>s+(parseFloat(a.amount)||0),0)
+      : (parseFloat(pr.allowances)||0);
+    return `<table><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody>
+      <tr><td>Basic Salary</td><td>${fmtCur(parseFloat(pr.basic)||0)}</td></tr>
+      ${allowanceRowsHtml}
+      <tr><td style="color:#6b7280;font-style:italic">Gross (${baseCur})</td><td style="color:#6b7280;font-style:italic">${fmtCur((parseFloat(pr.basic)||0)+sameCurAllow)}</td></tr>
+      ${(parseFloat(pr.loan_deduction)||0)>0?`<tr><td class="ded">Loan Deduction</td><td class="ded">− ${fmtCur(parseFloat(pr.loan_deduction)||0)}</td></tr>`:''}
+      ${(parseFloat(pr.deductions)||0)>0?`<tr><td class="pens">Pension (Employee 7.5%)</td><td class="pens">− ${fmtCur(parseFloat(pr.deductions)||0)}</td></tr>`:''}
+      <tr class="total-row"><td>NET PAYABLE</td><td>${fmtCur(parseFloat(pr.net_pay)||0)}</td></tr>
+    </tbody></table>`;
+  })()}
   ${pr.emprPension>0?`<div class="empr"><span>Employer Pension (7.5%)</span><span>${fmtMVR(pr.emprPension)}</span></div>`:''}
   ${isBank?`<div class="bank-box"><div class="bank-title">Bank Transfer Details</div><b>${emp.bankName||'—'}</b><br>Account: ${emp.bankAcctName||'—'} / ${emp.bankAcct||'—'}</div>`:`<div class="cash-box">Payment by Cash</div>`}
   <div class="footer">EM HUB · Confidential · Generated ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>
@@ -4986,15 +5134,44 @@ function exportPayrollSheet(){
     return 'MVR '+Number(amount||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   };
 
+  // Per-currency totals across all payroll records, splitting basic from
+  // allowances so we can show e.g. "USD basic + MVR phone allowance" payouts
+  // for the same staff correctly. `byCur[c] = {basic, allow, net, count}`.
+  const byCur = {};
+  const ensureCur = c => (byCur[c] = byCur[c] || {basic:0, allow:0, deductions:0, net:0});
+
   const rows=prs.map(pr=>{
     const e=hrEmployees.find(x=>String(x.id)===String(pr.empId));
     if(!e) return '';
-    const curr=pr.currency||e.salaryCurrency||'MVR';
+    const baseCur=pr.currency||e.salaryCurrency||'MVR';
+    // Tally basic + net_pay in base currency
+    ensureCur(baseCur);
+    byCur[baseCur].basic   += parseFloat(pr.basic)||0;
+    byCur[baseCur].net     += parseFloat(pr.net_pay)||0;
+    byCur[baseCur].deductions += (parseFloat(pr.loan_deduction)||0) + (parseFloat(pr.deductions)||0);
+    // Allowance lines may sit in different currencies
+    const lines = pr.allowanceLines || pr.allowance_lines || [];
+    if(lines.length){
+      lines.forEach(a => {
+        const c = a.currency || baseCur;
+        ensureCur(c);
+        byCur[c].allow += parseFloat(a.amount)||0;
+      });
+    } else {
+      byCur[baseCur].allow += parseFloat(pr.allowances)||0;
+    }
+    // Build allowance-breakdown text for the row
+    const linesForRow = lines.length ? lines : [];
+    const allowSummary = linesForRow.length
+      ? linesForRow.map(a => `<div style="font-size:10.5px">${a.name||'Allowance'}: ${fmtAmt(a.amount, a.currency||baseCur)}</div>`).join('')
+      : `<div style="font-size:11px">${fmtAmt(parseFloat(pr.allowances)||0, baseCur)}</div>`;
     return`<tr>
       <td>${e.empId||'—'}</td>
       <td>${e.name}</td>
       <td>${e.dept||'—'}</td>
-      <td style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;text-align:right;font-weight:700">${fmtAmt(parseFloat(pr.net_pay)||0,curr)}</td>
+      <td style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${fmtAmt(parseFloat(pr.basic)||0, baseCur)}</td>
+      <td style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${allowSummary}</td>
+      <td style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;text-align:right;font-weight:700">${fmtAmt(parseFloat(pr.net_pay)||0, baseCur)}</td>
       <td>${e.payMethod==='cash'?'Cash':' Bank'}</td>
       <td>${e.payMethod!=='cash'
         ? `<div style="font-weight:600">${e.bankName||'—'}</div><div style="font-size:11px;color:#374151">${e.bankAcctName||'—'}</div><div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:#374151">${e.bankAcct||'—'}</div>`
@@ -5003,13 +5180,13 @@ function exportPayrollSheet(){
     </tr>`;
   }).filter(Boolean).join('');
 
-  // Separate totals by currency
-  const mvrPrs=prs.filter(p=>{const e=hrEmployees.find(x=>String(x.id)===String(p.empId));return (p.currency||e?.salaryCurrency||'MVR')==='MVR';});
-  const usdPrs=prs.filter(p=>{const e=hrEmployees.find(x=>String(x.id)===String(p.empId));return (p.currency||e?.salaryCurrency||'MVR')==='USD';});
-  const mvrGross=mvrPrs.reduce((s,p)=>s+(parseFloat(p.basic)||0)+(parseFloat(p.allowances)||0),0);
-  const mvrNet=mvrPrs.reduce((s,p)=>s+(parseFloat(p.net_pay)||0),0);
-  const usdGross=usdPrs.reduce((s,p)=>s+(parseFloat(p.basic)||0)+(parseFloat(p.allowances)||0),0);
-  const usdNet=usdPrs.reduce((s,p)=>s+(parseFloat(p.net_pay)||0),0);
+  // Back-compat aliases for the existing totals block below
+  const mvrGross = (byCur.MVR?.basic||0) + (byCur.MVR?.allow||0);
+  const mvrNet   = byCur.MVR?.net||0;
+  const usdGross = (byCur.USD?.basic||0) + (byCur.USD?.allow||0);
+  const usdNet   = byCur.USD?.net||0;
+  const mvrPrs   = (mvrGross>0||mvrNet>0)?[1]:[];
+  const usdPrs   = (usdGross>0||usdNet>0)?[1]:[];
 
   const totalsHtml=`
     <div class="totals">
@@ -5038,7 +5215,7 @@ function exportPayrollSheet(){
     <div style="text-align:center;margin-bottom:8px"><img src="${EM_LOGO_URL}" alt="Event Maldives" style="display:block;height:60px;width:auto;margin:0 auto 10px"></div><h1>Payroll Sheet — ${monthLabel(month)}</h1>
     <div class="sub">EM HUB · HR Module · ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} · ${prs.length} employees</div>
     <table>
-      <thead><tr><th>Emp ID</th><th>Name</th><th>Dept</th><th style="text-align:right">Net Payable</th><th>Method</th><th>Bank Details</th><th>Status</th></tr></thead>
+      <thead><tr><th>Emp ID</th><th>Name</th><th>Dept</th><th>Basic</th><th>Allowances</th><th style="text-align:right">Net Payable</th><th>Method</th><th>Bank Details</th><th>Status</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     ${totalsHtml}

@@ -375,9 +375,9 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .g-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .g-title{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
 .g-subtotal{font-size:13px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:10px}
-.detail-dt{width:100%;border-collapse:collapse;margin-bottom:12px;border:1px solid var(--border);border-radius:7px;overflow:hidden;font-size:12.5px;table-layout:fixed}
+.detail-dt{width:100%;border-collapse:collapse;margin-bottom:12px;border:1px solid var(--border);border-radius:7px;overflow:hidden;font-size:12.5px}
 .detail-dt th{background:var(--surface);font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);text-align:left;padding:7px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
-.detail-dt td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail-dt td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle;white-space:nowrap}
 .detail-dt tr:last-child td{border-bottom:none}
 /* Right-align the Amount column so currency totals line up by their decimal */
 .detail-dt th:last-child, .detail-dt td:last-child{text-align:right}
@@ -486,9 +486,9 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .rs-val{font-size:18px;font-weight:700;color:var(--text);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
 .rs-lbl{font-size:11px;color:var(--text3);margin-top:3px;font-weight:500}
 .report-section-title{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
-.report-table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:12px;table-layout:fixed}
+.report-table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:12px}
 .report-table th{background:var(--hub);color:#fff;text-align:left;padding:7px 10px;font-weight:600;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
-.report-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.report-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text2);white-space:nowrap}
 .report-table th:last-child, .report-table td:last-child{text-align:right}
 .report-table tr:last-child td{border-bottom:2px solid var(--border)}
 .report-table .rt-total{font-weight:700;color:var(--text)}
@@ -3180,9 +3180,6 @@ function openReport(eid){
     return`<div style="margin-bottom:16px">
       <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:6px">Group ${gi+1}${g.label?' · '+g.label:''}</div>
       <table class="report-table">
-        <colgroup>
-          <col style="width:50px"><col style="width:90px"><col style="width:70px"><col style="width:90px"><col style="width:70px"><col style="width:60px"><col style="width:130px"><col>
-        </colgroup>
         <thead><tr><th>Pax</th><th>Date In</th><th>Time In</th><th>Date Out</th><th>Time Out</th><th>Hours</th><th>Rate/Person</th><th>Amount</th></tr></thead>
         <tbody>${rows}<tr style="background:#f8f9fb"><td colspan="7" style="font-weight:700;color:var(--text)">Group Subtotal</td><td class="rt-money">${fmt(gTotal)}</td></tr></tbody>
       </table>
@@ -3470,9 +3467,6 @@ function renderEvents(keep){
       </tr>`).join('');
       return`<div class="g-section"><div class="g-hdr"><span class="g-title">Group ${gi+1}${g.label?' · '+g.label:''}</span><div class="g-subtotal">${fmt(gTot)}<button class="btn btn-red btn-xs" onclick="deleteGroup('${ev.id}','${g.id}')">Remove</button></div></div>
         <table class="detail-dt">
-          <colgroup>
-            <col style="width:55px"><col style="width:110px"><col style="width:80px"><col style="width:110px"><col style="width:80px"><col style="width:75px"><col style="width:110px"><col>
-          </colgroup>
           <thead><tr><th>Pax</th><th>Date In</th><th>Time In</th><th>Date Out</th><th>Time Out</th><th>Hours</th><th>Rate</th><th>Amount</th></tr></thead>
         <tbody>${dayRows}</tbody></table></div>`;
     }).join('');
@@ -7337,9 +7331,6 @@ function openLocalCrewReport(eid){
     </div>
     <div class="report-section-title">Staff Breakdown</div>
     <table class="report-table">
-      <colgroup>
-        <col><col style="width:50px"><col style="width:130px"><col style="width:130px"><col style="width:100px"><col style="width:90px"><col style="width:110px"><col style="width:80px">
-      </colgroup>
       <thead><tr><th>Staff</th><th>Cur</th><th>Setup (d × rate)</th><th>Event (d × rate)</th><th>Subtotal</th><th>Adj</th><th>Payout</th><th>Status</th></tr></thead>
       <tbody>${rows||'<tr><td colspan="8" style="text-align:center;color:#9aa3af">No staff entries</td></tr>'}</tbody>
     </table>

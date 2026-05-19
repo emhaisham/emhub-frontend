@@ -3840,7 +3840,7 @@ function openEditEvent(eid){
   const ev=events.find(e=>String(e.id)===String(eid));if(!ev)return;
   editingEventId=eid;
   document.getElementById('editName').value=ev.name;
-  document.getElementById('editDate').value=ev.date;
+  document.getElementById('editDate').value=normalizeDate(ev.date)||'';
   // Deep clone groups into eGroups
   egSeq=0;
   eGroups=ev.groups.map(g=>({
@@ -4147,7 +4147,7 @@ function renderEmpForm(empId){
           <option value="parttime" ${emp?.empBasis==='parttime'?'selected':''}>Part Time</option>
           <option value="contract" ${emp?.empBasis==='contract'?'selected':''}>Contract</option>
         </select></div>
-      <div class="field"><label class="field-label">Date Joined</label><input type="date" id="ef_joined" value="${emp?.joined||''}"></div>
+      <div class="field"><label class="field-label">Date Joined</label><input type="date" id="ef_joined" value="${normalizeDate(emp?.joined)||''}"></div>
       <div class="field"><label class="field-label">Phone</label><input type="text" id="ef_phone" value="${emp?.phone||''}" placeholder="+960 xxx xxxx"></div>
       <div class="field"><label class="field-label">Email</label><input type="email" id="ef_email" value="${emp?.email||''}" placeholder="staff@company.com"></div>
       <div class="field"><label class="field-label">Employment Status</label>
@@ -4169,7 +4169,7 @@ function renderEmpForm(empId){
             <option value="resignation" ${emp?.exitType==='resignation'?'selected':''}>Resignation</option>
             <option value="termination" ${emp?.exitType==='termination'?'selected':''}>Termination</option>
           </select></div>
-        <div class="field"><label class="field-label">Last Working Day</label><input type="date" id="ef_exitdate" value="${(emp?.exitDate||'').toString().slice(0,10)}"></div>
+        <div class="field"><label class="field-label">Last Working Day</label><input type="date" id="ef_exitdate" value="${normalizeDate(emp?.exitDate)||''}"></div>
         <div class="field emp-form-full"><label class="field-label">Reason / Notes</label><input type="text" id="ef_exitreason" value="${emp?.exitReason||''}" placeholder="e.g. Personal reasons / Contract breach"></div>
       </div>
     </div>
@@ -4177,7 +4177,7 @@ function renderEmpForm(empId){
     <div id="probationSection" style="display:${emp&&(emp.status==='probation'||emp.probationStart)?'block':'none'}">
       <div class="form-section" style="margin-top:8px">Probation Period</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
-        <div class="field"><label class="field-label">Probation Start Date</label><input type="date" id="ef_probstart" value="${(emp?.probationStart||emp?.joined||'').toString().slice(0,10)}"></div>
+        <div class="field"><label class="field-label">Probation Start Date</label><input type="date" id="ef_probstart" value="${normalizeDate(emp?.probationStart||emp?.joined)||''}"></div>
         <div class="field"><label class="field-label">Duration (months)</label><input type="number" id="ef_probmonths" value="${emp?.probationMonths||3}" min="1" max="12" placeholder="3"></div>
         <div class="field"><label class="field-label">Probation Basic Salary (<span class="sal-curr-label">${emp?.salaryCurrency||'MVR'}</span>)</label><input type="number" id="ef_probsalary" value="${emp?.probationSalary||''}" placeholder="Salary during probation"></div>
       </div>
@@ -4218,35 +4218,35 @@ function renderEmpForm(empId){
       <div class="emp-form-grid">
         <div class="field"><label class="field-label">Nationality</label><select id="ef_nationality"><option value="">Select…</option>${natOpts}</select></div>
         <div class="field"><label class="field-label">Passport Number *</label><input type="text" id="ef_passport" value="${emp?.passportNo||''}" placeholder="e.g. A1234567"></div>
-        <div class="field"><label class="field-label">Passport Expiry *</label><input type="date" id="ef_ppexp" value="${emp?.passportExpiry||''}"></div>
+        <div class="field"><label class="field-label">Passport Expiry *</label><input type="date" id="ef_ppexp" value="${normalizeDate(emp?.passportExpiry)||''}"></div>
       </div>
 
       <div class="form-section-sub" style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:10px 0 8px;padding-left:2px">Work Permit</div>
       <div class="emp-form-grid">
         <div class="field"><label class="field-label">Work Permit Number *</label><input type="text" id="ef_wp" value="${emp?.workPermitNo||''}" placeholder="WP number"></div>
-        <div class="field"><label class="field-label">Work Permit Expiry *</label><input type="date" id="ef_wpexp" value="${emp?.workPermitExpiry||''}"></div>
+        <div class="field"><label class="field-label">Work Permit Expiry *</label><input type="date" id="ef_wpexp" value="${normalizeDate(emp?.workPermitExpiry)||''}"></div>
       </div>
 
       <div class="form-section-sub" style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:10px 0 8px;padding-left:2px">Insurance</div>
       <div class="emp-form-grid">
         <div class="field"><label class="field-label">Insurance Number</label><input type="text" id="ef_ins" value="${emp?.insuranceNo||''}" placeholder="Insurance number"></div>
         <div class="field"><label class="field-label">Insurance Agency</label><input type="text" id="ef_insagency" value="${emp?.insuranceAgency||''}" placeholder="e.g. Allied Insurance"></div>
-        <div class="field"><label class="field-label">Insurance Expiry</label><input type="date" id="ef_insexp" value="${emp?.insuranceExpiry||''}"></div>
+        <div class="field"><label class="field-label">Insurance Expiry</label><input type="date" id="ef_insexp" value="${normalizeDate(emp?.insuranceExpiry)||''}"></div>
       </div>
 
       <div class="form-section-sub" style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:10px 0 8px;padding-left:2px">Quota Fee</div>
       <div class="emp-form-grid">
-        <div class="field"><label class="field-label">Quota Fee Expiry</label><input type="date" id="ef_quotaexp" value="${emp?.quotaExpiry||''}"></div>
+        <div class="field"><label class="field-label">Quota Fee Expiry</label><input type="date" id="ef_quotaexp" value="${normalizeDate(emp?.quotaExpiry)||''}"></div>
       </div>
 
       <div class="form-section-sub" style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:10px 0 8px;padding-left:2px">Medical</div>
       <div class="emp-form-grid">
-        <div class="field"><label class="field-label">Medical Expiry</label><input type="date" id="ef_medexp" value="${emp?.medicalExpiry||''}"></div>
+        <div class="field"><label class="field-label">Medical Expiry</label><input type="date" id="ef_medexp" value="${normalizeDate(emp?.medicalExpiry)||''}"></div>
       </div>
 
       <div class="form-section-sub" style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:10px 0 8px;padding-left:2px">Contract</div>
       <div class="emp-form-grid">
-        <div class="field"><label class="field-label">Contract Expiry</label><input type="date" id="ef_contractexp" value="${emp?.contractExpiry||''}"></div>
+        <div class="field"><label class="field-label">Contract Expiry</label><input type="date" id="ef_contractexp" value="${normalizeDate(emp?.contractExpiry)||''}"></div>
       </div>
     </div>
 
@@ -4254,8 +4254,8 @@ function renderEmpForm(empId){
       <div class="form-section" style="margin-top:8px">Local Staff Details</div>
       <div class="emp-form-grid">
         <div class="field"><label class="field-label">National ID Number *</label><input type="text" id="ef_nid" value="${emp?.nidNo||''}" placeholder="A-number"></div>
-        <div class="field"><label class="field-label">NID Expiry</label><input type="date" id="ef_nidexp" value="${emp?.nidExpiry||''}"></div>
-        <div class="field"><label class="field-label">Date of Birth</label><input type="date" id="ef_dob" value="${(emp?.dob||'').toString().slice(0,10)}"></div>
+        <div class="field"><label class="field-label">NID Expiry</label><input type="date" id="ef_nidexp" value="${normalizeDate(emp?.nidExpiry)||''}"></div>
+        <div class="field"><label class="field-label">Date of Birth</label><input type="date" id="ef_dob" value="${normalizeDate(emp?.dob)||''}"></div>
       </div>
     </div>
 
@@ -5867,8 +5867,8 @@ function _renderCalModal(ev, defaultDate){
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="field"><label class="field-label">Event Name *</label><input type="text" id="cef_name" value="${ev?.name||''}" placeholder="e.g. Grand Wedding Reception"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="field"><label class="field-label">Start Date *</label><input type="date" id="cef_dateFrom" value="${ev?.eventDateFrom||defaultDate||''}"></div>
-          <div class="field"><label class="field-label">End Date *</label><input type="date" id="cef_dateTo" value="${ev?.eventDateTo||defaultDate||''}"></div>
+          <div class="field"><label class="field-label">Start Date *</label><input type="date" id="cef_dateFrom" value="${normalizeDate(ev?.eventDateFrom)||defaultDate||''}"></div>
+          <div class="field"><label class="field-label">End Date *</label><input type="date" id="cef_dateTo" value="${normalizeDate(ev?.eventDateTo)||defaultDate||''}"></div>
         </div>
         <div class="field"><label class="field-label">Venue / Location</label><input type="text" id="cef_venue" value="${ev?.venue||''}" placeholder="e.g. Bandos Island Resort"></div>
         <div class="field"><label class="field-label">Event Details / Notes</label><textarea id="cef_details" rows="3" style="resize:vertical">${ev?.notes||ev?.details||''}</textarea></div>
@@ -8146,13 +8146,13 @@ function _equipFormHtml(r){
       <div class="field"><label class="field-label">Requested By *</label>
         <input type="text" id="eq_requestedBy" value="${r?.requestedBy||''}" placeholder="Who requested this?"></div>
       <div class="field"><label class="field-label">Request Date *</label>
-        <input type="date" id="eq_requestDate" value="${r?.requestDate||today}"></div>
+        <input type="date" id="eq_requestDate" value="${normalizeDate(r?.requestDate)||today}"></div>
       <div class="field"><label class="field-label">Handed Over To *</label>
         <input type="text" id="eq_handedTo" value="${r?.handedTo||''}" placeholder="Person receiving the items"></div>
       <div class="field"><label class="field-label">Contact Number</label>
         <input type="text" id="eq_contact" value="${r?.contact||''}" placeholder="+960 xxxxxxx"></div>
       <div class="field"><label class="field-label">Expected Return Date</label>
-        <input type="date" id="eq_returnDate" value="${r?.returnDate||''}"></div>
+        <input type="date" id="eq_returnDate" value="${normalizeDate(r?.returnDate)||''}"></div>
       <div class="field"><label class="field-label">Approved By</label>
         <input type="text" id="eq_approvedBy" value="${r?.approvedBy||''}" placeholder="Manager / authoriser name"></div>
       <div class="field" style="grid-column:1 / -1"><label class="field-label">Notes</label>
@@ -9284,7 +9284,7 @@ function openMarkRepaired(parentId, unitId, faultId){
       <span style="color:var(--text3)">Fault: ${fault?.fault||''}</span>
     </div>
     <div class="field"><label class="field-label">Date Repaired *</label>
-      <input type="date" id="repair_date" value="${fault?.repairedDate||new Date().toISOString().slice(0,10)}"></div>
+      <input type="date" id="repair_date" value="${normalizeDate(fault?.repairedDate)||new Date().toISOString().slice(0,10)}"></div>
     <div class="field"><label class="field-label">Repaired By</label>
       <input type="text" id="repair_by" value="${fault?.repairedBy||''}" placeholder="Enter name of person who repaired"></div>
     <div class="field"><label class="field-label">Repair Notes</label>
@@ -9467,7 +9467,7 @@ function openEditUnit(parentId, unitId){
     <div class="field"><label class="field-label">Item Serial Number (manufacturer's)</label>
       <input type="text" id="unit_item_serial" value="${unit.itemSerial||''}" placeholder="Serial printed on the physical unit"></div>
     <div class="field"><label class="field-label">Import Date</label>
-      <input type="date" id="unit_import_date" value="${unit.importDate?String(unit.importDate).slice(0,10):''}"></div>
+      <input type="date" id="unit_import_date" value="${normalizeDate(unit.importDate)||''}"></div>
     <div class="field"><label class="field-label">Warehouse / Location</label>
       <select id="unit_wh"><option value="">— None —</option>${whOpts}</select></div>
     <div class="field"><label class="field-label">Flight Case</label>

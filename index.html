@@ -4860,7 +4860,7 @@ function renderPayslipCard(pr,emp,showBtn){
       ${(parseFloat(pr.deductions)||0)>0?`<div class="payslip-row pension-row"><span class="payslip-row-label">Pension (Employee 7.5%)</span><span class="payslip-row-val">- ${fmt(parseFloat(pr.deductions)||0)}</span></div>`:''}
       <div class="payslip-row total-row"><span class="payslip-row-label">Net Payable</span><span class="payslip-row-val">${fmt(parseFloat(pr.net_pay)||0)}</span></div>
       ${pr.emprPension>0?`<div class="payslip-row" style="background:var(--purple-bg)"><span class="payslip-row-label" style="color:var(--purple)">Employer Pension (7.5%)</span><span class="payslip-row-val" style="color:var(--purple)">${fmt(pr.emprPension)}</span></div>`:''}
-      ${isBank?`<div class="payslip-row"><span class="payslip-row-label" style="color:var(--accent)">Bank: ${emp.bankName||'—'} · ${emp.bankAcct||'—'}</span></div>`:`<div class="payslip-row"><span class="payslip-row-label" style="color:var(--amber)">Payment by Cash</span></div>`}
+      ${isBank?`<div class="payslip-row"><span class="payslip-row-label" style="color:var(--accent)">Bank: ${emp.bankName||'—'}${emp.bankAcctName?' · '+emp.bankAcctName:''} · ${emp.bankAcct||'—'}</span></div>`:`<div class="payslip-row"><span class="payslip-row-label" style="color:var(--amber)">Payment by Cash</span></div>`}
       <div style="padding:12px 18px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;align-items:center">
         <button class="btn btn-ghost btn-sm" onclick="printPayslip('${pr.id}')">Print/PDF</button>
         <button class="btn btn-ghost btn-sm" onclick="savePayslipJpeg('${pr.id}')">JPEG</button>

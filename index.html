@@ -9791,11 +9791,11 @@ function _invFormHtml(item){
         <input type="text" id="inv_model" value="${item?.model||''}" placeholder="e.g. Event 210A"></div>
       <div class="field"><label class="field-label">Manufacturer</label>
         <input type="text" id="inv_manufacturer" value="${item?.manufacturer||''}" placeholder="e.g. DAS Audio"></div>
-      <div class="field"><label class="field-label">Category</label>
+      <div class="field"><label class="field-label">Category *</label>
         <select id="inv_cat" onchange="updateInvSubCatOpts()">
           <option value="">— Select —</option>${catOpts}
         </select></div>
-      <div class="field"><label class="field-label">Sub-Category</label>
+      <div class="field"><label class="field-label">Sub-Category *</label>
         <select id="inv_subcat">
           <option value="">— Select —</option>${subOpts}
         </select></div>
@@ -9835,12 +9835,16 @@ function updateInvSubCatOpts(){
 async function saveInvItem(){
   const name=document.getElementById('inv_name')?.value.trim();
   if(!name){toast('Enter item name');return;}
+  const catId=document.getElementById('inv_cat')?.value||'';
+  const subCatId=document.getElementById('inv_subcat')?.value||'';
+  if(!catId){toast('Select a category');return;}
+  if(!subCatId){toast('Select a sub-category');return;}
   const data={
     name,
     model:document.getElementById('inv_model')?.value.trim()||'',
     manufacturer:document.getElementById('inv_manufacturer')?.value.trim()||'',
-    catId:document.getElementById('inv_cat')?.value||null,
-    subCatId:document.getElementById('inv_subcat')?.value||null,
+    catId,
+    subCatId,
     photoUrl:_invPhotoData||(_editInvId?invItems.find(x=>String(x.id)===String(_editInvId))?.photoUrl:null)||null,
   };
   let res;

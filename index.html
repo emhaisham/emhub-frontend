@@ -1366,6 +1366,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="nav-item" onclick="hrNav('staff-assets')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></span>Staff Assets</div>
               <div class="nav-item" onclick="hrNav('expiring-docs')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>Expiring Documents</div>
               <div class="nav-item" onclick="hrNav('probation-contracts')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>Probation &amp; Contracts</div>
+              <div class="nav-item" onclick="hrNav('org-chart')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="9" y="15" width="6" height="6" rx="1"/><path d="M6 9v3h12V9M12 12v3"/></svg></span>Org Chart</div>
               <div class="nav-lbl">Payroll</div>
               <div class="nav-item" onclick="hrNav('payroll')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Monthly Payroll</div>
               <div class="nav-item" onclick="hrNav('loans')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M8 10v11M12 10v11M16 10v11M20 10v11"/></svg></span>Loans</div>
@@ -1559,7 +1560,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 </div>
                 <div class="toolbar">
                   <select id="lvFilterEmp" onchange="_pages.leave=1;renderLeave()"><option value="">All Staff</option></select>
-                  <select id="lvFilterStatus" onchange="_pages.leave=1;renderLeave()"><option value="">All Status</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
+                  <select id="lvFilterStatus" onchange="_pages.leave=1;renderLeave()"><option value="">All Status</option><option value="pending">Stage 1 — Pending Manager</option><option value="manager_approved">Stage 2 — Awaiting Final</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
                   <select id="lvFilterType" onchange="_pages.leave=1;renderLeave()"><option value="">All Types</option></select>
                   <span class="toolbar-count" id="lvCount"></span>
                 </div>
@@ -1659,6 +1660,20 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 </select>
               </div>
               <div id="allStaffAssetsList"></div>
+            </div>
+
+            <!-- ── ORG CHART ── -->
+            <div class="page" id="hr-page-org-chart">
+              <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+                <div>
+                  <div class="page-title">Org Chart</div>
+                  <div class="page-sub">Who reports to whom across the company. Drives leave-approval routing — a request goes to the direct manager first, then to the final approver.</div>
+                </div>
+                <div class="toolbar" style="margin:0">
+                  <input type="text" id="orgSearch" placeholder="Search staff…" oninput="renderOrgChart()" style="width:240px">
+                </div>
+              </div>
+              <div id="orgChartList"></div>
             </div>
 
             <!-- ── PROBATION & CONTRACTS ── -->
@@ -2908,7 +2923,7 @@ function applyPerms(){
   // ── HR SIDEBAR nav items (by position) ───────────────
   const hrNavItems=document.querySelectorAll('#mod-hr .nav-wrap .nav-item');
   // positions: 0=All Staff, 1=Add Emp, 2=Disciplinary, 3=Staff Assets, 4=Payroll, 5=Loans, 6=Pension, 7=Bonus, 8=Leave, 9=Letters
-  const hrMap=['hr_view_all','hr_add_emp','hr_disc','hr_assets','hr_view_all','hr_view_all','hr_payroll','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
+  const hrMap=['hr_view_all','hr_add_emp','hr_disc','hr_assets','hr_view_all','hr_view_all','hr_view_all','hr_payroll','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
   hrMap.forEach((k,i)=>{
     if(!hrNavItems[i]) return;
     // All Staff and Bonus both gate on hr_view_all OR hr_view_own
@@ -4237,6 +4252,7 @@ function hrNav(page, extra){
       'profile':'hr_view_own',
       'expiring-docs':'hr_view_all',
       'probation-contracts':'hr_view_all',
+      'org-chart':'hr_view_all',
     };
     const permKey=pagePermMap[page];
     const role=currentUser.roleId?appRoles.find(r=>String(r.id)===String(currentUser.roleId)):null;
@@ -4271,7 +4287,7 @@ function hrNav(page, extra){
   const pageEl = document.getElementById('hr-page-'+page);
   if(pageEl) pageEl.classList.add('active');
   const items = document.querySelectorAll('#mod-hr .nav-item');
-  const map = {employees:0,'add-employee':1,disciplinary:2,'staff-assets':3,'expiring-docs':4,'probation-contracts':5,payroll:6,loans:7,pension:8,bonus:9,'dept-leave':10,leave:11,letters:12};
+  const map = {employees:0,'add-employee':1,disciplinary:2,'staff-assets':3,'expiring-docs':4,'probation-contracts':5,'org-chart':6,payroll:7,loans:8,pension:9,bonus:10,'dept-leave':11,leave:12,letters:13};
   if(items[map[page]]) items[map[page]].classList.add('active');
   hrActivePage = page;
   if(page==='employees')     { populateHRFilters(); renderEmployees(); }
@@ -4301,6 +4317,7 @@ function hrNav(page, extra){
   if(page==='letters')       { populateLetterEmp(); document.getElementById('ltDate').valueAsDate=new Date(); }
   if(page==='expiring-docs') { renderExpiringDocs(extra); }
   if(page==='probation-contracts') { renderProbationContracts(extra); }
+  if(page==='org-chart')           { renderOrgChart(); }
   updateHRSidebar();
 }
 
@@ -4437,6 +4454,10 @@ function renderEmpForm(empId){
           <option value="inactive" ${emp?.status==='inactive'?'selected':''}>Inactive</option>
         </select></div>
       <div class="field"><label class="field-label">Linked User Account</label><select id="ef_user"><option value="">None</option>${users.map(u=>{const taken=hrEmployees.find(e=>e.linkedUserId===u.id&&String(e.id)!==String(empId));return`<option value="${u.id}" ${emp?.linkedUserId===u.id?'selected':''} ${taken?'disabled':''}>@${u.username}${taken?' (linked)':''}</option>`;}).join('')}</select></div>
+      <div class="field"><label class="field-label">Reports To (Direct Manager)</label>
+        <select id="ef_reportsto"><option value="">— None —</option>${hrEmployees.filter(x=>String(x.id)!==String(empId)&&x.status==='active').sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(x=>`<option value="${x.id}" ${emp?.reportsTo===x.id?'selected':''}>${x.name}${x.designation?' · '+x.designation:''}</option>`).join('')}</select>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Leave requests will route to this person first.</div>
+      </div>
     </div>
 
     <div id="exitSection" style="display:${emp&&(emp.status==='resigned'||emp.status==='terminated')?'block':'none'}">
@@ -4708,6 +4729,7 @@ function saveEmployee(){
     probationEndDate: document.getElementById('ef_probend')?.value||null,
     probationStatus: document.getElementById('ef_probstatus')?.value||null,
     contractStartDate: document.getElementById('ef_contractstart')?.value||null,
+    reportsTo: document.getElementById('ef_reportsto')?.value||null,
     // expat
     nationality: document.getElementById('ef_nationality')?.value,
     passportNo: document.getElementById('ef_passport')?.value.trim(),
@@ -4749,6 +4771,7 @@ function saveEmployee(){
     probationStart:emp.probationStart||null, probationMonths:emp.probationMonths||0,
     probationSalary:emp.probationSalary||0,
     probationEndDate:emp.probationEndDate||null, probationStatus:emp.probationStatus||null,
+    reportsTo:emp.reportsTo||null,
     exitType:emp.exitType||null, exitDate:emp.exitDate||null, exitReason:emp.exitReason||null,
     emergencyName:emp.emgName||null, emergencyPhone:emp.emgPhone||null,
     emergencyRel:emp.emgRelation||null,
@@ -4862,6 +4885,63 @@ async function submitMarkRenewed(){
   closeRenewModal();
   renderExpiringDocs();
   toast(_renewCtx?.label+' renewed ✓');
+}
+
+// ══ ORG CHART ═════════════════════════════════════════
+async function renderOrgChart(){
+  const list = document.getElementById('orgChartList'); if(!list) return;
+  list.innerHTML = '<div style="padding:20px;color:var(--text3)">Loading…</div>';
+  const data = await api('GET','/hr/employees/org-chart');
+  if(!Array.isArray(data)){ list.innerHTML='<div class="empty"><div class="empty-title">Failed to load</div></div>'; return; }
+  const search = (document.getElementById('orgSearch')?.value||'').toLowerCase().trim();
+  // Build parent→children index
+  const byId = new Map(data.map(e=>[String(e.id), {...e, children:[]}]));
+  data.forEach(e=>{
+    if(e.reportsTo && byId.has(String(e.reportsTo))){
+      byId.get(String(e.reportsTo)).children.push(byId.get(String(e.id)));
+    }
+  });
+  // Roots = no manager OR manager not in active set
+  const roots = data.filter(e=>!e.reportsTo || !byId.has(String(e.reportsTo))).map(e=>byId.get(String(e.id)));
+  // If searching, show flat list of matches
+  if(search){
+    const matches = data.filter(e=> (e.name||'').toLowerCase().includes(search) || (e.designation||'').toLowerCase().includes(search) || (e.dept||'').toLowerCase().includes(search) );
+    if(!matches.length){ list.innerHTML='<div class="empty"><div class="empty-title">No matches</div></div>'; return; }
+    list.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">${matches.map(e=>{
+      const mgr = e.reportsTo ? byId.get(String(e.reportsTo))?.name : null;
+      return _orgCard(e, mgr);
+    }).join('')}</div>`;
+    return;
+  }
+  // Group roots by department for a cleaner top level
+  const byDept = {};
+  roots.forEach(r => { const d = r.dept || '— No Department —'; (byDept[d] = byDept[d] || []).push(r); });
+  list.innerHTML = Object.keys(byDept).sort().map(dept => `
+    <div style="margin-bottom:24px">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">${dept}</div>
+      ${byDept[dept].map(n=>_orgNode(n,0)).join('')}
+    </div>`).join('');
+}
+function _orgCard(e, mgrName){
+  const sub = [e.designation, e.dept].filter(Boolean).join(' · ');
+  return `<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--surface);cursor:pointer" onclick="hrNav('profile','${e.id}')">
+    <div style="font-size:13px;font-weight:600;color:var(--text)">${e.name}</div>
+    ${sub?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${sub}</div>`:''}
+    ${mgrName?`<div style="font-size:10px;color:var(--text3);margin-top:4px">↳ reports to ${mgrName}</div>`:''}
+  </div>`;
+}
+function _orgNode(n, depth){
+  const indent = depth * 22;
+  const sub = [n.designation, n.dept].filter(Boolean).join(' · ');
+  const head = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:4px 0;margin-left:${indent}px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer" onclick="hrNav('profile','${n.id}')">
+    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${n.children.length?'var(--green)':'var(--text3)'};flex-shrink:0"></span>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:600;color:var(--text)">${n.name}</div>
+      ${sub?`<div style="font-size:11px;color:var(--text3)">${sub}</div>`:''}
+    </div>
+    ${n.children.length?`<span style="font-size:11px;color:var(--text3)">${n.children.length} direct${n.children.length===1?'':'s'}</span>`:''}
+  </div>`;
+  return head + (n.children.length ? n.children.sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(c=>_orgNode(c, depth+1)).join('') : '');
 }
 
 // ══ PROBATION & CONTRACTS ═════════════════════════════
@@ -5240,6 +5320,7 @@ function renderProfile(empId){
         <div class="info-item"><div class="info-label">Phone</div><div class="info-val">${emp.phone||'—'}</div></div>
         <div class="info-item"><div class="info-label">Email</div><div class="info-val">${emp.email||'—'}</div></div>
         <div class="info-item"><div class="info-label">Pension</div><div class="info-val">${emp.pensionEligible==='no'?'Not eligible':'Eligible (7.5% + 7.5%)'}</div></div>
+        <div class="info-item"><div class="info-label">Reports To</div><div class="info-val">${(()=>{const m=hrEmployees.find(x=>String(x.id)===String(emp.reportsTo));return m?`<a href="javascript:void(0)" onclick="hrNav('profile','${m.id}')" style="color:var(--accent)">${m.name}</a>${m.designation?' · '+m.designation:''}`:'—';})()}</div></div>
         ${emp.type==='expat'?`
         <div class="info-item"><div class="info-label">Nationality</div><div class="info-val">${emp.nationality||'—'}</div></div>
         <div class="info-item"><div class="info-label">Passport No.</div><div class="info-val">${emp.passportNo||'—'}</div></div>
@@ -6940,35 +7021,83 @@ function renderLeave(){
   const yr=new Date().getFullYear().toString();
   const daysUsed=hrLeave.filter(l=>l.status==='approved'&&lvFrom(l).startsWith(yr)).reduce((s,l)=>s+(parseInt(l.days)||0),0);
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
-  set('lvStatPending',hrLeave.filter(l=>l.status==='pending').length);
+  set('lvStatPending',hrLeave.filter(l=>l.status==='pending'||l.status==='manager_approved').length);
   set('lvStatApproved',hrLeave.filter(l=>l.status==='approved').length);
   set('lvStatNow',now);set('lvStatDays',daysUsed);
   set('lvCount',`${list.length} record${list.length!==1?'s':''}`);
   const el=document.getElementById('leaveList');if(!el)return;
   if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div><div class="empty-title">No leave records</div><div class="empty-sub">Click "+ New Request" to submit a leave request</div></div>';return;}
   const _p = _paginate(list, 'leave', 'renderLeave');
+  // Permission lookups for action gating
+  const isAdmin = currentUser?.role === 'admin';
+  const role = currentUser?.roleId ? appRoles.find(r=>String(r.id)===String(currentUser.roleId)) : null;
+  const myPerms = role?.perms || currentUser?.rolePerms || {};
+  const hasMgrPerm   = isAdmin || myPerms.hr_leave_approve===true || myPerms.hr_leave_approve_edit===true;
+  const hasFinalPerm = isAdmin || myPerms.hr_leave_final_approve===true || myPerms.hr_leave_final_approve_edit===true;
+
   el.innerHTML=_p.shown.map(lv=>{
     const emp=hrEmployees.find(e=>String(e.id)===lvEmpId(lv))||{name:'Unknown'};
-    const sc={pending:'badge-amber',approved:'badge-green',rejected:'badge-red'}[lv.status]||'badge-amber';
+    // Status-aware colour + label (covers the new manager_approved stage)
+    const STATUS_BADGE = {
+      pending:           {cls:'badge-amber', label:'Stage 1 — Awaiting Manager'},
+      manager_approved:  {cls:'badge-blue',  label:'Stage 2 — Awaiting Final'},
+      approved:          {cls:'badge-green', label:'Approved'},
+      rejected:          {cls:'badge-red',   label:'Rejected'+(lv.rejectedAtStage?` (${lv.rejectedAtStage})`:'')}
+    };
+    const sb = STATUS_BADGE[lv.status] || STATUS_BADGE.pending;
     const lt=hrLeaveTypes.find(t=>t.name===lvType(lv));
     const dotColor=lt?.color||'#6b7280';
+
+    // Action-button gating
+    const empUserId = emp.linkedUserId;
+    const isSelf = empUserId && String(empUserId) === String(currentUser?.id||'');
+    // Stage 1: direct-manager (mgr_user_id from API) OR hr_leave_approve OR admin
+    const canActStage1 = (lv.status==='pending') && !(isSelf && !isAdmin) && (
+      isAdmin || hasMgrPerm ||
+      (lv.managerUserId && String(lv.managerUserId)===String(currentUser?.id||''))
+    );
+    // Stage 2: hr_leave_final_approve OR admin
+    const canActStage2 = (lv.status==='manager_approved') && !(isSelf && !isAdmin) && (isAdmin || hasFinalPerm);
+
+    // Awaiting-manager hint
+    const awaitingLine = (lv.status==='pending' && lv.managerName)
+      ? `<div style="font-size:11px;color:var(--text3);margin-top:3px">→ Awaiting ${lv.managerName}</div>`
+      : '';
+
+    // Trail (approved or in-progress past stage 1)
+    const trail = [];
+    if (lv.managerApprovedDate || lv.managerApprovedName) {
+      trail.push(`Manager ✓ ${lv.managerApprovedName||''} ${fmtDate(String(lv.managerApprovedDate||'').slice(0,10))}`.trim());
+    }
+    if (lv.status==='approved' && (lv.processed_date||lv.processedDate)) {
+      trail.push(`Final ✓ ${lv.processedName||lv.processed_by||''} ${fmtDate(String(lv.processed_date||lv.processedDate||'').slice(0,10))}`.trim());
+    } else if (lv.status==='rejected' && (lv.processed_date||lv.processedDate)) {
+      trail.push(`Rejected ✕ ${lv.processedName||lv.processed_by||''} ${fmtDate(String(lv.processed_date||lv.processedDate||'').slice(0,10))}`.trim());
+    }
+    const trailLine = trail.length ? `<div style="font-size:11px;color:var(--text3);margin-top:3px">${trail.join(' · ')}</div>` : '';
+
     return`<div class="card" style="margin-bottom:10px">
       <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 18px">
         <div style="width:10px;height:10px;border-radius:50%;background:${dotColor};flex-shrink:0;margin-top:5px"></div>
         <div style="flex:1">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <span style="font-size:14px;font-weight:600;color:var(--text)">${emp.name}</span>
-            <span class="badge ${sc}" style="font-size:11px">${(lv.status||'pending').charAt(0).toUpperCase()+(lv.status||'pending').slice(1)}</span>
+            <span class="badge ${sb.cls}" style="font-size:11px">${sb.label}</span>
             <span class="badge" style="background:${dotColor}22;color:${dotColor};border:1px solid ${dotColor}44;font-size:11px">${lvType(lv)||'—'}</span>
           </div>
           <div style="font-size:12.5px;color:var(--text2);margin-top:4px">${fmtDate(lvFrom(lv))} → ${fmtDate(lvTo(lv))} · <strong>${lv.days||0}</strong> day${(lv.days||0)!==1?'s':''}</div>
           ${lv.reason?`<div style="font-size:12px;color:var(--text3);margin-top:3px">${lv.reason}</div>`:''}
-          ${lv.processed_date||lv.processedDate?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${lv.status==='approved'?'Approved':'Rejected'} on ${fmtDate(String(lv.processed_date||lv.processedDate||'').slice(0,10))}</div>`:''}
+          ${awaitingLine}
+          ${trailLine}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
-          ${lv.status==='pending'?`
-            <button class="btn btn-green btn-xs leave-approve-btn" onclick="guardAction('hr_leave_approve',()=>updateLeaveStatus('${lv.id}','approved'))">✓ Approve</button>
-            <button class="btn btn-red btn-xs leave-approve-btn" onclick="guardAction('hr_leave_approve',()=>updateLeaveStatus('${lv.id}','rejected'))">✕ Reject</button>
+          ${canActStage1?`
+            <button class="btn btn-green btn-xs" onclick="updateLeaveStatus('${lv.id}','approved')" title="Advances to Stage 2 (or fully approves if you also hold Final Approve)">✓ Approve (Mgr)</button>
+            <button class="btn btn-red btn-xs" onclick="updateLeaveStatus('${lv.id}','rejected')">✕ Reject</button>
+          `:''}
+          ${canActStage2?`
+            <button class="btn btn-green btn-xs" onclick="updateLeaveStatus('${lv.id}','approved')" title="Final approval — request becomes Approved">✓ Final Approve</button>
+            <button class="btn btn-red btn-xs" onclick="updateLeaveStatus('${lv.id}','rejected')">✕ Reject</button>
           `:''}
           <button class="btn btn-red btn-xs" onclick="deleteLeave('${lv.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
         </div>
@@ -13361,7 +13490,8 @@ const PERM_TREE = [
     { label:'Loans', key:'hr_loans', actions:['view','edit'] },
     { label:'Pension', key:'hr_pension', actions:['view','edit'] },
     { label:'Leave', key:'hr_leave', actions:['view','edit'] },
-    { label:'Leave Approve / Reject', key:'hr_leave_approve', actions:['edit'] },
+    { label:'Leave Approve / Reject (Stage 1 — Manager)', key:'hr_leave_approve', actions:['edit'] },
+    { label:'Leave Final Approve (Stage 2 — GM/COO)', key:'hr_leave_final_approve', actions:['edit'] },
     { label:'Leave Types', key:'hr_leave_types', actions:['view','edit'] },
     { label:'Staff Letters', key:'hr_letters', actions:['view','edit'] },
     { label:'HR Settings', key:'hr_settings_edit', actions:['edit'] },

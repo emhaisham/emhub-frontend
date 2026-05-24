@@ -388,11 +388,13 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .pay-card.expanded .pay-hdr{border-bottom:1px solid var(--border)}
 .pay-body{display:none;padding:14px 18px}
 .pay-card.expanded .pay-body{display:block}
-.pay-group-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:7px;margin-bottom:8px}
+.pay-group-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:7px;margin-bottom:8px;gap:12px}
+.pay-group-row > div:first-child{min-width:0;flex:1 1 auto}
 .pg-name{font-size:13px;font-weight:600;color:var(--text)}
 .pg-detail{font-size:12px;color:var(--text3);margin-top:2px}
-.pg-right{display:flex;align-items:center;gap:12px}
-.pg-amount{font-size:14px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
+.pg-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.pg-amount{font-size:14px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pg-paid-info{font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;text-align:right}
 
 /* ══ REPORTS BARS ═════════════════════════════════ */
 .reports-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
@@ -2348,6 +2350,27 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
   </div>
 </div>
 
+<!-- ══ MARK PAID MODAL ════════════════════════════════ -->
+<div class="modal-backdrop" id="paidModal">
+  <div class="modal modal-sm">
+    <div class="modal-hdr">
+      <div class="modal-title" id="paidTitle">Mark Paid</div>
+      <button class="btn-close" onclick="closePaidModal()">✕</button>
+    </div>
+    <div style="padding:24px">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px" id="paidSub"></div>
+      <div class="field" style="margin-bottom:12px"><label class="field-label">Payment Date</label>
+        <input type="date" id="paidDateIn"></div>
+      <div class="field" style="margin-bottom:18px"><label class="field-label">Paid By *</label>
+        <input type="text" id="paidByIn" placeholder="e.g. John from Accounts"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="closePaidModal()">Cancel</button>
+        <button class="btn btn-green btn-sm" id="paidOkBtn">Mark Paid</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ EDIT EVENT MODAL ═══════════════════════════════ -->
 <div class="modal-backdrop" id="editEventModal">
   <div class="modal" style="max-width:960px">
@@ -3144,18 +3167,27 @@ function isEventPaid(eid){
   const ev=src.find(e=>String(e.id)===String(eid));if(!ev||!ev.groups?.length)return false;
   return ev.groups.every(g=>payments[eid]?.groups?.[g.id]);
 }
-function isGroupPaid(eid,gid){return!!(payments[eid]?.groups[gid])}
+// A group's payment slot can be:
+//   true                                  → legacy "paid" with no details
+//   false / undefined                     → unpaid
+//   {paid:true, paidAt:'YYYY-MM-DD', paidBy:'…'}  → paid with details
+function isGroupPaid(eid,gid){
+  const v=payments[eid]?.groups?.[gid];
+  return v===true || !!(v&&v.paid);
+}
+function getGroupPayment(eid,gid){
+  const v=payments[eid]?.groups?.[gid];
+  return (v&&typeof v==='object') ? v : null;
+}
 function toggleGroupPaid(eid,gid){
   const currently=isGroupPaid(eid,gid);
   if(!currently){
-    // Marking as paid — ask confirmation
-    openConfirm('Mark this group as paid?','This will record the payment for this group.','Mark Paid',()=>{
+    openPaidDialog('Mark group as paid','Record who paid and when.',(p)=>{
       if(!payments[eid])payments[eid]={groups:{}};
-      payments[eid].groups[gid]=true;
+      payments[eid].groups[gid]={paid:true,paidAt:p.paidAt,paidBy:p.paidBy};
       saveAll();renderAll();toast('Group marked as paid ✓');
     });
   }else{
-    // Unmarking — also confirm
     openConfirm('Remove paid status?','This will mark the group as unpaid again.','Confirm',()=>{
       if(!payments[eid])payments[eid]={groups:{}};
       payments[eid].groups[gid]=false;
@@ -3165,13 +3197,19 @@ function toggleGroupPaid(eid,gid){
 }
 function markEventPaid(eid,paid){
   const ev=events.find(e=>String(e.id)===String(eid));if(!ev)return;
-  const msg=paid?'Mark all groups in this event as paid?':'Mark all groups as unpaid?';
-  const sub=paid?'This will record payment for the entire event.':'This will reset payment status for all groups.';
-  openConfirm(msg,sub,paid?'Mark All Paid':'Mark All Unpaid',()=>{
-    if(!payments[eid])payments[eid]={groups:{}};
-    (ev.groups||[]).forEach(g=>{if(!payments[eid])payments[eid]={groups:{}};payments[eid].groups[g.id]=paid});
-    saveAll();renderAll();toast(paid?'Event marked as paid ✓':'Event marked as unpaid');
-  });
+  if(paid){
+    openPaidDialog('Mark all groups as paid','One payment record will be applied to every group in this event.',(p)=>{
+      if(!payments[eid])payments[eid]={groups:{}};
+      (ev.groups||[]).forEach(g=>{payments[eid].groups[g.id]={paid:true,paidAt:p.paidAt,paidBy:p.paidBy}});
+      saveAll();renderAll();toast('Event marked as paid ✓');
+    });
+  }else{
+    openConfirm('Mark all groups as unpaid?','This will reset payment status for all groups.','Mark All Unpaid',()=>{
+      if(!payments[eid])payments[eid]={groups:{}};
+      (ev.groups||[]).forEach(g=>{payments[eid].groups[g.id]=false});
+      saveAll();renderAll();toast('Event marked as unpaid');
+    });
+  }
 }
 
 // ══ SAVE / EXPORT ════════════════════════════════════
@@ -3559,11 +3597,16 @@ function renderPayments(){
       const totA=calcEvent(ev);const evPaid=isEventPaid(ev.id);const isExp=payExpanded.has(ev.id);
       const gRows=(ev.groups||[]).map((g,gi)=>{
         const gPaid=isGroupPaid(ev.id,g.id);const gAmt=calcGroup(g);
+        const gPay=getGroupPayment(ev.id,g.id);
+        const paidInfo=gPaid&&gPay?`<div class="pg-paid-info">Paid ${fmtDate(gPay.paidAt)} · ${gPay.paidBy||''}</div>`:'';
         const daysSummary=g.days.map(d=>`${d.pax} pax · ${fmtDate(d.startDate)} ${fmtTime(d.startTime)}`).join(', ');
         return`<div class="pay-group-row">
           <div><div class="pg-name">Group ${gi+1}${g.label?' · '+g.label:''}</div><div class="pg-detail">${daysSummary}</div></div>
           <div class="pg-right">
-            <div class="pg-amount">${fmt(gAmt)}</div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end">
+              <div class="pg-amount">${fmt(gAmt)}</div>
+              ${paidInfo}
+            </div>
             <span class="badge ${gPaid?'badge-green':'badge-red'}" style="font-size:11px">${gPaid?'Paid':'Unpaid'}</span>
             <button class="btn ${gPaid?'btn-red':'btn-green'} btn-xs" onclick="toggleGroupPaid('${ev.id}','${g.id}')">${gPaid?'Unmark':'Mark Paid'}</button>
           </div>
@@ -3601,10 +3644,14 @@ function renderPayments(){
         const payout=_lcStaffPayout(s);
         const days=_lcStaffDays(s);
         const cur=s.currency||'MVR';
+        const paidInfo=sPaid&&(s.paidAt||s.paidBy)?`<div class="pg-paid-info">Paid${s.paidAt?' '+fmtDate(s.paidAt):''}${s.paidBy?' · '+s.paidBy:''}</div>`:'';
         return `<div class="pay-group-row">
           <div><div class="pg-name">${s.empName||'(unknown)'} <span style="font-size:10px;background:var(--surface);color:var(--text3);border:1px solid var(--border);border-radius:6px;padding:1px 5px;margin-left:4px;font-weight:600">${cur}</span></div><div class="pg-detail">${days} day${days!==1?'s':''} · setup ${s.setupDays||0}×${fmtAmt(s.setupRate||0,cur)} · event ${s.eventDays||0}×${fmtAmt(s.eventRate||0,cur)}${(parseFloat(s.adjustment)||0)!==0?' · adj '+((parseFloat(s.adjustment)||0)>0?'+':'')+fmtAmt(parseFloat(s.adjustment)||0,cur):''}</div></div>
           <div class="pg-right">
-            <div class="pg-amount">${fmtAmt(payout,cur)}</div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end">
+              <div class="pg-amount">${fmtAmt(payout,cur)}</div>
+              ${paidInfo}
+            </div>
             <span class="badge ${sPaid?'badge-green':'badge-red'}" style="font-size:11px">${sPaid?'Paid':'Unpaid'}</span>
             <button class="btn ${sPaid?'btn-red':'btn-green'} btn-xs" onclick="toggleLocalCrewStaffPaid('${ev.id}',${i})">${sPaid?'Unmark':'Mark Paid'}</button>
           </div>
@@ -3857,6 +3904,33 @@ function openConfirm(title,sub,okLabel,cb){
 function closeConfirm(){document.getElementById('confirmModal').classList.remove('open');_confirmCallback=null}
 document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('confirmOkBtn').onclick=()=>{if(_confirmCallback)_confirmCallback();closeConfirm()};
+});
+
+// ══ MARK PAID DIALOG ═════════════════════════════════
+// Collects a Payment Date + Paid By (text) before recording payment.
+// Used by both Labor (groups) and Local Crew (per-staff or bulk).
+let _paidCallback=null;
+function openPaidDialog(title,sub,cb,defaults){
+  document.getElementById('paidTitle').textContent=title;
+  document.getElementById('paidSub').innerHTML=sub||'';
+  const di=document.getElementById('paidDateIn');
+  const bi=document.getElementById('paidByIn');
+  di.value=(defaults&&defaults.paidAt)||new Date().toISOString().slice(0,10);
+  bi.value=(defaults&&defaults.paidBy)||(currentUser?.name||currentUser?.username||'');
+  _paidCallback=cb;
+  document.getElementById('paidModal').classList.add('open');
+  setTimeout(()=>bi.focus(),50);
+}
+function closePaidModal(){document.getElementById('paidModal').classList.remove('open');_paidCallback=null}
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('paidOkBtn').onclick=()=>{
+    const paidAt=document.getElementById('paidDateIn').value||new Date().toISOString().slice(0,10);
+    const paidBy=document.getElementById('paidByIn').value.trim();
+    if(!paidBy){toast('Enter who paid');return;}
+    const cb=_paidCallback;
+    closePaidModal();
+    if(cb) cb({paidAt,paidBy});
+  };
 });
 
 // ══ EDIT EVENT ════════════════════════════════════════
@@ -7475,26 +7549,56 @@ async function toggleLocalCrewStaffPaid(eid, idx){
   const ev=localCrewEvents.find(e=>String(e.id)===String(eid));
   if(!ev||!ev.staff||!ev.staff[idx]) return;
   const wasPaid=!!ev.staff[idx].paid;
-  ev.staff[idx].paid=!wasPaid;
-  ev.staff[idx].paidAt=ev.staff[idx].paid?new Date().toISOString():null;
-  const res=await api('PUT','/crewpay/local-crew/'+eid,{name:ev.name,date:ev.date,staff:ev.staff});
-  if(!res){ ev.staff[idx].paid=wasPaid; return toast('Failed to update'); }
-  // Re-normalize date from server response
-  if(res.date) ev.date=normalizeDate(res.date);
-  renderPayments();
-  toast(ev.staff[idx].paid?'Marked paid ✓':'Marked unpaid');
+  if(!wasPaid){
+    openPaidDialog('Mark staff as paid','Record who paid and when.',async (p)=>{
+      const backup={paid:ev.staff[idx].paid,paidAt:ev.staff[idx].paidAt,paidBy:ev.staff[idx].paidBy};
+      ev.staff[idx].paid=true;
+      ev.staff[idx].paidAt=p.paidAt;
+      ev.staff[idx].paidBy=p.paidBy;
+      const res=await api('PUT','/crewpay/local-crew/'+eid,{name:ev.name,date:ev.date,staff:ev.staff});
+      if(!res){ ev.staff[idx].paid=backup.paid; ev.staff[idx].paidAt=backup.paidAt; ev.staff[idx].paidBy=backup.paidBy; return toast('Failed to update'); }
+      if(res.date) ev.date=normalizeDate(res.date);
+      renderPayments();
+      toast('Marked paid ✓');
+    });
+  }else{
+    openConfirm('Remove paid status?','This will mark the staff member as unpaid.','Confirm',async ()=>{
+      const backup={paid:ev.staff[idx].paid,paidAt:ev.staff[idx].paidAt,paidBy:ev.staff[idx].paidBy};
+      ev.staff[idx].paid=false;
+      ev.staff[idx].paidAt=null;
+      ev.staff[idx].paidBy=null;
+      const res=await api('PUT','/crewpay/local-crew/'+eid,{name:ev.name,date:ev.date,staff:ev.staff});
+      if(!res){ ev.staff[idx].paid=backup.paid; ev.staff[idx].paidAt=backup.paidAt; ev.staff[idx].paidBy=backup.paidBy; return toast('Failed to update'); }
+      if(res.date) ev.date=normalizeDate(res.date);
+      renderPayments();
+      toast('Marked unpaid');
+    });
+  }
 }
 async function markLocalCrewAllPaid(eid, paid){
   const ev=localCrewEvents.find(e=>String(e.id)===String(eid));
   if(!ev||!ev.staff||!ev.staff.length) return;
-  const now=new Date().toISOString();
-  const backup=ev.staff.map(s=>({paid:s.paid,paidAt:s.paidAt}));
-  ev.staff.forEach(s=>{ s.paid=paid; s.paidAt=paid?now:null; });
-  const res=await api('PUT','/crewpay/local-crew/'+eid,{name:ev.name,date:ev.date,staff:ev.staff});
-  if(!res){ ev.staff.forEach((s,i)=>{ s.paid=backup[i].paid; s.paidAt=backup[i].paidAt; }); return toast('Failed to update'); }
-  if(res.date) ev.date=normalizeDate(res.date);
-  renderPayments();
-  toast(paid?'All marked paid ✓':'All marked unpaid');
+  if(paid){
+    openPaidDialog('Mark all staff as paid','One payment record will be applied to every staff member.',async (p)=>{
+      const backup=ev.staff.map(s=>({paid:s.paid,paidAt:s.paidAt,paidBy:s.paidBy}));
+      ev.staff.forEach(s=>{ s.paid=true; s.paidAt=p.paidAt; s.paidBy=p.paidBy; });
+      const res=await api('PUT','/crewpay/local-crew/'+eid,{name:ev.name,date:ev.date,staff:ev.staff});
+      if(!res){ ev.staff.forEach((s,i)=>{ s.paid=backup[i].paid; s.paidAt=backup[i].paidAt; s.paidBy=backup[i].paidBy; }); return toast('Failed to update'); }
+      if(res.date) ev.date=normalizeDate(res.date);
+      renderPayments();
+      toast('All marked paid ✓');
+    });
+  }else{
+    openConfirm('Mark all as unpaid?','This will reset payment status for every staff member.','Mark All Unpaid',async ()=>{
+      const backup=ev.staff.map(s=>({paid:s.paid,paidAt:s.paidAt,paidBy:s.paidBy}));
+      ev.staff.forEach(s=>{ s.paid=false; s.paidAt=null; s.paidBy=null; });
+      const res=await api('PUT','/crewpay/local-crew/'+eid,{name:ev.name,date:ev.date,staff:ev.staff});
+      if(!res){ ev.staff.forEach((s,i)=>{ s.paid=backup[i].paid; s.paidAt=backup[i].paidAt; s.paidBy=backup[i].paidBy; }); return toast('Failed to update'); }
+      if(res.date) ev.date=normalizeDate(res.date);
+      renderPayments();
+      toast('All marked unpaid');
+    });
+  }
 }
 
 // ── Local Crew PDF / JPEG export ──────────────────────────

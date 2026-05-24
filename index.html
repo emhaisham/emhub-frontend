@@ -1368,6 +1368,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="nav-item" onclick="hrNav('probation-contracts')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>Probation &amp; Contracts</div>
               <div class="nav-item" onclick="hrNav('org-chart')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="9" y="15" width="6" height="6" rx="1"/><path d="M6 9v3h12V9M12 12v3"/></svg></span>Org Chart</div>
               <div class="nav-lbl">Payroll</div>
+              <div class="nav-item" onclick="hrNav('salary-revisions')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/><path d="M7 7l10 10M17 7L7 17"/></svg></span>Salary Revisions</div>
               <div class="nav-item" onclick="hrNav('payroll')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Monthly Payroll</div>
               <div class="nav-item" onclick="hrNav('loans')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M8 10v11M12 10v11M16 10v11M20 10v11"/></svg></span>Loans</div>
               <div class="nav-item" onclick="hrNav('pension')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v1a3 3 0 006 0V7m0 1a3 3 0 006 0V7m0 1a3 3 0 006 0V7L12 2 3 7z"/></svg></span>Pension</div>
@@ -1660,6 +1661,21 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 </select>
               </div>
               <div id="allStaffAssetsList"></div>
+            </div>
+
+            <!-- ── SALARY REVISIONS ── -->
+            <div class="page" id="hr-page-salary-revisions">
+              <div class="page-hdr">
+                <div class="page-title">Salary Revisions</div>
+                <div class="page-sub">Propose, review, and approve salary changes. Approved revisions auto-apply on their effective date.</div>
+              </div>
+              <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
+                <button class="staff-tab active" id="srvTab-pending" onclick="srvSetTab('pending')">⏳ Pending <span class="staff-tab-count" id="srvCount-pending"></span></button>
+                <button class="staff-tab" id="srvTab-approved" onclick="srvSetTab('approved')">✓ Approved <span class="staff-tab-count" id="srvCount-approved"></span></button>
+                <button class="staff-tab" id="srvTab-applied"  onclick="srvSetTab('applied')">💰 Applied <span class="staff-tab-count" id="srvCount-applied"></span></button>
+                <button class="staff-tab" id="srvTab-rejected" onclick="srvSetTab('rejected')">✕ Rejected <span class="staff-tab-count" id="srvCount-rejected"></span></button>
+              </div>
+              <div id="srvList"></div>
             </div>
 
             <!-- ── ORG CHART ── -->
@@ -2420,6 +2436,40 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
   </div>
 </div>
 
+<!-- ══ PROPOSE SALARY REVISION MODAL ═════════════════ -->
+<div class="modal-backdrop" id="srvModal">
+  <div class="modal modal-sm">
+    <div class="modal-hdr">
+      <div class="modal-title">Propose Salary Revision</div>
+      <button class="btn-close" onclick="closeSrvModal()">✕</button>
+    </div>
+    <div style="padding:24px">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px" id="srvModalSub"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="field"><label class="field-label">Revision Type *</label>
+          <select id="srvType">
+            <option value="increment">Increment</option>
+            <option value="promotion">Promotion</option>
+            <option value="demotion">Demotion</option>
+            <option value="correction">Correction</option>
+            <option value="allowance_change">Allowance Change</option>
+          </select></div>
+        <div class="field"><label class="field-label">Effective Date *</label><input type="date" id="srvEffective"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 120px;gap:12px;margin-bottom:12px">
+        <div class="field"><label class="field-label">New Basic Salary *</label><input type="number" id="srvNewBasic" placeholder="e.g. 12000"></div>
+        <div class="field"><label class="field-label">Currency</label>
+          <select id="srvCurrency"><option value="MVR">MVR</option><option value="USD">USD</option></select></div>
+      </div>
+      <div class="field" style="margin-bottom:14px"><label class="field-label">Reason / Notes</label><textarea id="srvReason" rows="3" placeholder="e.g. Annual increment, promotion to Senior Tech"></textarea></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:12px;border-top:1px solid var(--border)">
+        <button class="btn btn-ghost btn-sm" onclick="closeSrvModal()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="submitProposeRevision()">Propose</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ PROBATION / CONTRACT ACTION MODAL ═════════════ -->
 <div class="modal-backdrop" id="pcModal">
   <div class="modal modal-sm">
@@ -2923,7 +2973,7 @@ function applyPerms(){
   // ── HR SIDEBAR nav items (by position) ───────────────
   const hrNavItems=document.querySelectorAll('#mod-hr .nav-wrap .nav-item');
   // positions: 0=All Staff, 1=Add Emp, 2=Disciplinary, 3=Staff Assets, 4=Payroll, 5=Loans, 6=Pension, 7=Bonus, 8=Leave, 9=Letters
-  const hrMap=['hr_view_all','hr_add_emp','hr_disc','hr_assets','hr_view_all','hr_view_all','hr_view_all','hr_payroll','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
+  const hrMap=['hr_view_all','hr_add_emp','hr_disc','hr_assets','hr_view_all','hr_view_all','hr_view_all','hr_view_all','hr_payroll','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
   hrMap.forEach((k,i)=>{
     if(!hrNavItems[i]) return;
     // All Staff and Bonus both gate on hr_view_all OR hr_view_own
@@ -4253,6 +4303,7 @@ function hrNav(page, extra){
       'expiring-docs':'hr_view_all',
       'probation-contracts':'hr_view_all',
       'org-chart':'hr_view_all',
+      'salary-revisions':'hr_view_all',
     };
     const permKey=pagePermMap[page];
     const role=currentUser.roleId?appRoles.find(r=>String(r.id)===String(currentUser.roleId)):null;
@@ -4287,7 +4338,7 @@ function hrNav(page, extra){
   const pageEl = document.getElementById('hr-page-'+page);
   if(pageEl) pageEl.classList.add('active');
   const items = document.querySelectorAll('#mod-hr .nav-item');
-  const map = {employees:0,'add-employee':1,disciplinary:2,'staff-assets':3,'expiring-docs':4,'probation-contracts':5,'org-chart':6,payroll:7,loans:8,pension:9,bonus:10,'dept-leave':11,leave:12,letters:13};
+  const map = {employees:0,'add-employee':1,disciplinary:2,'staff-assets':3,'expiring-docs':4,'probation-contracts':5,'org-chart':6,'salary-revisions':7,payroll:8,loans:9,pension:10,bonus:11,'dept-leave':12,leave:13,letters:14};
   if(items[map[page]]) items[map[page]].classList.add('active');
   hrActivePage = page;
   if(page==='employees')     { populateHRFilters(); renderEmployees(); }
@@ -4318,6 +4369,7 @@ function hrNav(page, extra){
   if(page==='expiring-docs') { renderExpiringDocs(extra); }
   if(page==='probation-contracts') { renderProbationContracts(extra); }
   if(page==='org-chart')           { renderOrgChart(); }
+  if(page==='salary-revisions')    { renderSalaryRevisions(); }
   updateHRSidebar();
 }
 
@@ -4887,6 +4939,171 @@ async function submitMarkRenewed(){
   toast(_renewCtx?.label+' renewed ✓');
 }
 
+// ══ SALARY REVISIONS ══════════════════════════════════
+let _srvTab = 'pending';
+let _srvCache = [];
+function srvSetTab(t){
+  _srvTab = t;
+  document.querySelectorAll('#hr-page-salary-revisions .staff-tab').forEach(b=>b.classList.remove('active'));
+  const btn = document.getElementById('srvTab-'+t); if(btn) btn.classList.add('active');
+  _renderSrvList();
+}
+async function renderSalaryRevisions(){
+  const data = await api('GET','/hr/salary-revisions');
+  if(!Array.isArray(data)){ document.getElementById('srvList').innerHTML='<div class="empty"><div class="empty-title">Failed to load</div></div>'; return; }
+  _srvCache = data;
+  ['pending','approved','applied','rejected'].forEach(s=>{
+    const el = document.getElementById('srvCount-'+s);
+    if(el) el.textContent = String(data.filter(r=>r.status===s).length);
+  });
+  _renderSrvList();
+}
+function _srvTypeBadge(type){
+  const colours = {
+    hire: 'var(--text3)',
+    increment: 'var(--green)',
+    promotion: 'var(--accent)',
+    demotion: 'var(--amber)',
+    correction: 'var(--text3)',
+    allowance_change: 'var(--text3)'
+  };
+  const c = colours[type] || 'var(--text3)';
+  return `<span class="badge" style="font-size:10px;background:${c}22;color:${c};border:1px solid ${c}44">${(type||'').replace(/_/g,' ')}</span>`;
+}
+function _diffSummary(r){
+  const before = r.oldBasic == null ? '—' : `${(r.oldBasic||0).toLocaleString()} ${r.currency||''}`;
+  const after  = `${(r.newBasic||0).toLocaleString()} ${r.currency||''}`;
+  const delta  = (r.oldBasic != null && r.newBasic != null) ? (r.newBasic - r.oldBasic) : null;
+  const pct    = (delta != null && r.oldBasic) ? ((delta / r.oldBasic) * 100).toFixed(1) : null;
+  const dl     = delta == null ? '' : `<span style="color:${delta>=0?'var(--green)':'var(--red)'};font-weight:600;margin-left:6px">${delta>=0?'+':''}${delta.toLocaleString()}${pct?' ('+(delta>=0?'+':'')+pct+'%)':''}</span>`;
+  return `${before} → ${after}${dl}`;
+}
+function _renderSrvList(){
+  const list = document.getElementById('srvList'); if(!list) return;
+  const rows = _srvCache.filter(r=>r.status===_srvTab);
+  if(!rows.length){ list.innerHTML='<div class="empty"><div class="empty-icon">💰</div><div class="empty-title">Nothing here</div></div>'; return; }
+  const isAdmin = currentUser?.role === 'admin';
+  const role = currentUser?.roleId ? appRoles.find(r=>String(r.id)===String(currentUser.roleId)) : null;
+  const myPerms = role?.perms || currentUser?.rolePerms || {};
+  const canApprove = isAdmin || myPerms.hr_salary_approve===true || myPerms.hr_salary_approve_edit===true;
+
+  list.innerHTML = rows.map(r => {
+    const actions = (_srvTab==='pending' && canApprove && (isAdmin || String(r.proposedBy||'') !== String(currentUser?.id||'')))
+      ? `<button class="btn btn-green btn-xs" onclick="srvActStatus('${r.id}','approved')">✓ Approve</button>
+         <button class="btn btn-red btn-xs"   onclick="srvActStatus('${r.id}','rejected')">✕ Reject</button>`
+      : '';
+    const applyBtn = (_srvTab==='approved' && canApprove)
+      ? `<button class="btn btn-primary btn-xs" onclick="srvActApply('${r.id}')">Apply Now</button>`
+      : '';
+    return `<div class="pay-group-row" style="cursor:default">
+      <div>
+        <div class="pg-name">${r.empName||'(unknown)'} ${_srvTypeBadge(r.type)}</div>
+        <div class="pg-detail">effective ${fmtDate(r.effectiveDate)} · ${_diffSummary(r)}</div>
+        ${r.reason?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${r.reason}</div>`:''}
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">
+          ${r.proposedByName?'Proposed by '+r.proposedByName:''}${r.proposedAt?' · '+fmtDate(String(r.proposedAt).slice(0,10)):''}
+          ${r.approvedByName?' · '+(r.status==='rejected'?'Rejected by ':'Approved by ')+r.approvedByName:''}${r.approvedAt?' · '+fmtDate(String(r.approvedAt).slice(0,10)):''}
+          ${r.appliedAt?' · Applied '+fmtDate(String(r.appliedAt).slice(0,10)):''}
+        </div>
+      </div>
+      <div class="pg-right">
+        <button class="btn btn-ghost btn-xs" onclick="hrNav('profile','${r.empId}')">Profile</button>
+        ${actions}
+        ${applyBtn}
+      </div>
+    </div>`;
+  }).join('');
+}
+async function srvActStatus(id, status){
+  const res = await api('PATCH','/hr/salary-revisions/'+id+'/status',{status});
+  if(!res) return;
+  if(status==='approved' && res.status==='applied'){
+    const fresh = await api('GET','/hr/employees');
+    if(Array.isArray(fresh)){ hrEmployees = fresh; markFresh('hrEmployees'); }
+  }
+  toast(`Revision ${status}${res.status==='applied'?' & applied':''} ✓`);
+  renderSalaryRevisions();
+}
+async function srvActApply(id){
+  const res = await api('POST','/hr/salary-revisions/'+id+'/apply',{});
+  if(!res) return;
+  const fresh = await api('GET','/hr/employees');
+  if(Array.isArray(fresh)){ hrEmployees = fresh; markFresh('hrEmployees'); }
+  toast('Revision applied ✓');
+  renderSalaryRevisions();
+}
+
+// Propose Revision modal — used from the profile button.
+let _srvProposeCtx = null;
+function openProposeRevision(empId){
+  const emp = hrEmployees.find(e=>String(e.id)===String(empId)); if(!emp) return;
+  _srvProposeCtx = { empId };
+  const def = new Date(); def.setMonth(def.getMonth()+1); def.setDate(1);
+  document.getElementById('srvModalSub').innerHTML = `<strong>${emp.name}</strong> · current ${(emp.basicSalary||0).toLocaleString()} ${emp.salaryCurrency||'MVR'}`;
+  document.getElementById('srvNewBasic').value = emp.basicSalary || '';
+  document.getElementById('srvCurrency').value = emp.salaryCurrency || 'MVR';
+  document.getElementById('srvEffective').value = def.toISOString().slice(0,10);
+  document.getElementById('srvType').value = 'increment';
+  document.getElementById('srvReason').value = '';
+  document.getElementById('srvModal').classList.add('open');
+}
+function closeSrvModal(){document.getElementById('srvModal').classList.remove('open');_srvProposeCtx=null}
+async function submitProposeRevision(){
+  if(!_srvProposeCtx) return;
+  const payload = {
+    empId: _srvProposeCtx.empId,
+    type: document.getElementById('srvType').value,
+    effectiveDate: document.getElementById('srvEffective').value,
+    newBasic: parseFloat(document.getElementById('srvNewBasic').value)||0,
+    currency: document.getElementById('srvCurrency').value,
+    reason: (document.getElementById('srvReason').value||'').trim()
+  };
+  if(!payload.effectiveDate){ toast('Pick an effective date'); return; }
+  if(!payload.newBasic){ toast('Enter the new basic salary'); return; }
+  const res = await api('POST','/hr/salary-revisions',payload);
+  if(!res) return;
+  closeSrvModal();
+  toast('Revision proposed ✓');
+  // If we're on profile view, refresh the salary tab
+  if(typeof renderSalaryHistoryTab==='function') renderSalaryHistoryTab(_srvProposeCtx?.empId||payload.empId);
+}
+
+// Profile tab — renders salary history for a single employee.
+async function renderSalaryHistoryTab(empId){
+  const body = document.getElementById('salaryHistoryBody'); if(!body) return;
+  body.innerHTML = '<div style="padding:20px;color:var(--text3)">Loading…</div>';
+  const rows = await api('GET','/hr/employees/'+empId+'/salary-history');
+  if(!Array.isArray(rows)){ body.innerHTML='<div class="empty"><div class="empty-title">Failed to load</div></div>'; return; }
+  const isAdmin = currentUser?.role==='admin';
+  const role = currentUser?.roleId ? appRoles.find(r=>String(r.id)===String(currentUser.roleId)) : null;
+  const myPerms = role?.perms || currentUser?.rolePerms || {};
+  const canPropose = isAdmin || myPerms.hr_salary_revise===true || myPerms.hr_salary_revise_edit===true;
+  const proposeBtn = canPropose
+    ? `<button class="btn btn-primary btn-sm" onclick="openProposeRevision('${empId}')">＋ Propose Revision</button>`
+    : '';
+  const list = rows.length ? rows.map(r => `
+    <div style="border-left:3px solid ${r.status==='applied'?'var(--green)':r.status==='approved'?'var(--accent)':r.status==='rejected'?'var(--red)':'var(--amber)'};padding:10px 14px;background:var(--surface);border-radius:6px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-weight:600">${fmtDate(r.effectiveDate)}</span>
+        ${_srvTypeBadge(r.type)}
+        <span class="badge ${r.status==='applied'?'badge-green':r.status==='approved'?'badge-blue':r.status==='rejected'?'badge-red':'badge-amber'}" style="font-size:10px">${r.status}</span>
+      </div>
+      <div style="font-size:13px;margin-top:6px;color:var(--text)">${_diffSummary(r)}</div>
+      ${r.reason?`<div style="font-size:12px;color:var(--text2);margin-top:3px">${r.reason}</div>`:''}
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">
+        ${r.proposedByName?'Proposed by '+r.proposedByName:''}
+        ${r.approvedByName?' · '+(r.status==='rejected'?'Rejected by ':'Approved by ')+r.approvedByName:''}
+        ${r.appliedAt?' · Applied '+fmtDate(String(r.appliedAt).slice(0,10)):''}
+      </div>
+    </div>`).join('') : '<div class="empty"><div class="empty-title">No revisions yet</div><div class="empty-sub">Salary changes will appear here as they happen.</div></div>';
+  body.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text3);letter-spacing:.04em;text-transform:uppercase">Salary Timeline</div>
+      ${proposeBtn}
+    </div>
+    ${list}`;
+}
+
 // ══ ORG CHART ═════════════════════════════════════════
 async function renderOrgChart(){
   const list = document.getElementById('orgChartList'); if(!list) return;
@@ -5306,6 +5523,7 @@ function renderProfile(empId){
       <button class="profile-tab ${profileActiveTab==='info'?'active':''}" onclick="profileActiveTab='info';renderProfile('${emp.id}')">Info</button>
       <button class="profile-tab ${profileActiveTab==='docs'?'active':''}" onclick="profileActiveTab='docs';renderProfile('${emp.id}')">Documents</button>
       <button class="profile-tab ${profileActiveTab==='payroll'?'active':''}" onclick="profileActiveTab='payroll';renderProfile('${emp.id}')">Payroll</button>
+      <button class="profile-tab ${profileActiveTab==='salary-history'?'active':''}" onclick="profileActiveTab='salary-history';renderProfile('${emp.id}')">Salary History</button>
       <button class="profile-tab ${profileActiveTab==='loans'?'active':''}" onclick="profileActiveTab='loans';renderProfile('${emp.id}')">Loans</button>
       <button class="profile-tab ${profileActiveTab==='disciplinary'?'active':''}" onclick="profileActiveTab='disciplinary';renderProfile('${emp.id}')">Disciplinary</button>
       <button class="profile-tab ${profileActiveTab==='assets'?'active':''}" onclick="profileActiveTab='assets';renderProfile('${emp.id}')">Assets</button>
@@ -5373,6 +5591,9 @@ function renderProfile(empId){
       <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Payslips</div>
       ${empPRs.length?empPRs.map(pr=>renderPayslipCard(pr,emp,false)).join(''):'<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="empty-title">No payslips yet</div></div>'}
     </div>
+    <div class="profile-panel ${profileActiveTab==='salary-history'?'active':''}" id="ptab-salary-history">
+      <div id="salaryHistoryBody"></div>
+    </div>
     <div class="profile-panel ${profileActiveTab==='loans'?'active':''}" id="ptab-loans">
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm" onclick="guardAction('hr_loans', ()=>openAddLoan('${emp.id}'))">＋ New Loan</button></div>
       ${empLoans.length?empLoans.map(l=>renderLoanCard(l,emp)).join(''):'<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v1a3 3 0 006 0V7m0 1a3 3 0 006 0V7m0 1a3 3 0 006 0V7L12 2 3 7z"/></svg></div><div class="empty-title">No loans</div></div>'}
@@ -5398,6 +5619,10 @@ function renderProfile(empId){
         <div class="info-item"><div class="info-label">Emergency Phone</div><div class="info-val">${emp.emgPhone||'—'}</div></div>
       </div>
     </div>`;
+  // Lazy-load tabs that need an API call (salary history isn't held in any local cache)
+  if (profileActiveTab === 'salary-history') {
+    setTimeout(()=>renderSalaryHistoryTab(emp.id), 0);
+  }
 }
 
 function renderDocsList(emp){
@@ -13489,6 +13714,8 @@ const PERM_TREE = [
     { label:'Monthly Payroll', key:'hr_payroll', actions:['view','edit'] },
     { label:'Loans', key:'hr_loans', actions:['view','edit'] },
     { label:'Pension', key:'hr_pension', actions:['view','edit'] },
+    { label:'Propose Salary Revision', key:'hr_salary_revise', actions:['edit'] },
+    { label:'Approve Salary Revision', key:'hr_salary_approve', actions:['edit'] },
     { label:'Leave', key:'hr_leave', actions:['view','edit'] },
     { label:'Leave Approve / Reject (Stage 1 — Manager)', key:'hr_leave_approve', actions:['edit'] },
     { label:'Leave Final Approve (Stage 2 — GM/COO)', key:'hr_leave_final_approve', actions:['edit'] },

@@ -1596,32 +1596,54 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 
             <!-- ── LETTERS ── -->
             <div class="page" id="hr-page-letters">
-              <div class="page-hdr"><div class="page-title">Staff Letters</div><div class="page-sub">Generate employment and experience letters</div></div>
+              <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between">
+                <div><div class="page-title">Staff Letters</div><div class="page-sub">Generate employment, experience, NOC, salary certificate, warning, increment, transfer, termination, and bank letters. Supports bulk generation for multiple staff in one print job.</div></div>
+                <button class="btn btn-ghost btn-sm" id="ltBulkToggle" onclick="ltToggleBulk()">📑 Bulk Mode</button>
+              </div>
               <div class="card">
-                <div class="card-hdr"><div class="card-hdr-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div><div class="card-title">Generate Staff Letter</div><div class="card-sub">Select template, fill in details, then click Generate</div></div></div>
+                <div class="card-hdr"><div class="card-hdr-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div><div class="card-title" id="ltCardTitle">Generate Staff Letter</div><div class="card-sub" id="ltCardSub">Select template, fill in details, then click Generate</div></div></div>
                 <div class="card-body">
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
                     <div class="field"><label class="field-label">Letter Template *</label>
                       <select id="ltTemplate" onchange="updateLetterPreview()">
                         <option value="employment">Employment Verification Letter</option>
                         <option value="experience">Experience / Service Letter</option>
+                        <option value="noc">No Objection Certificate (NOC)</option>
+                        <option value="salary_cert">Salary Certificate</option>
+                        <option value="bank_letter">Bank Account Opening Letter</option>
+                        <option value="warning">Warning Letter</option>
+                        <option value="increment">Salary Increment Letter</option>
+                        <option value="transfer">Transfer Letter</option>
+                        <option value="termination">Termination Letter</option>
                       </select></div>
-                    <div class="field"><label class="field-label">Staff Member *</label>
+                    <div class="field" id="ltEmpWrap"><label class="field-label">Staff Member *</label>
                       <select id="ltEmp" onchange="updateLetterPreview()"><option value="">Select staff…</option></select></div>
+                    <div class="field" id="ltBulkWrap" style="display:none"><label class="field-label">Staff Members (multi-select) *</label>
+                      <select id="ltEmpBulk" multiple size="5" style="height:auto"></select>
+                      <div style="font-size:11px;color:var(--text3);margin-top:4px">Ctrl/⌘-click to select multiple. One letter per staff in the print output.</div></div>
                     <div class="field"><label class="field-label">Letter Date</label><input type="date" id="ltDate" oninput="updateLetterPreview()"></div>
                     <div class="field"><label class="field-label">To (Addressee / Organisation) *</label><input type="text" id="ltAddressee" placeholder="e.g. Embassy of India, Malé" oninput="updateLetterPreview()"></div>
                     <div class="field"><label class="field-label">Reference / Subject</label><input type="text" id="ltSubject" placeholder="e.g. Employment Verification" oninput="updateLetterPreview()"></div>
-                    <div class="field"><label class="field-label">Include Salary?</label>
+                    <div class="field" id="ltSalaryWrap"><label class="field-label">Include Salary?</label>
                       <select id="ltSalary" onchange="updateLetterPreview()"><option value="yes">Yes — include salary</option><option value="no">No — omit salary</option></select></div>
                     <div class="field" id="ltLastDayWrap" style="display:none"><label class="field-label">Last Working Day</label><input type="date" id="ltLastDay" oninput="updateLetterPreview()"></div>
-                    <div class="field" id="ltReasonWrap" style="display:none"><label class="field-label">Reason for Leaving</label><input type="text" id="ltReason" placeholder="e.g. Resignation" oninput="updateLetterPreview()"></div>
+                    <div class="field" id="ltReasonWrap" style="display:none"><label class="field-label">Reason</label><input type="text" id="ltReason" placeholder="e.g. Resignation / Personal" oninput="updateLetterPreview()"></div>
+                    <div class="field" id="ltPurposeWrap" style="display:none"><label class="field-label">Purpose (NOC)</label><input type="text" id="ltPurpose" placeholder="e.g. Travel to UAE, opening bank account" oninput="updateLetterPreview()"></div>
+                    <div class="field" id="ltBankNameWrap" style="display:none"><label class="field-label">Bank Name</label><input type="text" id="ltBankName" placeholder="e.g. Bank of Maldives" oninput="updateLetterPreview()"></div>
+                    <div class="field" id="ltWarnLevelWrap" style="display:none"><label class="field-label">Warning Level</label>
+                      <select id="ltWarnLevel" onchange="updateLetterPreview()"><option value="Verbal">Verbal</option><option value="1st Written">1st Written</option><option value="2nd Written">2nd Written</option><option value="Final Written">Final Written</option></select></div>
+                    <div class="field emp-form-full" id="ltIssueWrap" style="display:none"><label class="field-label">Issue / Behaviour Description</label><textarea id="ltIssue" rows="3" placeholder="Describe the conduct or incident…" oninput="updateLetterPreview()"></textarea></div>
+                    <div class="field" id="ltOldSalaryWrap" style="display:none"><label class="field-label">Old Basic Salary</label><input type="number" id="ltOldSalary" placeholder="e.g. 10000" oninput="updateLetterPreview()"></div>
+                    <div class="field" id="ltNewSalaryWrap" style="display:none"><label class="field-label">New Basic Salary</label><input type="number" id="ltNewSalary" placeholder="e.g. 12000" oninput="updateLetterPreview()"></div>
+                    <div class="field" id="ltEffectiveWrap" style="display:none"><label class="field-label">Effective Date</label><input type="date" id="ltEffective" oninput="updateLetterPreview()"></div>
+                    <div class="field" id="ltFromDeptWrap" style="display:none"><label class="field-label">From Department</label><input type="text" id="ltFromDept" placeholder="e.g. Production" oninput="updateLetterPreview()"></div>
+                    <div class="field" id="ltToDeptWrap" style="display:none"><label class="field-label">To Department</label><input type="text" id="ltToDept" placeholder="e.g. Logistics" oninput="updateLetterPreview()"></div>
                   </div>
                   <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:20px">
-                    <button class="btn btn-primary btn-sm" onclick="updateLetterPreview()"> Generate Letter</button>
-                    <button class="btn btn-ghost btn-sm" onclick="guardAction('crewpay_export',saveReportJpeg2)">Save JPEG</button>
+                    <button class="btn btn-primary btn-sm" onclick="updateLetterPreview()" id="ltGenBtn"> Generate Letter</button>
                     <button class="btn btn-ghost btn-sm" onclick="printLetter()">Print / PDF</button>
                   </div>
-                  <div id="letterPreviewWrap" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#e5e7eb;padding:16px">
+                  <div id="letterPreviewWrap" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#e5e7eb;padding:16px;max-height:80vh;overflow-y:auto">
                     <div id="letterPreview" style="padding:18mm 20mm;background:#fff;font-family:'Times New Roman',serif;font-size:12pt;line-height:1.7;min-height:257mm;max-width:210mm;margin:0 auto;color:#1a1a1a;box-shadow:0 2px 8px rgba(0,0,0,.15)">
                       <div style="text-align:center;color:var(--text3);padding:80px 20px;font-family:sans-serif">Select a staff member and click Generate Letter</div>
                     </div>
@@ -1692,9 +1714,12 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 
             <!-- ── SALARY REVISIONS ── -->
             <div class="page" id="hr-page-salary-revisions">
-              <div class="page-hdr">
-                <div class="page-title">Salary Revisions</div>
-                <div class="page-sub">Propose, review, and approve salary changes. Approved revisions auto-apply on their effective date.</div>
+              <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between">
+                <div>
+                  <div class="page-title">Salary Revisions</div>
+                  <div class="page-sub">Propose, review, and approve salary changes. Approved revisions auto-apply on their effective date.</div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="guardAction('hr_salary_revise', ()=>openProposeRevision(null))">＋ Propose Revision</button>
               </div>
               <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
                 <button class="staff-tab active" id="srvTab-pending" onclick="srvSetTab('pending')">⏳ Pending <span class="staff-tab-count" id="srvCount-pending"></span></button>
@@ -2500,6 +2525,10 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
     </div>
     <div style="padding:24px">
       <div style="font-size:13px;color:var(--text2);margin-bottom:16px" id="srvModalSub"></div>
+      <div id="srvEmpPickerWrap" class="field" style="margin-bottom:12px;display:none">
+        <label class="field-label">Employee *</label>
+        <select id="srvEmpPicker" onchange="_srvOnPickerChange()"></select>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
         <div class="field"><label class="field-label">Revision Type *</label>
           <select id="srvType">
@@ -5387,25 +5416,59 @@ async function srvActApply(id){
   renderSalaryRevisions();
 }
 
-// Propose Revision modal — used from the profile button.
+// Propose Revision modal — used from the profile button OR the queue page
+// header. If empId is null, show an inline employee picker.
 let _srvProposeCtx = null;
 function openProposeRevision(empId){
-  const emp = hrEmployees.find(e=>String(e.id)===String(empId)); if(!emp) return;
-  _srvProposeCtx = { empId };
+  _srvProposeCtx = { empId: empId || null };
   const def = new Date(); def.setMonth(def.getMonth()+1); def.setDate(1);
-  document.getElementById('srvModalSub').innerHTML = `<strong>${emp.name}</strong> · current ${(emp.basicSalary||0).toLocaleString()} ${emp.salaryCurrency||'MVR'}`;
-  document.getElementById('srvNewBasic').value = emp.basicSalary || '';
-  document.getElementById('srvCurrency').value = emp.salaryCurrency || 'MVR';
+  const sub = document.getElementById('srvModalSub');
+  const empPickerWrap = document.getElementById('srvEmpPickerWrap');
+  if (empId) {
+    const emp = hrEmployees.find(e=>String(e.id)===String(empId));
+    if (!emp) return;
+    sub.innerHTML = `<strong>${emp.name}</strong> · current ${(emp.basicSalary||0).toLocaleString()} ${emp.salaryCurrency||'MVR'}`;
+    if (empPickerWrap) empPickerWrap.style.display = 'none';
+    document.getElementById('srvNewBasic').value = emp.basicSalary || '';
+    document.getElementById('srvCurrency').value = emp.salaryCurrency || 'MVR';
+  } else {
+    sub.innerHTML = 'Pick the employee to set up the revision for.';
+    if (empPickerWrap) empPickerWrap.style.display = 'block';
+    const sel = document.getElementById('srvEmpPicker');
+    if (sel) {
+      sel.innerHTML = '<option value="">Select…</option>' +
+        hrEmployees
+          .filter(e=>e.status==='active')
+          .sort((a,b)=>(a.name||'').localeCompare(b.name||''))
+          .map(e=>`<option value="${e.id}" data-basic="${e.basicSalary||''}" data-curr="${e.salaryCurrency||'MVR'}">${e.name}${e.designation?' · '+e.designation:''} (${(e.basicSalary||0).toLocaleString()} ${e.salaryCurrency||'MVR'})</option>`).join('');
+      sel.value = '';
+    }
+    document.getElementById('srvNewBasic').value = '';
+    document.getElementById('srvCurrency').value = 'MVR';
+  }
   document.getElementById('srvEffective').value = def.toISOString().slice(0,10);
   document.getElementById('srvType').value = 'increment';
   document.getElementById('srvReason').value = '';
   document.getElementById('srvModal').classList.add('open');
 }
+// When the employee picker changes in the queue-page flow, prefill new-basic
+// with current salary so the user only has to adjust the delta.
+function _srvOnPickerChange(){
+  const sel = document.getElementById('srvEmpPicker');
+  const opt = sel?.selectedOptions[0]; if(!opt) return;
+  const basic = opt.dataset?.basic;
+  const curr  = opt.dataset?.curr;
+  if (basic) document.getElementById('srvNewBasic').value = basic;
+  if (curr)  document.getElementById('srvCurrency').value = curr;
+  document.getElementById('srvModalSub').innerHTML = `<strong>${opt.textContent.split(' (')[0]}</strong> · current ${(parseFloat(basic)||0).toLocaleString()} ${curr||'MVR'}`;
+}
 function closeSrvModal(){document.getElementById('srvModal').classList.remove('open');_srvProposeCtx=null}
 async function submitProposeRevision(){
   if(!_srvProposeCtx) return;
+  const empId = _srvProposeCtx.empId || document.getElementById('srvEmpPicker')?.value;
+  if(!empId){ toast('Pick an employee'); return; }
   const payload = {
-    empId: _srvProposeCtx.empId,
+    empId,
     type: document.getElementById('srvType').value,
     effectiveDate: document.getElementById('srvEffective').value,
     newBasic: parseFloat(document.getElementById('srvNewBasic').value)||0,
@@ -5418,8 +5481,11 @@ async function submitProposeRevision(){
   if(!res) return;
   closeSrvModal();
   toast('Revision proposed ✓');
-  // If we're on profile view, refresh the salary tab
-  if(typeof renderSalaryHistoryTab==='function') renderSalaryHistoryTab(_srvProposeCtx?.empId||payload.empId);
+  // Refresh whichever surface the user came from
+  if (hrActivePage === 'salary-revisions') renderSalaryRevisions();
+  if (typeof renderSalaryHistoryTab === 'function' && profileActiveTab === 'salary-history') {
+    renderSalaryHistoryTab(empId);
+  }
 }
 
 // Profile tab — renders salary history for a single employee.
@@ -6672,10 +6738,13 @@ function recordPensionPayment(){
 }
 
 function printLetter(){
-  const empId=document.getElementById('ltEmp')?.value;
-  if(!empId) return toast('Select a staff member first');
+  // Single mode reads ltEmp; bulk mode reads ltEmpBulk
+  const singleId = document.getElementById('ltEmp')?.value;
+  const bulkIds  = Array.from(document.getElementById('ltEmpBulk')?.selectedOptions||[]).map(o=>o.value);
+  const hasSelection = (singleId && !_ltBulkMode) || (_ltBulkMode && bulkIds.length);
+  if(!hasSelection) return toast(_ltBulkMode ? 'Select one or more staff first' : 'Select a staff member first');
   const content=document.getElementById('letterPreview')?.innerHTML;
-  if(!content||content.includes('Select a staff')||content.includes('Generate Letter')){
+  if(!content||content.includes('Select a staff')||content.includes('No letters to render')){
     updateLetterPreview();
     setTimeout(()=>{
       const c2=document.getElementById('letterPreview')?.innerHTML;
@@ -6688,24 +6757,23 @@ function printLetter(){
 }
 
 function _printLetterContent(content){
-  const frame=document.getElementById('psFrame');
-  const doc=frame.contentWindow.document;
-  doc.open();
-  doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Employment Letter</title>
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Staff Letter</title>
   <style>
     @page { size: A4 portrait; margin: 18mm 20mm; }
     html,body { margin:0; padding:0; width:210mm; font-family:'Times New Roman',serif; font-size:12pt; line-height:1.7; color:#1a1a1a; }
-    body { padding: 0; }
+    body { padding: 0; background: #fff; }
     p { margin: 0 0 8pt 0; }
-    .letter-header { margin-bottom: 18pt; }
-    .letter-footer { margin-top: 24pt; }
-    table { width:100%; border-collapse:collapse; }
+    table { width:auto; border-collapse:collapse; }
+    /* Each letter sits inside .lt-page; remove the on-screen shadow + auto
+       margin so print pages flow cleanly. page-break-before is honoured. */
+    .lt-page { box-shadow:none !important; margin:0 !important; padding:0 !important; min-height:0 !important; max-width:none !important; }
+    .lt-page + .lt-page { page-break-before: always; }
     @media print {
       html,body { width:210mm; }
       * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
   </style>
-  </head><body>${content}</body></html>`);
+  </head><body>${content}</body></html>`;
   _mobilePrint(html);
 }
 
@@ -8087,27 +8155,264 @@ async function renderDeptLeave(){
 // ══════════════════════════════════════════════════════
 // UPDATED LETTER FUNCTION (2 templates)
 // ══════════════════════════════════════════════════════
+// ── Letter template config ──────────────────────────────────────────────────
+// Each template declares which optional fields it uses + a default subject.
+// `_ltFieldVisibility` reads this and toggles wrappers, so we never have a
+// half-baked field shown in the wrong template.
+const LT_TEMPLATES = {
+  employment: { subject:'Employment Verification', fields:['salary'] },
+  experience: { subject:'Experience / Service Letter', fields:['salary','lastDay','reason'] },
+  noc:        { subject:'No Objection Certificate', fields:['purpose'] },
+  salary_cert:{ subject:'Salary Certificate', fields:[] }, // salary always shown
+  bank_letter:{ subject:'Bank Account Opening Request', fields:['bankName','salary'] },
+  warning:    { subject:'Warning Letter', fields:['warnLevel','issue'] },
+  increment:  { subject:'Salary Increment Notification', fields:['oldSalary','newSalary','effective','reason'] },
+  transfer:   { subject:'Departmental Transfer', fields:['fromDept','toDept','effective','reason'] },
+  termination:{ subject:'Termination of Employment', fields:['lastDay','reason'] }
+};
+
+function _ltFieldVisibility(){
+  const tpl = document.getElementById('ltTemplate')?.value || 'employment';
+  const cfg = LT_TEMPLATES[tpl] || LT_TEMPLATES.employment;
+  const fields = cfg.fields || [];
+  const map = {
+    salary:   'ltSalaryWrap',
+    lastDay:  'ltLastDayWrap',
+    reason:   'ltReasonWrap',
+    purpose:  'ltPurposeWrap',
+    bankName: 'ltBankNameWrap',
+    warnLevel:'ltWarnLevelWrap',
+    issue:    'ltIssueWrap',
+    oldSalary:'ltOldSalaryWrap',
+    newSalary:'ltNewSalaryWrap',
+    effective:'ltEffectiveWrap',
+    fromDept: 'ltFromDeptWrap',
+    toDept:   'ltToDeptWrap'
+  };
+  Object.entries(map).forEach(([k,id])=>{
+    const el = document.getElementById(id);
+    if (el) el.style.display = fields.includes(k) ? 'block' : 'none';
+  });
+}
+
+// Bulk mode — pick multiple staff and render every letter back-to-back.
+let _ltBulkMode = false;
+function ltToggleBulk(){
+  _ltBulkMode = !_ltBulkMode;
+  document.getElementById('ltBulkToggle').textContent = _ltBulkMode ? '✕ Exit Bulk Mode' : '📑 Bulk Mode';
+  document.getElementById('ltEmpWrap').style.display     = _ltBulkMode ? 'none' : 'block';
+  document.getElementById('ltBulkWrap').style.display    = _ltBulkMode ? 'block' : 'none';
+  document.getElementById('ltCardTitle').textContent     = _ltBulkMode ? 'Bulk Generate Letters' : 'Generate Staff Letter';
+  document.getElementById('ltCardSub').textContent       = _ltBulkMode ? 'Pick multiple staff. One letter per staff member, all in one print job.' : 'Select template, fill in details, then click Generate';
+  document.getElementById('ltGenBtn').textContent        = _ltBulkMode ? ' Generate All' : ' Generate Letter';
+  // Re-populate bulk picker (cheap, ensures freshness)
+  if (_ltBulkMode) {
+    const sel = document.getElementById('ltEmpBulk');
+    if (sel) sel.innerHTML = hrEmployees
+      .filter(e=>e.status==='active')
+      .sort((a,b)=>(a.name||'').localeCompare(b.name||''))
+      .map(e=>`<option value="${e.id}">${e.name}${e.designation?' · '+e.designation:''}</option>`).join('');
+  }
+  updateLetterPreview();
+}
+
 function updateLetterPreview(){
-  const empId=document.getElementById('ltEmp')?.value;
+  _ltFieldVisibility();
   const template=document.getElementById('ltTemplate')?.value||'employment';
+  const cfg = LT_TEMPLATES[template] || LT_TEMPLATES.employment;
   const addressee=document.getElementById('ltAddressee')?.value.trim()||'[Addressee / Organisation]';
-  const subject=document.getElementById('ltSubject')?.value.trim()||(template==='employment'?'Employment Verification':'Experience Letter');
+  const subject=document.getElementById('ltSubject')?.value.trim()||cfg.subject;
   const dateVal=document.getElementById('ltDate')?.value;
-  const showSalary=document.getElementById('ltSalary')?.value==='yes';
-  const lastDay=document.getElementById('ltLastDay')?.value;
-  const reason=document.getElementById('ltReason')?.value.trim();
   const letterDate=dateVal?new Date(dateVal).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
   const el=document.getElementById('letterPreview');if(!el)return;
 
-  // Show/hide experience-only fields
-  const lastDayWrap=document.getElementById('ltLastDayWrap');
-  const reasonWrap=document.getElementById('ltReasonWrap');
-  if(lastDayWrap) lastDayWrap.style.display=template==='experience'?'block':'none';
-  if(reasonWrap)  reasonWrap.style.display=template==='experience'?'block':'none';
+  // Collect employee IDs — single or bulk
+  let empIds = [];
+  if (_ltBulkMode) {
+    empIds = Array.from(document.getElementById('ltEmpBulk')?.selectedOptions||[]).map(o=>o.value);
+  } else {
+    const id = document.getElementById('ltEmp')?.value;
+    if (id) empIds = [id];
+  }
 
-  if(!empId){el.innerHTML='<div style="text-align:center;color:#9ca3af;padding:80px 20px;font-family:sans-serif">Select a staff member and click Generate Letter</div>';return;}
-  const emp=hrEmployees.find(e=>String(e.id)===String(empId));
-  if(!emp){el.innerHTML='<div style="text-align:center;color:#9ca3af;padding:80px 20px;font-family:sans-serif">Employee not found</div>';return;}
+  if(!empIds.length){
+    el.innerHTML=`<div style="text-align:center;color:#9ca3af;padding:80px 20px;font-family:sans-serif">${_ltBulkMode?'Select one or more staff':'Select a staff member'} and click ${_ltBulkMode?'Generate All':'Generate Letter'}</div>`;
+    return;
+  }
+
+  // Build all letters; separate with a page-break between them.
+  const ctx = {
+    template, addressee, subject, letterDate,
+    showSalary: document.getElementById('ltSalary')?.value!=='no',
+    lastDay:   document.getElementById('ltLastDay')?.value,
+    reason:    document.getElementById('ltReason')?.value.trim(),
+    purpose:   document.getElementById('ltPurpose')?.value.trim(),
+    bankName:  document.getElementById('ltBankName')?.value.trim(),
+    warnLevel: document.getElementById('ltWarnLevel')?.value,
+    issue:     document.getElementById('ltIssue')?.value.trim(),
+    oldSalary: document.getElementById('ltOldSalary')?.value,
+    newSalary: document.getElementById('ltNewSalary')?.value,
+    effective: document.getElementById('ltEffective')?.value,
+    fromDept:  document.getElementById('ltFromDept')?.value.trim(),
+    toDept:    document.getElementById('ltToDept')?.value.trim()
+  };
+
+  const letters = empIds.map((id, idx) => {
+    const emp = hrEmployees.find(e=>String(e.id)===String(id));
+    if (!emp) return '';
+    const inner = _ltBuildLetter(emp, ctx);
+    // Page-break between letters in bulk mode; print stylesheet honours this.
+    const pageBreak = idx > 0 ? 'page-break-before:always;' : '';
+    return `<div class="lt-page" style="${pageBreak}padding:18mm 20mm;background:#fff;min-height:257mm;max-width:210mm;margin:0 auto 16px auto;box-shadow:0 2px 8px rgba(0,0,0,.15)">${inner}</div>`;
+  }).filter(Boolean).join('');
+
+  // Render into #letterPreview but strip its own padding so each letter's
+  // .lt-page provides its own margins. The wrap div retains the grey bg.
+  el.style.padding = '0';
+  el.style.background = 'transparent';
+  el.style.boxShadow = 'none';
+  el.style.maxWidth = 'none';
+  el.innerHTML = letters || '<div style="text-align:center;color:#9ca3af;padding:80px 20px;font-family:sans-serif">No letters to render</div>';
+}
+
+// Build a single letter's inner HTML for one employee with the shared ctx.
+function _ltBuildLetter(emp, ctx) {
+  const joined=emp.joined?new Date(emp.joined).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
+  const lastDayFmt=ctx.lastDay?new Date(ctx.lastDay).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
+  const effectiveFmt=ctx.effective?new Date(ctx.effective).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
+
+  const header=`<div style="font-family:'Times New Roman',serif;font-size:11.5pt;line-height:1.55;color:#1a1a1a">
+    <div style="text-align:center;margin-bottom:16pt;border-bottom:2px solid #0f172a;padding-bottom:10pt">
+      <img src="${EM_LOGO_URL}" alt="Event Maldives" style="display:block;height:48pt;width:auto;margin:0 auto 8pt">
+      <div style="font-size:9pt;color:#6b7280;font-family:sans-serif">H. Kamana, 7th Floor, Male', Maldives</div>
+    </div>
+    <div style="margin-bottom:10pt">${ctx.letterDate}</div>
+    <div style="margin-bottom:10pt"><strong>To:</strong> ${ctx.addressee}</div>
+    <div style="margin-bottom:10pt"><strong>Re: ${ctx.subject} — ${emp.name}</strong></div>`;
+
+  const greeting = ctx.template === 'warning'
+    ? `<p style="margin:0 0 6pt">Dear ${emp.name},</p>`
+    : ctx.template === 'increment' || ctx.template === 'transfer' || ctx.template === 'termination'
+      ? `<p style="margin:0 0 6pt">Dear ${emp.name},</p>`
+      : `<p style="margin:0 0 6pt">To Whom It May Concern,</p>`;
+
+  const rowsBase = `
+      <tr><td style="padding:2pt 16pt 2pt 0;width:160pt"><strong>Full Name</strong></td><td>${emp.name}</td></tr>
+      ${emp.type==='local'&&emp.nidNo?`<tr><td style="padding:2pt 16pt 2pt 0"><strong>National ID</strong></td><td>${emp.nidNo}</td></tr>`:''}
+      ${emp.type==='expat'&&emp.passportNo?`<tr><td style="padding:2pt 16pt 2pt 0"><strong>Passport No.</strong></td><td>${emp.passportNo}</td></tr>`:''}
+      <tr><td style="padding:2pt 16pt 2pt 0"><strong>Job Title</strong></td><td>${emp.title||emp.designation||'—'}</td></tr>
+      <tr><td style="padding:2pt 16pt 2pt 0"><strong>Department</strong></td><td>${emp.dept||'—'}</td></tr>
+      <tr><td style="padding:2pt 16pt 2pt 0"><strong>Date of Joining</strong></td><td>${joined}</td></tr>`;
+  const salaryRow = `<tr><td style="padding:2pt 16pt 2pt 0"><strong>Basic Salary</strong></td><td>${fmtMVR(emp.basicSalary)}${emp.salaryCurrency&&emp.salaryCurrency!=='MVR'?' '+emp.salaryCurrency:''}</td></tr>`;
+  const allowanceRow = emp.allowance?`<tr><td style="padding:2pt 16pt 2pt 0"><strong>Allowance</strong></td><td>${fmtMVR(emp.allowance)}</td></tr>`:'';
+
+  let body='';
+  switch (ctx.template) {
+    case 'employment':
+      body=`<p style="margin:0 0 6pt">This letter is to certify that <strong>${emp.name}</strong>${emp.type==='local'&&emp.nidNo?`, holding National ID No. <strong>${emp.nidNo}</strong>,`:''} is currently employed with our company in the capacity of <strong>${emp.title||emp.designation||emp.dept||'Staff'}</strong> in the <strong>${emp.dept||'—'}</strong> department.</p>
+        <p style="margin:0 0 6pt">The details of their employment are as follows:</p>
+        <table style="margin:6pt 0 6pt 16pt;font-size:11.5pt;border-collapse:collapse">${rowsBase}${ctx.showSalary?salaryRow+allowanceRow:''}</table>
+        <p style="margin:0 0 6pt">This letter is issued upon the request of the employee for whatever purpose it may serve.</p>`;
+      break;
+    case 'experience':
+      body=`<p style="margin:0 0 6pt">This is to certify that <strong>${emp.name}</strong>${emp.type==='local'&&emp.nidNo?`, holding National ID No. <strong>${emp.nidNo}</strong>,`:''} has been employed with our company as <strong>${emp.title||emp.designation||emp.dept||'Staff'}</strong> in the <strong>${emp.dept||'—'}</strong> department.</p>
+        <p style="margin:0 0 6pt">The details of their service are as follows:</p>
+        <table style="margin:6pt 0 6pt 16pt;font-size:11.5pt;border-collapse:collapse">${rowsBase}
+          <tr><td style="padding:2pt 16pt 2pt 0"><strong>Last Working Day</strong></td><td>${lastDayFmt}</td></tr>
+          ${ctx.reason?`<tr><td style="padding:2pt 16pt 2pt 0"><strong>Reason for Leaving</strong></td><td>${ctx.reason}</td></tr>`:''}
+          ${ctx.showSalary?`<tr><td style="padding:2pt 16pt 2pt 0"><strong>Last Basic Salary</strong></td><td>${fmtMVR(emp.basicSalary)}</td></tr>`:''}
+        </table>
+        <p style="margin:0 0 6pt">During their tenure, <strong>${emp.name}</strong> has been a dedicated and hardworking member of our team. We wish them all the best in their future endeavours.</p>
+        <p style="margin:0 0 6pt">This letter is issued upon request for whatever purpose it may serve.</p>`;
+      break;
+    case 'noc':
+      body=`<p style="margin:0 0 6pt">This is to certify that <strong>${emp.name}</strong>${emp.type==='local'&&emp.nidNo?` (National ID: <strong>${emp.nidNo}</strong>)`:emp.type==='expat'&&emp.passportNo?` (Passport: <strong>${emp.passportNo}</strong>)`:''} is an employee of Event Maldives, holding the position of <strong>${emp.title||emp.designation||'Staff'}</strong> in the <strong>${emp.dept||'—'}</strong> department since ${joined}.</p>
+        <p style="margin:0 0 6pt"><strong>We have no objection</strong> to ${emp.name} ${ctx.purpose?'for the purpose of <strong>'+ctx.purpose+'</strong>':'undertaking the activity stated in their application'}.</p>
+        <table style="margin:6pt 0 6pt 16pt;font-size:11.5pt;border-collapse:collapse">${rowsBase}</table>
+        <p style="margin:0 0 6pt">This letter is issued at the request of the employee and is valid for the purpose mentioned above.</p>`;
+      break;
+    case 'salary_cert':
+      body=`<p style="margin:0 0 6pt">This letter certifies that <strong>${emp.name}</strong>${emp.type==='local'&&emp.nidNo?`, holding National ID No. <strong>${emp.nidNo}</strong>,`:''} is employed with Event Maldives in the position of <strong>${emp.title||emp.designation||'Staff'}</strong> in the <strong>${emp.dept||'—'}</strong> department since ${joined}.</p>
+        <p style="margin:0 0 6pt">The current salary details are as follows:</p>
+        <table style="margin:6pt 0 6pt 16pt;font-size:11.5pt;border-collapse:collapse">${rowsBase}${salaryRow}${allowanceRow}
+          ${Array.isArray(emp.allowances)&&emp.allowances.length?emp.allowances.map(a=>`<tr><td style="padding:2pt 16pt 2pt 0"><strong>${a.name||'Allowance'}</strong></td><td>${(parseFloat(a.amount)||0).toLocaleString()} ${a.currency||'MVR'}</td></tr>`).join(''):''}
+        </table>
+        <p style="margin:0 0 6pt">This certificate is issued upon the request of the employee for whatever lawful purpose it may serve.</p>`;
+      break;
+    case 'bank_letter':
+      body=`<p style="margin:0 0 6pt">We confirm that <strong>${emp.name}</strong>${emp.type==='local'&&emp.nidNo?` (National ID: <strong>${emp.nidNo}</strong>)`:emp.type==='expat'&&emp.passportNo?` (Passport: <strong>${emp.passportNo}</strong>)`:''} is a permanent employee of Event Maldives holding the position of <strong>${emp.title||emp.designation||'Staff'}</strong> since ${joined}.</p>
+        <p style="margin:0 0 6pt">We kindly request <strong>${ctx.bankName||'[Bank Name]'}</strong> to open a salary account in the name of the above-mentioned employee. Their monthly salary will be credited to this account.</p>
+        <table style="margin:6pt 0 6pt 16pt;font-size:11.5pt;border-collapse:collapse">${rowsBase}${ctx.showSalary?salaryRow:''}</table>
+        <p style="margin:0 0 6pt">We confirm that the employee's employment is in good standing. Please provide them with all reasonable assistance.</p>`;
+      break;
+    case 'warning':
+      body=`<p style="margin:0 0 6pt">This letter serves as a <strong>${ctx.warnLevel||'Verbal'} Warning</strong> regarding the following matter:</p>
+        ${ctx.issue?`<div style="margin:6pt 0 10pt 16pt;padding:10pt;background:#fafafa;border-left:3px solid #f59e0b">${ctx.issue}</div>`:'<p style="margin:6pt 0 10pt 16pt;color:#6b7280">[Issue description to be added]</p>'}
+        <p style="margin:0 0 6pt">You are required to address this matter immediately. Any continuation or recurrence of similar conduct may result in further disciplinary action, up to and including termination of employment.</p>
+        <p style="margin:0 0 6pt">A copy of this letter will be placed in your personnel file. Please acknowledge receipt by signing below.</p>
+        <table style="margin:14pt 0 6pt 0;font-size:11.5pt;border-collapse:collapse">
+          <tr><td style="padding:2pt 32pt 2pt 0">Employee Signature:</td><td style="border-bottom:1px solid #1a1a1a;width:200pt">&nbsp;</td></tr>
+          <tr><td style="padding:6pt 32pt 2pt 0">Date:</td><td style="border-bottom:1px solid #1a1a1a;width:200pt">&nbsp;</td></tr>
+        </table>`;
+      break;
+    case 'increment':
+      const oldS = parseFloat(ctx.oldSalary)||emp.basicSalary||0;
+      const newS = parseFloat(ctx.newSalary)||0;
+      const delta = newS - oldS;
+      body=`<p style="margin:0 0 6pt">We are pleased to inform you that, in recognition of your performance and contribution to Event Maldives, your basic salary has been revised as follows, effective <strong>${effectiveFmt}</strong>:</p>
+        <table style="margin:6pt 0 6pt 16pt;font-size:11.5pt;border-collapse:collapse">
+          <tr><td style="padding:2pt 16pt 2pt 0;width:160pt"><strong>Previous Basic Salary</strong></td><td>${fmtMVR(oldS)}</td></tr>
+          <tr><td style="padding:2pt 16pt 2pt 0"><strong>Revised Basic Salary</strong></td><td>${fmtMVR(newS)}</td></tr>
+          ${delta?`<tr><td style="padding:2pt 16pt 2pt 0"><strong>Increase</strong></td><td>${delta>=0?'+':''}${fmtMVR(delta)}${oldS?' ('+(delta>=0?'+':'')+((delta/oldS)*100).toFixed(1)+'%)':''}</td></tr>`:''}
+          <tr><td style="padding:2pt 16pt 2pt 0"><strong>Effective Date</strong></td><td>${effectiveFmt}</td></tr>
+        </table>
+        ${ctx.reason?`<p style="margin:0 0 6pt"><strong>Reason:</strong> ${ctx.reason}</p>`:''}
+        <p style="margin:0 0 6pt">All other terms and conditions of your employment remain unchanged. We look forward to your continued dedication and contribution.</p>
+        <p style="margin:0 0 6pt">Congratulations.</p>`;
+      break;
+    case 'transfer':
+      body=`<p style="margin:0 0 6pt">This is to formally notify you of your transfer within Event Maldives, effective <strong>${effectiveFmt}</strong>:</p>
+        <table style="margin:6pt 0 6pt 16pt;font-size:11.5pt;border-collapse:collapse">
+          <tr><td style="padding:2pt 16pt 2pt 0;width:160pt"><strong>From Department</strong></td><td>${ctx.fromDept||emp.dept||'—'}</td></tr>
+          <tr><td style="padding:2pt 16pt 2pt 0"><strong>To Department</strong></td><td>${ctx.toDept||'—'}</td></tr>
+          <tr><td style="padding:2pt 16pt 2pt 0"><strong>Position</strong></td><td>${emp.title||emp.designation||'—'}</td></tr>
+          <tr><td style="padding:2pt 16pt 2pt 0"><strong>Effective Date</strong></td><td>${effectiveFmt}</td></tr>
+        </table>
+        ${ctx.reason?`<p style="margin:0 0 6pt"><strong>Reason for Transfer:</strong> ${ctx.reason}</p>`:''}
+        <p style="margin:0 0 6pt">Your salary, benefits, and other terms of employment remain unchanged unless otherwise communicated separately. Please coordinate with both departments to ensure a smooth handover.</p>
+        <p style="margin:0 0 6pt">We trust you will bring the same level of dedication to your new role.</p>`;
+      break;
+    case 'termination':
+      body=`<p style="margin:0 0 6pt">This letter serves as formal notice of the termination of your employment with Event Maldives, effective <strong>${lastDayFmt}</strong>.</p>
+        ${ctx.reason?`<p style="margin:0 0 6pt"><strong>Reason for Termination:</strong> ${ctx.reason}</p>`:''}
+        <p style="margin:0 0 6pt">You are required to complete all pending handovers and return all company property (ID card, assets, documents) prior to your last working day. Your final settlement will be processed in accordance with company policy and your employment contract.</p>
+        <table style="margin:6pt 0 6pt 16pt;font-size:11.5pt;border-collapse:collapse">${rowsBase}
+          <tr><td style="padding:2pt 16pt 2pt 0"><strong>Last Working Day</strong></td><td>${lastDayFmt}</td></tr>
+        </table>
+        <p style="margin:0 0 6pt">We thank you for your service and wish you the best in your future endeavours.</p>`;
+      break;
+    default:
+      body=`<p>Unknown template.</p>`;
+  }
+
+  const footer=`<p style="margin:6pt 0 0">Should you require any further information, please do not hesitate to contact us.</p>
+    <div style="margin-top:36pt"><p style="margin:0">Yours sincerely,</p>
+      <div style="margin-top:24pt">
+        <img src="data:image/png;base64,${SIGNATURE_B64}" alt="Signature" style="display:block;height:50pt;width:auto;margin:0 0 -8pt 0">
+        <div style="border-top:1px solid #1a1a1a;width:180pt;margin-bottom:4pt"></div>
+        <div><strong>Ahmed Midhath</strong></div><div style="font-size:10pt;color:#4b5563">Managing Director</div>
+      </div>
+    </div></div>`;
+
+  return header + greeting + body + footer;
+}
+
+// (legacy single-letter logic removed — updateLetterPreview + _ltBuildLetter
+// cover all templates including the original employment/experience flows.)
+function _unused_legacyLetter(){ /* removed */ }
+/* eslint-disable */
+/*  Old single-template builder kept commented for one release in case we
+    need to diff against it:
   const joined=emp.joined?new Date(emp.joined).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
   const lastDayFmt=lastDay?new Date(lastDay).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
 
@@ -8165,6 +8470,8 @@ function updateLetterPreview(){
 
   el.innerHTML=header+body+footer;
 }
+*/
+/* eslint-enable */
 
 // ══════════════════════════════════════════════════════
 const EM_LOGO_URL = location.origin + '/em-logo.png';

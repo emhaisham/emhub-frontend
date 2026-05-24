@@ -1369,6 +1369,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="nav-item" onclick="hrNav('org-chart')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="9" y="15" width="6" height="6" rx="1"/><path d="M6 9v3h12V9M12 12v3"/></svg></span>Org Chart</div>
               <div class="nav-lbl">Payroll</div>
               <div class="nav-item" onclick="hrNav('salary-revisions')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/><path d="M7 7l10 10M17 7L7 17"/></svg></span>Salary Revisions</div>
+              <div class="nav-item" onclick="hrNav('training')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>Training &amp; Certs</div>
               <div class="nav-item" onclick="hrNav('payroll')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Monthly Payroll</div>
               <div class="nav-item" onclick="hrNav('loans')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M8 10v11M12 10v11M16 10v11M20 10v11"/></svg></span>Loans</div>
               <div class="nav-item" onclick="hrNav('pension')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v1a3 3 0 006 0V7m0 1a3 3 0 006 0V7m0 1a3 3 0 006 0V7L12 2 3 7z"/></svg></span>Pension</div>
@@ -1661,6 +1662,32 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 </select>
               </div>
               <div id="allStaffAssetsList"></div>
+            </div>
+
+            <!-- ── TRAINING & CERTIFICATIONS ── -->
+            <div class="page" id="hr-page-training">
+              <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between">
+                <div>
+                  <div class="page-title">Training &amp; Certifications</div>
+                  <div class="page-sub">Catalog of certs (first aid, rigging, electrical, driver's licence…) with per-employee records and automated renewal reminders.</div>
+                </div>
+                <div style="display:flex;gap:6px">
+                  <button class="btn btn-ghost btn-sm" onclick="guardAction('hr_training_edit', openTrainingTypesModal)">⚙ Manage Types</button>
+                  <button class="btn btn-primary btn-sm" onclick="guardAction('hr_training_edit', ()=>openTrainingRecordModal(null,null))">＋ New Record</button>
+                </div>
+              </div>
+              <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
+                <button class="staff-tab active" id="trnTab-expiring" onclick="trnSetTab('expiring')">⚠️ Expiring (90d) <span class="staff-tab-count" id="trnCount-expiring"></span></button>
+                <button class="staff-tab" id="trnTab-active"   onclick="trnSetTab('active')">✓ Active <span class="staff-tab-count" id="trnCount-active"></span></button>
+                <button class="staff-tab" id="trnTab-expired"  onclick="trnSetTab('expired')">✕ Expired <span class="staff-tab-count" id="trnCount-expired"></span></button>
+                <button class="staff-tab" id="trnTab-all"      onclick="trnSetTab('all')">All <span class="staff-tab-count" id="trnCount-all"></span></button>
+              </div>
+              <div class="toolbar" style="margin-bottom:14px">
+                <select id="trnFilterType" onchange="_renderTrnList()"><option value="">All cert types</option></select>
+                <input type="text" id="trnSearch" placeholder="Search staff…" oninput="_renderTrnList()">
+                <span class="toolbar-count" id="trnCount"></span>
+              </div>
+              <div id="trnList"></div>
             </div>
 
             <!-- ── SALARY REVISIONS ── -->
@@ -2436,6 +2463,34 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
   </div>
 </div>
 
+<!-- ══ TRAINING RECORD MODAL ═════════════════════════ -->
+<div class="modal-backdrop" id="trnRecModal">
+  <div class="modal modal-sm">
+    <div class="modal-hdr">
+      <div class="modal-title" id="trnRecTitle">Training Record</div>
+      <button class="btn-close" onclick="closeTrainingRecordModal()">✕</button>
+    </div>
+    <div style="padding:24px">
+      <div id="trnRecFields"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:12px;border-top:1px solid var(--border)">
+        <button class="btn btn-ghost btn-sm" onclick="closeTrainingRecordModal()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveTrainingRecord()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TRAINING TYPES MODAL ══════════════════════════ -->
+<div class="modal-backdrop" id="trnTypesModal">
+  <div class="modal modal-sm">
+    <div class="modal-hdr">
+      <div class="modal-title">Manage Cert Types</div>
+      <button class="btn-close" onclick="closeTrainingTypesModal()">✕</button>
+    </div>
+    <div style="padding:18px 24px" id="trnTypesBody"></div>
+  </div>
+</div>
+
 <!-- ══ PROPOSE SALARY REVISION MODAL ═════════════════ -->
 <div class="modal-backdrop" id="srvModal">
   <div class="modal modal-sm">
@@ -2973,7 +3028,7 @@ function applyPerms(){
   // ── HR SIDEBAR nav items (by position) ───────────────
   const hrNavItems=document.querySelectorAll('#mod-hr .nav-wrap .nav-item');
   // positions: 0=All Staff, 1=Add Emp, 2=Disciplinary, 3=Staff Assets, 4=Payroll, 5=Loans, 6=Pension, 7=Bonus, 8=Leave, 9=Letters
-  const hrMap=['hr_view_all','hr_add_emp','hr_disc','hr_assets','hr_view_all','hr_view_all','hr_view_all','hr_view_all','hr_payroll','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
+  const hrMap=['hr_view_all','hr_add_emp','hr_disc','hr_assets','hr_view_all','hr_view_all','hr_view_all','hr_view_all','hr_training','hr_payroll','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
   hrMap.forEach((k,i)=>{
     if(!hrNavItems[i]) return;
     // All Staff and Bonus both gate on hr_view_all OR hr_view_own
@@ -4304,6 +4359,7 @@ function hrNav(page, extra){
       'probation-contracts':'hr_view_all',
       'org-chart':'hr_view_all',
       'salary-revisions':'hr_view_all',
+      'training':'hr_training',
     };
     const permKey=pagePermMap[page];
     const role=currentUser.roleId?appRoles.find(r=>String(r.id)===String(currentUser.roleId)):null;
@@ -4338,7 +4394,7 @@ function hrNav(page, extra){
   const pageEl = document.getElementById('hr-page-'+page);
   if(pageEl) pageEl.classList.add('active');
   const items = document.querySelectorAll('#mod-hr .nav-item');
-  const map = {employees:0,'add-employee':1,disciplinary:2,'staff-assets':3,'expiring-docs':4,'probation-contracts':5,'org-chart':6,'salary-revisions':7,payroll:8,loans:9,pension:10,bonus:11,'dept-leave':12,leave:13,letters:14};
+  const map = {employees:0,'add-employee':1,disciplinary:2,'staff-assets':3,'expiring-docs':4,'probation-contracts':5,'org-chart':6,'salary-revisions':7,training:8,payroll:9,loans:10,pension:11,bonus:12,'dept-leave':13,leave:14,letters:15};
   if(items[map[page]]) items[map[page]].classList.add('active');
   hrActivePage = page;
   if(page==='employees')     { populateHRFilters(); renderEmployees(); }
@@ -4370,6 +4426,7 @@ function hrNav(page, extra){
   if(page==='probation-contracts') { renderProbationContracts(extra); }
   if(page==='org-chart')           { renderOrgChart(); }
   if(page==='salary-revisions')    { renderSalaryRevisions(); }
+  if(page==='training')            { renderTrainingPage(); }
   updateHRSidebar();
 }
 
@@ -4937,6 +4994,303 @@ async function submitMarkRenewed(){
   closeRenewModal();
   renderExpiringDocs();
   toast(_renewCtx?.label+' renewed ✓');
+}
+
+// ══ TRAINING & CERTIFICATIONS ═════════════════════════
+let _trnTab = 'expiring';
+let _trnRecords = [];
+let _trnTypes = [];
+
+function trnSetTab(t){
+  _trnTab = t;
+  document.querySelectorAll('#hr-page-training .staff-tab').forEach(b=>b.classList.remove('active'));
+  const btn = document.getElementById('trnTab-'+t); if(btn) btn.classList.add('active');
+  _renderTrnList();
+}
+async function renderTrainingPage(){
+  const [types, records] = await Promise.all([
+    api('GET','/hr/training-types'),
+    api('GET','/hr/training-records')
+  ]);
+  if(!Array.isArray(records)){ document.getElementById('trnList').innerHTML='<div class="empty"><div class="empty-title">Failed to load</div></div>'; return; }
+  _trnTypes = Array.isArray(types) ? types : [];
+  _trnRecords = records;
+  // Populate filter
+  const ft = document.getElementById('trnFilterType');
+  if(ft){
+    const cur = ft.value;
+    ft.innerHTML = '<option value="">All cert types</option>'+_trnTypes.map(t=>`<option value="${t.id}" ${cur===t.id?'selected':''}>${t.name}</option>`).join('');
+  }
+  // Counts
+  const today = new Date(); today.setHours(0,0,0,0);
+  const inWindow = (d, days)=>{ if(!d) return false; const dt = new Date(d); dt.setHours(0,0,0,0); const diff=Math.round((dt-today)/86400000); return diff>=0 && diff<=days; };
+  const isExpired = d => { if(!d) return false; const dt = new Date(d); dt.setHours(0,0,0,0); return dt < today; };
+  const set = (id,v)=>{const el=document.getElementById(id);if(el)el.textContent=String(v)};
+  set('trnCount-expiring', records.filter(r=>inWindow(r.expiresDate,90)).length);
+  set('trnCount-active',   records.filter(r=>!isExpired(r.expiresDate)).length);
+  set('trnCount-expired',  records.filter(r=>isExpired(r.expiresDate)).length);
+  set('trnCount-all',      records.length);
+  _renderTrnList();
+}
+function _renderTrnList(){
+  const list = document.getElementById('trnList'); if(!list) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const search = (document.getElementById('trnSearch')?.value||'').toLowerCase();
+  const fType = document.getElementById('trnFilterType')?.value||'';
+  const rows = _trnRecords.filter(r => {
+    if(fType && String(r.typeId)!==String(fType)) return false;
+    if(search && !(r.empName||'').toLowerCase().includes(search) && !(r.typeName||'').toLowerCase().includes(search)) return false;
+    const d = r.expiresDate ? Math.round((new Date(r.expiresDate)-today)/86400000) : null;
+    if(_trnTab==='expiring') return d!==null && d>=0 && d<=90;
+    if(_trnTab==='active')   return d===null || d>=0;
+    if(_trnTab==='expired')  return d!==null && d<0;
+    return true;
+  });
+  const cnt = document.getElementById('trnCount'); if(cnt) cnt.textContent = rows.length+' record'+(rows.length===1?'':'s');
+  if(!rows.length){ list.innerHTML='<div class="empty"><div class="empty-icon">🎓</div><div class="empty-title">Nothing here</div><div class="empty-sub">Add a certification via ＋ New Record.</div></div>'; return; }
+  const isAdmin = currentUser?.role==='admin';
+  const role = currentUser?.roleId ? appRoles.find(r=>String(r.id)===String(currentUser.roleId)) : null;
+  const myPerms = role?.perms || currentUser?.rolePerms || {};
+  const canEdit = isAdmin || myPerms.hr_training_edit===true || myPerms.hr_training_edit_edit===true;
+  list.innerHTML = rows.map(r => {
+    const d = r.expiresDate ? Math.round((new Date(r.expiresDate)-today)/86400000) : null;
+    const expBadge = d===null
+      ? `<span class="badge" style="font-size:10px;background:var(--surface);color:var(--text3);border:1px solid var(--border)">No expiry</span>`
+      : d<0
+        ? `<span class="badge badge-red" style="font-size:10px">Expired ${Math.abs(d)}d ago</span>`
+        : d<=30
+          ? `<span class="badge badge-red" style="font-size:10px">In ${d}d</span>`
+          : d<=90
+            ? `<span class="badge badge-amber" style="font-size:10px">In ${d}d</span>`
+            : `<span class="badge badge-green" style="font-size:10px">In ${d}d</span>`;
+    const colour = r.typeColor || '#6366f1';
+    const docLink = r.docUrl ? `<a href="${r.docUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-size:11px">📎 doc</a>` : '';
+    const editBtns = canEdit ? `
+      <button class="btn btn-ghost btn-xs" onclick="openTrainingRecordModal('${r.id}','${r.empId}')">Edit</button>
+      <button class="btn btn-red btn-xs" onclick="deleteTrainingRecord('${r.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>` : '';
+    return `<div class="pay-group-row" style="cursor:default">
+      <div>
+        <div class="pg-name">${r.empName||'(unknown)'} <span class="badge" style="font-size:10px;background:${colour}22;color:${colour};border:1px solid ${colour}44">${r.typeName||'(unknown type)'}</span></div>
+        <div class="pg-detail">issued ${fmtDate(r.issuedDate)||'—'} · expires ${fmtDate(r.expiresDate)||'—'}${r.issuer?' · '+r.issuer:''}${r.certNo?' · '+r.certNo:''}</div>
+        ${r.notes?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${r.notes}</div>`:''}
+      </div>
+      <div class="pg-right">
+        ${expBadge}
+        ${docLink}
+        <button class="btn btn-ghost btn-xs" onclick="hrNav('profile','${r.empId}')">Profile</button>
+        ${editBtns}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Record modal (add or edit; for one specific employee or pick at form time) ──
+let _trnRecCtx = null;
+function openTrainingRecordModal(recordId, empId){
+  // Ensure types are loaded
+  (async ()=>{
+    if(!_trnTypes.length){
+      const t = await api('GET','/hr/training-types');
+      _trnTypes = Array.isArray(t)?t:[];
+    }
+    const existing = recordId ? _trnRecords.find(r=>String(r.id)===String(recordId)) : null;
+    _trnRecCtx = { recordId, empId: empId || existing?.empId || null };
+    document.getElementById('trnRecTitle').textContent = recordId ? 'Edit Training Record' : 'New Training Record';
+    const empSelect = empId
+      ? `<input type="hidden" id="trnRecEmp" value="${empId}">`
+      : `<div class="field" style="margin-bottom:12px"><label class="field-label">Employee *</label>
+          <select id="trnRecEmp">
+            <option value="">Select…</option>
+            ${hrEmployees.filter(e=>e.status==='active').sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(e=>`<option value="${e.id}" ${existing?.empId===e.id?'selected':''}>${e.name}${e.designation?' · '+e.designation:''}</option>`).join('')}
+          </select></div>`;
+    const today = new Date().toISOString().slice(0,10);
+    const issuedDef = existing?.issuedDate ? String(existing.issuedDate).slice(0,10) : today;
+    const expiresDef = existing?.expiresDate ? String(existing.expiresDate).slice(0,10) : '';
+    document.getElementById('trnRecFields').innerHTML = `
+      ${empSelect}
+      <div class="field" style="margin-bottom:12px"><label class="field-label">Cert Type *</label>
+        <select id="trnRecType" onchange="_trnAutoExpiry()">
+          <option value="">Select…</option>
+          ${_trnTypes.map(t=>`<option value="${t.id}" data-vm="${t.validityMonths||''}" ${existing?.typeId===t.id?'selected':''}>${t.name}${t.validityMonths?' ('+t.validityMonths+'mo)':''}</option>`).join('')}
+        </select></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="field"><label class="field-label">Issued Date *</label><input type="date" id="trnRecIssued" value="${issuedDef}" onchange="_trnAutoExpiry()"></div>
+        <div class="field"><label class="field-label">Expires Date</label><input type="date" id="trnRecExpires" value="${expiresDef}">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Auto-fills from cert validity.</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="field"><label class="field-label">Issuing Authority</label><input type="text" id="trnRecIssuer" value="${existing?.issuer||''}" placeholder="e.g. St. John Ambulance"></div>
+        <div class="field"><label class="field-label">Certificate Number</label><input type="text" id="trnRecCertNo" value="${existing?.certNo||''}" placeholder="optional"></div>
+      </div>
+      <div class="field" style="margin-bottom:12px"><label class="field-label">Document URL</label><input type="url" id="trnRecDoc" value="${existing?.docUrl||''}" placeholder="https://…"></div>
+      <div class="field" style="margin-bottom:14px"><label class="field-label">Notes</label><textarea id="trnRecNotes" rows="2" placeholder="any relevant detail">${existing?.notes||''}</textarea></div>`;
+    document.getElementById('trnRecModal').classList.add('open');
+  })();
+}
+function _trnAutoExpiry(){
+  // Auto-set expires_date when type's validity_months is known and expires is blank
+  const exp = document.getElementById('trnRecExpires');
+  if(!exp || exp.value) return;
+  const sel = document.getElementById('trnRecType');
+  const opt = sel?.selectedOptions[0]; const vm = parseInt(opt?.dataset?.vm,10);
+  const iss = document.getElementById('trnRecIssued')?.value;
+  if(!vm || !iss) return;
+  const d = new Date(iss); d.setMonth(d.getMonth()+vm);
+  exp.value = d.toISOString().slice(0,10);
+}
+function closeTrainingRecordModal(){document.getElementById('trnRecModal').classList.remove('open');_trnRecCtx=null}
+async function saveTrainingRecord(){
+  const c = _trnRecCtx; if(!c) return;
+  const empId = c.empId || document.getElementById('trnRecEmp')?.value;
+  if(!empId){ toast('Pick an employee'); return; }
+  const payload = {
+    typeId: document.getElementById('trnRecType').value,
+    issuedDate: document.getElementById('trnRecIssued').value,
+    expiresDate: document.getElementById('trnRecExpires').value || null,
+    issuer: (document.getElementById('trnRecIssuer').value||'').trim(),
+    certNo: (document.getElementById('trnRecCertNo').value||'').trim(),
+    docUrl: (document.getElementById('trnRecDoc').value||'').trim(),
+    notes:  (document.getElementById('trnRecNotes').value||'').trim()
+  };
+  if(!payload.typeId){ toast('Pick a cert type'); return; }
+  if(!payload.issuedDate){ toast('Pick the issued date'); return; }
+  const res = c.recordId
+    ? await api('PUT','/hr/training-records/'+c.recordId, payload)
+    : await api('POST','/hr/employees/'+empId+'/training', payload);
+  if(!res) return;
+  closeTrainingRecordModal();
+  toast('Training record saved ✓');
+  if(hrActivePage==='training') renderTrainingPage();
+  if(typeof renderTrainingTab==='function') renderTrainingTab(empId);
+}
+function deleteTrainingRecord(id){
+  openConfirm('Delete this training record?','This cannot be undone.','Delete',async()=>{
+    const r = await api('DELETE','/hr/training-records/'+id);
+    if(!r) return;
+    toast('Deleted ✓');
+    if(hrActivePage==='training') renderTrainingPage();
+  });
+}
+
+// ── Manage Types modal ──
+async function openTrainingTypesModal(){
+  document.getElementById('trnTypesModal').classList.add('open');
+  await _renderTrnTypesList();
+}
+function closeTrainingTypesModal(){document.getElementById('trnTypesModal').classList.remove('open');}
+async function _renderTrnTypesList(){
+  const t = await api('GET','/hr/training-types');
+  _trnTypes = Array.isArray(t)?t:[];
+  const body = document.getElementById('trnTypesBody'); if(!body) return;
+  const rows = _trnTypes.length ? _trnTypes.map(tp=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="width:10px;height:10px;border-radius:50%;background:${tp.color||'#6366f1'};flex-shrink:0"></div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:13px">${tp.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${tp.description||'—'}${tp.validityMonths?' · validity '+tp.validityMonths+'mo':''}</div>
+      </div>
+      <button class="btn btn-ghost btn-xs" onclick="_trnEditType('${tp.id}')">Edit</button>
+      <button class="btn btn-red btn-xs" onclick="_trnDeleteType('${tp.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>
+    </div>`).join('') : '<div style="padding:20px;color:var(--text3);text-align:center">No cert types yet. Add one below.</div>';
+  body.innerHTML = `
+    <div style="max-height:280px;overflow-y:auto;margin-bottom:14px">${rows}</div>
+    <div style="border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:8px" id="trnTypeFormHdr">Add New Type</div>
+      <input type="hidden" id="trnTypeId" value="">
+      <div style="display:grid;grid-template-columns:2fr 1fr 80px;gap:8px;margin-bottom:8px">
+        <input type="text" id="trnTypeName" placeholder="Name (e.g. First Aid)">
+        <input type="text" id="trnTypeDesc" placeholder="Description (optional)">
+        <input type="number" id="trnTypeValidity" placeholder="mo">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" onclick="_trnClearTypeForm()">Clear</button>
+        <button class="btn btn-primary btn-sm" onclick="_trnSaveType()">Save</button>
+      </div>
+    </div>`;
+}
+function _trnEditType(id){
+  const t = _trnTypes.find(x=>String(x.id)===String(id)); if(!t) return;
+  document.getElementById('trnTypeFormHdr').textContent = 'Edit Type';
+  document.getElementById('trnTypeId').value = t.id;
+  document.getElementById('trnTypeName').value = t.name||'';
+  document.getElementById('trnTypeDesc').value = t.description||'';
+  document.getElementById('trnTypeValidity').value = t.validityMonths||'';
+}
+function _trnClearTypeForm(){
+  document.getElementById('trnTypeFormHdr').textContent = 'Add New Type';
+  document.getElementById('trnTypeId').value = '';
+  document.getElementById('trnTypeName').value = '';
+  document.getElementById('trnTypeDesc').value = '';
+  document.getElementById('trnTypeValidity').value = '';
+}
+async function _trnSaveType(){
+  const id = document.getElementById('trnTypeId').value;
+  const payload = {
+    name: (document.getElementById('trnTypeName').value||'').trim(),
+    description: (document.getElementById('trnTypeDesc').value||'').trim(),
+    validityMonths: parseInt(document.getElementById('trnTypeValidity').value,10)||null,
+    color: null, mandatoryFor: []
+  };
+  if(!payload.name){ toast('Name required'); return; }
+  const res = id
+    ? await api('PUT','/hr/training-types/'+id, payload)
+    : await api('POST','/hr/training-types', payload);
+  if(!res) return;
+  toast(id?'Updated ✓':'Added ✓');
+  _trnClearTypeForm();
+  _renderTrnTypesList();
+}
+async function _trnDeleteType(id){
+  openConfirm('Delete this cert type?','Existing records keep their data but show "(unknown type)".','Delete',async()=>{
+    const r = await api('DELETE','/hr/training-types/'+id);
+    if(!r) return;
+    toast('Deleted ✓');
+    _renderTrnTypesList();
+    if(hrActivePage==='training') renderTrainingPage();
+  });
+}
+
+// Profile tab — list one employee's training records.
+async function renderTrainingTab(empId){
+  const body = document.getElementById('trainingTabBody'); if(!body) return;
+  body.innerHTML = '<div style="padding:20px;color:var(--text3)">Loading…</div>';
+  const [rows, types] = await Promise.all([
+    api('GET','/hr/employees/'+empId+'/training'),
+    _trnTypes.length ? Promise.resolve(_trnTypes) : api('GET','/hr/training-types')
+  ]);
+  if(Array.isArray(types)) _trnTypes = types;
+  if(!Array.isArray(rows)){ body.innerHTML='<div class="empty"><div class="empty-title">Failed to load</div></div>'; return; }
+  const isAdmin = currentUser?.role==='admin';
+  const role = currentUser?.roleId ? appRoles.find(r=>String(r.id)===String(currentUser.roleId)) : null;
+  const myPerms = role?.perms || currentUser?.rolePerms || {};
+  const canEdit = isAdmin || myPerms.hr_training_edit===true || myPerms.hr_training_edit_edit===true;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const list = rows.length ? rows.map(r => {
+    const d = r.expiresDate ? Math.round((new Date(r.expiresDate)-today)/86400000) : null;
+    const colour = r.typeColor || '#6366f1';
+    const status = d===null ? 'No expiry' : d<0 ? `Expired ${Math.abs(d)}d ago` : d<=30 ? `Expires in ${d}d` : d<=90 ? `Expires in ${d}d` : 'Valid';
+    const colour2 = d===null ? 'var(--text3)' : d<0 ? 'var(--red)' : d<=30 ? 'var(--red)' : d<=90 ? 'var(--amber)' : 'var(--green)';
+    return `<div style="border-left:3px solid ${colour};padding:10px 14px;background:var(--surface);border-radius:6px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-weight:600">${r.typeName||'(unknown type)'}</span>
+        <span style="font-size:11px;color:${colour2};font-weight:600">${status}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px">issued ${fmtDate(r.issuedDate)||'—'} · expires ${fmtDate(r.expiresDate)||'—'}${r.issuer?' · '+r.issuer:''}${r.certNo?' · '+r.certNo:''}</div>
+      ${r.notes?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${r.notes}</div>`:''}
+      <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px">
+        ${r.docUrl?`<a href="${r.docUrl}" target="_blank" rel="noopener" class="btn btn-ghost btn-xs">📎 Open Doc</a>`:''}
+        ${canEdit?`<button class="btn btn-ghost btn-xs" onclick="openTrainingRecordModal('${r.id}','${empId}')">Edit</button>
+                   <button class="btn btn-red btn-xs" onclick="deleteTrainingRecord('${r.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>`:''}
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty"><div class="empty-icon">🎓</div><div class="empty-title">No training records</div></div>';
+  const addBtn = canEdit ? `<button class="btn btn-primary btn-sm" onclick="openTrainingRecordModal(null,'${empId}')">＋ Add Record</button>` : '';
+  body.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text3);letter-spacing:.04em;text-transform:uppercase">Training & Certifications</div>
+      ${addBtn}
+    </div>
+    ${list}`;
 }
 
 // ══ SALARY REVISIONS ══════════════════════════════════
@@ -5524,6 +5878,7 @@ function renderProfile(empId){
       <button class="profile-tab ${profileActiveTab==='docs'?'active':''}" onclick="profileActiveTab='docs';renderProfile('${emp.id}')">Documents</button>
       <button class="profile-tab ${profileActiveTab==='payroll'?'active':''}" onclick="profileActiveTab='payroll';renderProfile('${emp.id}')">Payroll</button>
       <button class="profile-tab ${profileActiveTab==='salary-history'?'active':''}" onclick="profileActiveTab='salary-history';renderProfile('${emp.id}')">Salary History</button>
+      <button class="profile-tab ${profileActiveTab==='training'?'active':''}" onclick="profileActiveTab='training';renderProfile('${emp.id}')">Training</button>
       <button class="profile-tab ${profileActiveTab==='loans'?'active':''}" onclick="profileActiveTab='loans';renderProfile('${emp.id}')">Loans</button>
       <button class="profile-tab ${profileActiveTab==='disciplinary'?'active':''}" onclick="profileActiveTab='disciplinary';renderProfile('${emp.id}')">Disciplinary</button>
       <button class="profile-tab ${profileActiveTab==='assets'?'active':''}" onclick="profileActiveTab='assets';renderProfile('${emp.id}')">Assets</button>
@@ -5594,6 +5949,9 @@ function renderProfile(empId){
     <div class="profile-panel ${profileActiveTab==='salary-history'?'active':''}" id="ptab-salary-history">
       <div id="salaryHistoryBody"></div>
     </div>
+    <div class="profile-panel ${profileActiveTab==='training'?'active':''}" id="ptab-training">
+      <div id="trainingTabBody"></div>
+    </div>
     <div class="profile-panel ${profileActiveTab==='loans'?'active':''}" id="ptab-loans">
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm" onclick="guardAction('hr_loans', ()=>openAddLoan('${emp.id}'))">＋ New Loan</button></div>
       ${empLoans.length?empLoans.map(l=>renderLoanCard(l,emp)).join(''):'<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v1a3 3 0 006 0V7m0 1a3 3 0 006 0V7m0 1a3 3 0 006 0V7L12 2 3 7z"/></svg></div><div class="empty-title">No loans</div></div>'}
@@ -5619,9 +5977,11 @@ function renderProfile(empId){
         <div class="info-item"><div class="info-label">Emergency Phone</div><div class="info-val">${emp.emgPhone||'—'}</div></div>
       </div>
     </div>`;
-  // Lazy-load tabs that need an API call (salary history isn't held in any local cache)
+  // Lazy-load tabs that need an API call (these aren't held in any local cache)
   if (profileActiveTab === 'salary-history') {
     setTimeout(()=>renderSalaryHistoryTab(emp.id), 0);
+  } else if (profileActiveTab === 'training') {
+    setTimeout(()=>renderTrainingTab(emp.id), 0);
   }
 }
 
@@ -13716,6 +14076,7 @@ const PERM_TREE = [
     { label:'Pension', key:'hr_pension', actions:['view','edit'] },
     { label:'Propose Salary Revision', key:'hr_salary_revise', actions:['edit'] },
     { label:'Approve Salary Revision', key:'hr_salary_approve', actions:['edit'] },
+    { label:'Training & Certs', key:'hr_training', actions:['view','edit'] },
     { label:'Leave', key:'hr_leave', actions:['view','edit'] },
     { label:'Leave Approve / Reject (Stage 1 — Manager)', key:'hr_leave_approve', actions:['edit'] },
     { label:'Leave Final Approve (Stage 2 — GM/COO)', key:'hr_leave_final_approve', actions:['edit'] },

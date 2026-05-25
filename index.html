@@ -393,6 +393,32 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .pg-name{font-size:13px;font-weight:600;color:var(--text)}
 .pg-detail{font-size:12px;color:var(--text3);margin-top:2px}
 .pg-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+
+/* ── Bucket / urgency group header used on Expiring Docs, Probation,
+   Training, Salary Revisions etc. Coloured pill on the left + bigger
+   weight than a body label so eye can scan the group breaks. */
+.bucket-hdr{display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text2)}
+.bucket-hdr::before{content:'';display:inline-block;width:3px;height:14px;background:currentColor;border-radius:2px;opacity:.6}
+.bucket-hdr .bucket-count{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0;text-transform:none}
+.bucket-group{margin-bottom:22px}
+.bucket-red   { color: var(--red);   }
+.bucket-amber { color: var(--amber); }
+.bucket-blue  { color: var(--accent);}
+.bucket-grey  { color: var(--text3); }
+
+/* Tightened empty-state spacing for in-tab usage (vs the page-level
+   empty state which has more vertical room). */
+.empty-tight{padding:32px 16px;text-align:center;color:var(--text3)}
+.empty-tight .empty-icon{font-size:24px;margin-bottom:8px;opacity:.7}
+.empty-tight .empty-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.empty-tight .empty-sub{font-size:12px;color:var(--text3)}
+
+/* Loosens the field stacks inside modal bodies. The .field class sets
+   margin-bottom:12px by default; in a modal context we want a bit more
+   breathing room. Applied automatically to fields inside .modal-body. */
+.modal .field{margin-bottom:16px}
+.modal .field .field-label{margin-bottom:6px;display:block;font-size:11.5px;font-weight:600;color:var(--text2);letter-spacing:.02em}
+.modal .field input,.modal .field select,.modal .field textarea{font-size:13.5px}
 .pg-amount{font-size:14px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
 .pg-paid-info{font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;text-align:right}
 
@@ -1359,22 +1385,23 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="sidebar-brand-sub">Human Resources</div>
             </div>
             <div class="nav-wrap">
-              <div class="nav-lbl">Employees</div>
+              <div class="nav-lbl">Records</div>
               <div class="nav-item active" onclick="hrNav('employees')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>All Staff</div>
               <div class="nav-item" onclick="guardAction('hr_add_emp', ()=>hrNav('add-employee'))"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>Add Employee</div>
+              <div class="nav-item" onclick="hrNav('org-chart')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="9" y="15" width="6" height="6" rx="1"/><path d="M6 9v3h12V9M12 12v3"/></svg></span>Org Chart</div>
               <div class="nav-item" onclick="hrNav('disciplinary')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg></span>Disciplinary</div>
               <div class="nav-item" onclick="hrNav('staff-assets')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></span>Staff Assets</div>
+              <div class="nav-lbl">Compliance</div>
               <div class="nav-item" onclick="hrNav('expiring-docs')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>Expiring Documents</div>
               <div class="nav-item" onclick="hrNav('probation-contracts')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>Probation &amp; Contracts</div>
-              <div class="nav-item" onclick="hrNav('org-chart')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="9" y="15" width="6" height="6" rx="1"/><path d="M6 9v3h12V9M12 12v3"/></svg></span>Org Chart</div>
-              <div class="nav-lbl">Payroll</div>
-              <div class="nav-item" onclick="hrNav('salary-revisions')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/><path d="M7 7l10 10M17 7L7 17"/></svg></span>Salary Revisions</div>
               <div class="nav-item" onclick="hrNav('training')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>Training &amp; Certs</div>
+              <div class="nav-lbl">Payroll</div>
               <div class="nav-item" onclick="hrNav('payroll')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Monthly Payroll</div>
+              <div class="nav-item" onclick="hrNav('salary-revisions')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/><path d="M7 7l10 10M17 7L7 17"/></svg></span>Salary Revisions</div>
               <div class="nav-item" onclick="hrNav('loans')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M8 10v11M12 10v11M16 10v11M20 10v11"/></svg></span>Loans</div>
               <div class="nav-item" onclick="hrNav('pension')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v1a3 3 0 006 0V7m0 1a3 3 0 006 0V7m0 1a3 3 0 006 0V7L12 2 3 7z"/></svg></span>Pension</div>
               <div class="nav-item" onclick="hrNav('bonus')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>Bonus</div>
-              <div class="nav-lbl">Other</div>
+              <div class="nav-lbl">Leave &amp; Letters</div>
               <div class="nav-item" onclick="hrNav('dept-leave')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Department Leave</div>
               <div class="nav-item" onclick="hrNav('leave')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></span>Leave</div>
               <div class="nav-item" onclick="hrNav('letters')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>Staff Letters</div>
@@ -1746,9 +1773,12 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 
             <!-- ── PROBATION & CONTRACTS ── -->
             <div class="page" id="hr-page-probation-contracts">
-              <div class="page-hdr">
-                <div class="page-title">Probation &amp; Contracts</div>
-                <div class="page-sub">Probation periods ending and contracts approaching expiry — confirm, extend, terminate, or renew.</div>
+              <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+                <div>
+                  <div class="page-title">Probation &amp; Contracts</div>
+                  <div class="page-sub">Probation periods ending and contracts approaching expiry — confirm, extend, terminate, or renew.</div>
+                </div>
+                <!-- right column reserved for visual rhythm with other HR pages -->
               </div>
               <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
                 <button class="staff-tab active" id="pcTab-probation" onclick="pcSetTab('probation')">🧪 Probation Ending <span class="staff-tab-count" id="pcCount-probation"></span></button>
@@ -3057,7 +3087,7 @@ function applyPerms(){
   // ── HR SIDEBAR nav items (by position) ───────────────
   const hrNavItems=document.querySelectorAll('#mod-hr .nav-wrap .nav-item');
   // positions: 0=All Staff, 1=Add Emp, 2=Disciplinary, 3=Staff Assets, 4=Payroll, 5=Loans, 6=Pension, 7=Bonus, 8=Leave, 9=Letters
-  const hrMap=['hr_view_all','hr_add_emp','hr_disc','hr_assets','hr_view_all','hr_view_all','hr_view_all','hr_view_all','hr_training','hr_payroll','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
+  const hrMap=['hr_view_all','hr_add_emp','hr_view_all','hr_disc','hr_assets','hr_view_all','hr_view_all','hr_training','hr_payroll','hr_view_all','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
   hrMap.forEach((k,i)=>{
     if(!hrNavItems[i]) return;
     // All Staff and Bonus both gate on hr_view_all OR hr_view_own
@@ -4423,7 +4453,7 @@ function hrNav(page, extra){
   const pageEl = document.getElementById('hr-page-'+page);
   if(pageEl) pageEl.classList.add('active');
   const items = document.querySelectorAll('#mod-hr .nav-item');
-  const map = {employees:0,'add-employee':1,disciplinary:2,'staff-assets':3,'expiring-docs':4,'probation-contracts':5,'org-chart':6,'salary-revisions':7,training:8,payroll:9,loans:10,pension:11,bonus:12,'dept-leave':13,leave:14,letters:15};
+  const map = {employees:0,'add-employee':1,'org-chart':2,disciplinary:3,'staff-assets':4,'expiring-docs':5,'probation-contracts':6,training:7,payroll:8,'salary-revisions':9,loans:10,pension:11,bonus:12,'dept-leave':13,leave:14,letters:15};
   if(items[map[page]]) items[map[page]].classList.add('active');
   hrActivePage = page;
   if(page==='employees')     { populateHRFilters(); renderEmployees(); }
@@ -4962,19 +4992,19 @@ async function renderExpiringDocs(initialDocFilter){
   if(!filtered.length){ list.innerHTML='<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Nothing expiring</div><div class="empty-sub">Within the selected window. Try a longer window.</div></div>'; return; }
   // Group by urgency bucket
   const buckets = [
-    { label: 'Expired',       test: x => x.daysRemaining < 0,                       colour: 'var(--red)'   },
-    { label: '0–7 days',      test: x => x.daysRemaining >= 0  && x.daysRemaining <= 7,  colour: 'var(--red)'   },
-    { label: '8–30 days',     test: x => x.daysRemaining >= 8  && x.daysRemaining <= 30, colour: 'var(--amber)' },
-    { label: '31–60 days',    test: x => x.daysRemaining >= 31 && x.daysRemaining <= 60, colour: 'var(--blue)'  },
-    { label: '61–90 days',    test: x => x.daysRemaining >= 61 && x.daysRemaining <= 90, colour: 'var(--text3)' },
-    { label: '90+ days',      test: x => x.daysRemaining > 90,                            colour: 'var(--text3)' }
+    { label: 'Expired',       test: x => x.daysRemaining < 0,                       cls: 'bucket-red'   },
+    { label: '0–7 days',      test: x => x.daysRemaining >= 0  && x.daysRemaining <= 7,  cls: 'bucket-red'   },
+    { label: '8–30 days',     test: x => x.daysRemaining >= 8  && x.daysRemaining <= 30, cls: 'bucket-amber' },
+    { label: '31–60 days',    test: x => x.daysRemaining >= 31 && x.daysRemaining <= 60, cls: 'bucket-blue'  },
+    { label: '61–90 days',    test: x => x.daysRemaining >= 61 && x.daysRemaining <= 90, cls: 'bucket-grey'  },
+    { label: '90+ days',      test: x => x.daysRemaining > 90,                            cls: 'bucket-grey'  }
   ];
   const html = buckets.map(b => {
     const rows = filtered.filter(b.test);
     if(!rows.length) return '';
     return `
-      <div style="margin-bottom:18px">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${b.colour};margin-bottom:8px">${b.label} <span style="color:var(--text3);font-weight:600;margin-left:6px">(${rows.length})</span></div>
+      <div class="bucket-group">
+        <div class="bucket-hdr ${b.cls}">${b.label} <span class="bucket-count">(${rows.length})</span></div>
         ${rows.map(r => {
           const dayLbl = r.daysRemaining < 0
             ? `<span style="color:var(--red);font-weight:700">Expired ${Math.abs(r.daysRemaining)}d ago</span>`
@@ -5364,7 +5394,16 @@ function _diffSummary(r){
 function _renderSrvList(){
   const list = document.getElementById('srvList'); if(!list) return;
   const rows = _srvCache.filter(r=>r.status===_srvTab);
-  if(!rows.length){ list.innerHTML='<div class="empty"><div class="empty-icon">💰</div><div class="empty-title">Nothing here</div></div>'; return; }
+  if(!rows.length){
+    const emptyText = {
+      pending: 'No revisions awaiting approval. Use "＋ Propose Revision" to start one.',
+      approved: 'No approved revisions waiting to be applied.',
+      applied:  'No applied revisions yet.',
+      rejected: 'No rejected revisions.'
+    }[_srvTab] || 'Nothing here.';
+    list.innerHTML=`<div class="empty-tight"><div class="empty-icon">💰</div><div class="empty-title">${{pending:'Inbox is empty',approved:'All clear',applied:'No history yet',rejected:'None rejected'}[_srvTab]||'Nothing here'}</div><div class="empty-sub">${emptyText}</div></div>`;
+    return;
+  }
   const isAdmin = currentUser?.role === 'admin';
   const role = currentUser?.roleId ? appRoles.find(r=>String(r.id)===String(currentUser.roleId)) : null;
   const myPerms = role?.perms || currentUser?.rolePerms || {};
@@ -5378,16 +5417,33 @@ function _renderSrvList(){
     const applyBtn = (_srvTab==='approved' && canApprove)
       ? `<button class="btn btn-primary btn-xs" onclick="srvActApply('${r.id}')">Apply Now</button>`
       : '';
-    return `<div class="pay-group-row" style="cursor:default">
+    // Diff numbers — show prominently. delta/percent computed once and used twice.
+    const before = r.oldBasic == null ? '—' : `${Number(r.oldBasic).toLocaleString()} ${r.currency||''}`.trim();
+    const after  = `${Number(r.newBasic||0).toLocaleString()} ${r.currency||''}`.trim();
+    const delta  = (r.oldBasic != null && r.newBasic != null) ? (r.newBasic - r.oldBasic) : null;
+    const pct    = (delta != null && r.oldBasic) ? ((delta / r.oldBasic) * 100).toFixed(1) : null;
+    const deltaCol = delta == null ? 'var(--text3)' : delta >= 0 ? 'var(--green)' : 'var(--red)';
+    const deltaLabel = delta == null ? '' : `<span style="color:${deltaCol};font-weight:600">${delta>=0?'+':''}${delta.toLocaleString()}${pct?` (${delta>=0?'+':''}${pct}%)`:''}</span>`;
+    // Compose actor/date metadata cleanly
+    const meta = [];
+    if (r.proposedByName) meta.push(`Proposed by <strong>${r.proposedByName}</strong>${r.proposedAt?` · ${fmtDate(String(r.proposedAt).slice(0,10))}`:''}`);
+    if (r.approvedByName) meta.push(`${r.status==='rejected'?'Rejected':'Approved'} by <strong>${r.approvedByName}</strong>${r.approvedAt?` · ${fmtDate(String(r.approvedAt).slice(0,10))}`:''}`);
+    if (r.appliedAt)      meta.push(`Applied ${fmtDate(String(r.appliedAt).slice(0,10))}`);
+    return `<div class="pay-group-row" style="cursor:default;align-items:flex-start">
       <div>
-        <div class="pg-name">${r.empName||'(unknown)'} ${_srvTypeBadge(r.type)}</div>
-        <div class="pg-detail">effective ${fmtDate(r.effectiveDate)} · ${_diffSummary(r)}</div>
-        ${r.reason?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${r.reason}</div>`:''}
-        <div style="font-size:11px;color:var(--text3);margin-top:3px">
-          ${r.proposedByName?'Proposed by '+r.proposedByName:''}${r.proposedAt?' · '+fmtDate(String(r.proposedAt).slice(0,10)):''}
-          ${r.approvedByName?' · '+(r.status==='rejected'?'Rejected by ':'Approved by ')+r.approvedByName:''}${r.approvedAt?' · '+fmtDate(String(r.approvedAt).slice(0,10)):''}
-          ${r.appliedAt?' · Applied '+fmtDate(String(r.appliedAt).slice(0,10)):''}
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+          <span class="pg-name" style="font-size:14px">${r.empName||'(unknown)'}</span>
+          ${_srvTypeBadge(r.type)}
+          <span style="font-size:11px;color:var(--text3)">effective ${fmtDate(r.effectiveDate)}</span>
         </div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px">
+          <span style="color:var(--text3);font-weight:500">${before}</span>
+          <span style="color:var(--text3);margin:0 6px">→</span>
+          ${after}
+          ${deltaLabel?'  '+deltaLabel:''}
+        </div>
+        ${r.reason?`<div style="font-size:12px;color:var(--text2);margin-bottom:3px">${r.reason}</div>`:''}
+        ${meta.length?`<div style="font-size:11px;color:var(--text3)">${meta.join(' &middot; ')}</div>`:''}
       </div>
       <div class="pg-right">
         <button class="btn btn-ghost btn-xs" onclick="hrNav('profile','${r.empId}')">Profile</button>
@@ -5605,22 +5661,22 @@ function _renderPcList(){
   const cnt = document.getElementById('pcCount'); if(cnt) cnt.textContent = (items?.length||0)+' item'+((items?.length||0)===1?'':'s');
   if(!items?.length){ list.innerHTML='<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Nothing in window</div><div class="empty-sub">Try a longer look-ahead window.</div></div>'; return; }
   const buckets = [
-    { label: 'Overdue',     test: x => x.daysRemaining < 0,                            colour:'var(--red)'   },
-    { label: '0–7 days',    test: x => x.daysRemaining >= 0  && x.daysRemaining <= 7,  colour:'var(--red)'   },
-    { label: '8–30 days',   test: x => x.daysRemaining >= 8  && x.daysRemaining <= 30, colour:'var(--amber)' },
-    { label: '31–60 days',  test: x => x.daysRemaining >= 31 && x.daysRemaining <= 60, colour:'var(--blue)'  },
-    { label: '61–90 days',  test: x => x.daysRemaining >= 61 && x.daysRemaining <= 90, colour:'var(--text3)' },
-    { label: '90+ days',    test: x => x.daysRemaining > 90,                            colour:'var(--text3)' }
+    { label: 'Overdue',     test: x => x.daysRemaining < 0,                            cls:'bucket-red'   },
+    { label: '0–7 days',    test: x => x.daysRemaining >= 0  && x.daysRemaining <= 7,  cls:'bucket-red'   },
+    { label: '8–30 days',   test: x => x.daysRemaining >= 8  && x.daysRemaining <= 30, cls:'bucket-amber' },
+    { label: '31–60 days',  test: x => x.daysRemaining >= 31 && x.daysRemaining <= 60, cls:'bucket-blue'  },
+    { label: '61–90 days',  test: x => x.daysRemaining >= 61 && x.daysRemaining <= 90, cls:'bucket-grey'  },
+    { label: '90+ days',    test: x => x.daysRemaining > 90,                            cls:'bucket-grey'  }
   ];
   list.innerHTML = buckets.map(b=>{
     const rows = items.filter(b.test);
     if(!rows.length) return '';
     return `
-      <div style="margin-bottom:18px">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${b.colour};margin-bottom:8px">${b.label} <span style="color:var(--text3);font-weight:600;margin-left:6px">(${rows.length})</span></div>
+      <div class="bucket-group">
+        <div class="bucket-hdr ${b.cls}">${b.label} <span class="bucket-count">(${rows.length})</span></div>
         ${rows.map(r => _pcRowHtml(r)).join('')}
       </div>`;
-  }).join('') || '<div class="empty"><div class="empty-title">Nothing</div></div>';
+  }).join('') || '<div class="empty-tight"><div class="empty-icon">🎉</div><div class="empty-title">All clear</div><div class="empty-sub">No probation or contracts in the selected window.</div></div>';
 }
 function _pcRowHtml(r){
   const dayLbl = r.daysRemaining < 0

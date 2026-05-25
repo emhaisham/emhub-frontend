@@ -774,16 +774,44 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 
 /* ══ HR MODULE STYLES ════════════════════════════════ */
-.emp-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow-sm);margin-bottom:10px;cursor:pointer;transition:all .15s}
-.emp-card:hover{border-color:var(--border2);box-shadow:var(--shadow);transform:translateY(-1px)}
+/* ── Staff list row (extends .pay-group-row with leading avatar) ──
+   The canonical list-row pattern for HR. Replaces the old .emp-card
+   (card-per-row was the anti-pattern PRODUCT.md called out). Density
+   matches CrewPay payments, Expiring Documents, Probation, Salary
+   Revisions — one shared rhythm across the whole HR module. */
+.emp-row{cursor:pointer}
+.emp-row-main{display:flex;align-items:center;gap:14px;min-width:0;flex:1 1 auto}
+.emp-row-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;position:relative;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.emp-row-text{min-width:0;flex:1}
+.emp-row-name{font-size:13.5px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;flex-wrap:wrap;letter-spacing:-.005em}
+.emp-row-empcode{font-size:11px;color:var(--text3);font-weight:500;font-variant-numeric:tabular-nums}
+.emp-row-detail{font-size:12px;color:var(--text3);margin-top:2px;letter-spacing:.005em}
+.emp-row-iconbtn{width:30px;height:30px;border-radius:7px;border:1px solid var(--border2);background:var(--white);color:var(--text3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;flex-shrink:0}
+.emp-row-iconbtn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+.emp-row-iconbtn.danger:hover{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+
+/* Type chip — standardised to the design tokens. Replaces the old
+   hardcoded baby-blue (.tag-local) and pink (.tag-expat). */
+.emp-type-chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:4px;letter-spacing:.02em;line-height:1.3}
+.emp-type-chip.local{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd)}
+.emp-type-chip.expat{background:var(--purple-bg);color:var(--purple);border:1px solid #ddd6fe}
+
+/* Stat tile — compliance-attention variant. Clickable; subtle hover
+   states the user that it goes somewhere. */
+.stat-card.is-link{cursor:pointer;transition:border-color .12s,transform .12s cubic-bezier(.16,1,.3,1)}
+.stat-card.is-link:hover{border-color:var(--accent)}
+.stat-card.is-link:active{transform:translateY(1px)}
+
+/* Sticky tools — keeps search + filters visible while a long list scrolls.
+   Targets .toolbar.sticky-tools so it's opt-in per page, not global. */
+.toolbar.sticky-tools{position:sticky;top:-1px;background:var(--bg);z-index:5;padding:10px 0;margin-top:-2px;border-bottom:1px solid transparent;transition:border-color .15s,box-shadow .15s}
+.toolbar.sticky-tools.is-stuck{border-bottom-color:var(--border);box-shadow:0 4px 8px -6px rgba(20,18,14,.08)}
 .emp-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;flex-shrink:0}
-.emp-info{flex:1;min-width:0}
-.emp-name{font-size:14px;font-weight:600;color:var(--text)}
-.emp-role{font-size:12px;color:var(--text3);margin-top:2px}
-.emp-tags{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+/* Generic .tag used by Add Employee form sections + WP status pills below.
+   The .emp-* / .tag-local / .tag-expat classes were removed when the staff
+   list migrated to .pay-group-row + .emp-type-chip; only what's still in
+   use survives. */
 .tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px}
-.tag-local{background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd}
-.tag-expat{background:#fce7f3;color:#9d174d;border:1px solid #fbcfe8}
 .tag-dept{background:var(--surface);color:var(--text2);border:1px solid var(--border2)}
 .tag-wp-ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
 .tag-wp-warn{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
@@ -1093,12 +1121,10 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
   #cp-page-reports .field { max-width: none !important; min-width: 0; }
   #cp-page-reports input[type="date"] { width: 100%; min-width: 130px; box-sizing: border-box; }
 
-  /* HR All Staff dashboard: keep labels on one consistent line so numbers align */
-  #hr-page-employees .stat-card .stat-label,
-  #hr-page-employees .stat-top .stat-label { white-space: normal; min-height: 28px; display: flex; align-items: center; }
-  /* Allow horizontal scroll on the stat row so 5+ cards stay readable */
-  #hr-page-employees .stat-row { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; gap: 8px; }
-  #hr-page-employees .stat-row .stat-card { flex: 0 0 130px; }
+  /* HR All Staff dashboard: 3-tile header stacks on mobile (one per row)
+     so each tile keeps its full content visible. The old 8-tile horizontal-
+     scroll workaround was removed when the header was rebuilt with 3 tiles. */
+  #hr-page-employees .stat-row { grid-template-columns: 1fr !important; gap: 10px; }
 
   /* Local Crew add/edit modal: collapse multi-col grids to one column */
   #lcStaffRows > div > div[style*="grid-template-columns"] {
@@ -1621,15 +1647,33 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <div><div class="page-title">All Staff</div><div class="page-sub">Manage employee records, documents and contracts</div></div>
                 <button class="btn btn-primary" onclick="guardAction('hr_add_emp', ()=>hrNav('add-employee'))">＋ Add Employee</button>
               </div>
-              <div class="stat-row" style="grid-template-columns:repeat(8,1fr);margin-bottom:16px">
-                <div class="stat-card"><div class="stat-top"><span class="stat-label">Total Active</span></div><div class="stat-val blue" id="hrStatTotal">0</div></div>
-                <div class="stat-card"><div class="stat-top"><span class="stat-label">Local</span></div><div class="stat-val green" id="hrStatLocal">0</div></div>
-                <div class="stat-card"><div class="stat-top"><span class="stat-label">Expat</span></div><div class="stat-val blue" id="hrStatExpat">0</div></div>
-                <div class="stat-card" style="cursor:pointer" onclick="hrNav('expiring-docs','work_permit_expiry')"><div class="stat-top"><span class="stat-label">WP Expiring</span></div><div class="stat-val red" id="hrStatExpiring">0</div></div>
-                <div class="stat-card" style="cursor:pointer" onclick="hrNav('expiring-docs','passport_expiry')"><div class="stat-top"><span class="stat-label">Passport Exp.</span></div><div class="stat-val amber" id="hrStatPPExp">0</div></div>
-                <div class="stat-card" style="cursor:pointer" onclick="hrNav('expiring-docs','nid_expiry')"><div class="stat-top"><span class="stat-label">NID Expiring</span></div><div class="stat-val amber" id="hrStatNIDExp">0</div></div>
-                <div class="stat-card" style="cursor:pointer" onclick="hrNav('expiring-docs','insurance_expiry')"><div class="stat-top"><span class="stat-label">Insurance Exp.</span></div><div class="stat-val red" id="hrStatInsExp">0</div></div>
-                <div class="stat-card" style="cursor:pointer" onclick="hrNav('expiring-docs','quota_expiry')"><div class="stat-top"><span class="stat-label">Quota Exp.</span></div><div class="stat-val red" id="hrStatQuotaExp">0</div></div>
+              <!-- v2: three tiles, not eight. Total / Type Mix / Compliance.
+                   The detailed expiry counts (WP, Passport, NID, Insurance,
+                   Quota) live on the Expiring Documents page; the Compliance
+                   Attention tile is the link in. -->
+              <div class="stat-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
+                <div class="stat-card">
+                  <div class="stat-top"><span class="stat-label">Active headcount</span></div>
+                  <div class="stat-val blue" id="hrStatTotal">0</div>
+                  <div class="stat-sub" id="hrStatTotalSub">across all departments</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-top"><span class="stat-label">Type mix</span></div>
+                  <div class="stat-val" style="display:flex;align-items:baseline;gap:14px;font-size:22px">
+                    <span><span id="hrStatLocal" style="color:var(--accent)">0</span> <span style="font-size:12px;color:var(--text3);font-weight:500">local</span></span>
+                    <span style="color:var(--text3);font-weight:400;font-size:14px">·</span>
+                    <span><span id="hrStatExpat" style="color:var(--purple)">0</span> <span style="font-size:12px;color:var(--text3);font-weight:500">expat</span></span>
+                  </div>
+                  <div class="stat-sub">work permits, passports tracked separately</div>
+                </div>
+                <div class="stat-card is-link" onclick="hrNav('expiring-docs')" title="Jump to Expiring Documents">
+                  <div class="stat-top">
+                    <span class="stat-label">Compliance attention</span>
+                    <span style="font-size:10px;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;font-weight:600">90 days</span>
+                  </div>
+                  <div class="stat-val" id="hrStatCompliance" style="color:var(--amber)">0</div>
+                  <div class="stat-sub" id="hrStatComplianceSub">documents expiring soon</div>
+                </div>
               </div>
               <!-- Staff status tabs -->
               <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
@@ -1637,9 +1681,10 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <button class="staff-tab" id="staffTab-former" onclick="setStaffTab('former')">Resigned / Terminated <span class="staff-tab-count" id="staffTabCount-former"></span></button>
                 <button class="staff-tab" id="staffTab-all" onclick="setStaffTab('all')">All <span class="staff-tab-count" id="staffTabCount-all"></span></button>
               </div>
-              <!-- Staff list -->
-              <div class="toolbar">
-                <input type="text" id="hrSearch" placeholder="Search staff…" oninput="_pages.emp=1;renderEmployees()">
+              <!-- Staff list — sticky toolbar so search + filters stay visible
+                   while scrolling a long list of staff. -->
+              <div class="toolbar sticky-tools" id="hrStaffTools">
+                <input type="text" id="hrSearch" placeholder="Search by name, code, dept, or NID…" oninput="_pages.emp=1;renderEmployees()">
                 <select id="hrFilterType" onchange="_pages.emp=1;renderEmployees()"><option value="">All types</option><option value="local">Local</option><option value="expat">Expat</option></select>
                 <select id="hrFilterDept" onchange="_pages.emp=1;renderEmployees()"><option value="">All departments</option></select>
                 <input type="hidden" id="hrFilterStatus" value="active">
@@ -6803,58 +6848,104 @@ function renderEmployees(){
   const elFC=document.getElementById('staffTabCount-former'); if(elFC) elFC.textContent=formerCount;
   const elALL=document.getElementById('staffTabCount-all'); if(elALL) elALL.textContent=hrEmployees.length;
 
-  const total=hrEmployees.filter(e=>!formerStatuses.includes(e.status)).length;
-  const local=hrEmployees.filter(e=>e.type==='local'&&!formerStatuses.includes(e.status)).length;
-  const expat=hrEmployees.filter(e=>e.type==='expat'&&!formerStatuses.includes(e.status)).length;
-  const wpExp=hrEmployees.filter(e=>{const d=daysUntil(e.workPermitExpiry);return d!==null&&d>=0&&d<=90}).length;
-  const ppExp=hrEmployees.filter(e=>{const d=daysUntil(e.passportExpiry);return d!==null&&d>=0&&d<=90}).length;
-  const nidExp=hrEmployees.filter(e=>{const d=daysUntil(e.nidExpiry);return d!==null&&d>=0&&d<=90}).length;
-  const insExp=hrEmployees.filter(e=>{const d=daysUntil(e.insuranceExpiry);return d!==null&&d>=0&&d<=90}).length;
-  const quotaExp=hrEmployees.filter(e=>{const d=daysUntil(e.quotaExpiry);return d!==null&&d>=0&&d<=90}).length;
-  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
-  set('hrStatTotal',total);set('hrStatLocal',local);set('hrStatExpat',expat);
-  set('hrStatExpiring',wpExp);set('hrStatPPExp',ppExp);set('hrStatNIDExp',nidExp);
-  set('hrStatInsExp',insExp);set('hrStatQuotaExp',quotaExp);
-  set('hrCount',`${list.length} shown`);
-  const el=document.getElementById('hrEmpList'); if(!el) return;
-  if(!list.length){
+  const active = hrEmployees.filter(e=>!formerStatuses.includes(e.status));
+  const total = active.length;
+  const local = active.filter(e=>e.type==='local').length;
+  const expat = active.filter(e=>e.type==='expat').length;
+  // Compliance roll-up: every doc expiring or already expired within 90 days
+  // across every active employee, counting each incident (one staff with
+  // both WP and passport expiring contributes 2). Matches what the
+  // Expiring Documents page actually surfaces.
+  const docCheck = ['workPermitExpiry','passportExpiry','nidExpiry','insuranceExpiry','quotaExpiry','medicalExpiry','contractExpiry'];
+  let compliance = 0;
+  active.forEach(e => docCheck.forEach(k => {
+    const d = daysUntil(e[k]);
+    if (d !== null && d <= 90) compliance++;
+  }));
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('hrStatTotal', total);
+  set('hrStatTotalSub', `across ${new Set(active.map(e=>e.dept).filter(Boolean)).size||0} departments`);
+  set('hrStatLocal', local);
+  set('hrStatExpat', expat);
+  set('hrStatCompliance', compliance);
+  set('hrStatComplianceSub', compliance === 0 ? 'all documents current' : `documents expiring within 90 days`);
+  // Wire the compliance tile to switch colour when there's nothing pending
+  const compEl = document.getElementById('hrStatCompliance');
+  if (compEl) compEl.style.color = compliance === 0 ? 'var(--green)' : 'var(--amber)';
+
+  set('hrCount', `${list.length} shown`);
+  const el = document.getElementById('hrEmpList'); if(!el) return;
+  if (!list.length) {
     const emptyMsg = tab==='former' ? 'No resigned or terminated staff' : 'No employees found';
-    el.innerHTML=`<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="empty-title">${emptyMsg}</div><div class="empty-sub">${tab==='former'?'Resigned and terminated staff will appear here':'Click "Add Employee" to get started'}</div></div>`;
+    el.innerHTML = `<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="empty-title">${emptyMsg}</div><div class="empty-sub">${tab==='former'?'Resigned and terminated staff will appear here':'Click "Add Employee" to get started'}</div></div>`;
     return;
   }
   const _p = _paginate(list, 'emp', 'renderEmployees');
-  el.innerHTML=_p.shown.map(emp=>{
+  el.innerHTML = _p.shown.map((emp, idx) => {
     // Photo key: most records store it on emp.photo (the storage key), some
     // legacy ones nest it under emp.docs.photo.key. Prefer the former.
     const photoKey = emp.photo || emp.docs?.photo?.key || '';
     const initial = emp.name[0].toUpperCase();
     const avatarBg = hrAvColor(emp.name);
-    const statusBadge = formerStatuses.includes(emp.status)
-      ? `<span class="tag" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);font-size:11px">${emp.status==='resigned'?'Resigned':emp.status==='terminated'?'Terminated':'Inactive'}</span>`
-      : (emp.status==='probation'?`<span class="tag" style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);font-size:11px">Probation</span>`:'');
-    return`<div class="emp-card">
-      <div style="width:44px;height:44px;border-radius:50%;background:${avatarBg};display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;position:relative">
-        <span>${initial}</span>
-        ${photoKey?`<img data-key="${photoKey}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.remove()">`:''}
-      </div>
-      <div class="emp-info">
-        <div class="emp-name">${emp.name} <span style="font-size:11px;color:var(--text3);font-weight:400">${emp.empId||''}</span></div>
-        <div class="emp-role">${emp.title||'—'} · ${emp.dept||'—'}</div>
-        <div class="emp-tags">
-          <span class="tag ${emp.type==='expat'?'tag-expat':'tag-local'}">${emp.type==='expat'?'Expat':'Local'}</span>
-          ${statusBadge}
+    const isFormer = formerStatuses.includes(emp.status);
+    // Status badge: only show when it's something other than active
+    let statusBadge = '';
+    if (emp.status==='probation')      statusBadge = `<span class="badge badge-amber" style="font-size:10.5px;padding:2px 7px">Probation</span>`;
+    else if (emp.status==='resigned')   statusBadge = `<span class="badge badge-red" style="font-size:10.5px;padding:2px 7px">Resigned</span>`;
+    else if (emp.status==='terminated') statusBadge = `<span class="badge badge-red" style="font-size:10.5px;padding:2px 7px">Terminated</span>`;
+    else if (emp.status==='inactive')   statusBadge = `<span class="badge badge-red" style="font-size:10.5px;padding:2px 7px">Inactive</span>`;
+    // Per-row staggered reveal driven by --i; the parent .pay-group-row gets
+    // the row-reveal class so existing animation rules apply.
+    return `<div class="pay-group-row emp-row row-reveal" style="--i:${idx}" onclick="profileActiveTab='info';hrNav('profile','${emp.id}')">
+      <div class="emp-row-main">
+        <div class="emp-row-avatar" style="background:${avatarBg}">
+          <span>${initial}</span>
+          ${photoKey?`<img data-key="${photoKey}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()">`:''}
+        </div>
+        <div class="emp-row-text">
+          <div class="emp-row-name">
+            <span>${emp.name}</span>
+            ${emp.empId?`<span class="emp-row-empcode">${emp.empId}</span>`:''}
+            <span class="emp-type-chip ${emp.type==='expat'?'expat':'local'}">${emp.type==='expat'?'Expat':'Local'}</span>
+            ${statusBadge}
+          </div>
+          <div class="emp-row-detail">${emp.title||emp.designation||'—'} <span style="color:var(--border2);margin:0 6px">·</span> ${emp.dept||'—'}${emp.joined?` <span style="color:var(--border2);margin:0 6px">·</span> joined ${fmtDate(emp.joined)}`:''}</div>
         </div>
       </div>
-      <div style="display:flex;gap:6px;flex-shrink:0">
-        <button class="btn btn-primary btn-xs" onclick="profileActiveTab='info';hrNav('profile','${emp.id}')">View</button>
-        <button class="btn btn-ghost btn-xs" onclick="guardAction('hr_edit_emp',()=>hrNav('add-employee','${emp.id}'))">Edit</button>
-        <button class="btn btn-red btn-xs" onclick="deleteEmployee('${emp.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+      <div class="pg-right" onclick="event.stopPropagation()">
+        <button class="emp-row-iconbtn" title="Edit" onclick="guardAction('hr_edit_emp',()=>hrNav('add-employee','${emp.id}'))">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+        <button class="emp-row-iconbtn danger" title="Delete" onclick="deleteEmployee('${emp.id}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
       </div>
     </div>`;
-  }).join('')+_p.footer;
+  }).join('') + _p.footer;
   // Trigger the same lazy-load pipeline the inventory list uses to fetch
   // signed URLs for the data-key imgs (staff avatars).
   loadInvPhotos();
+  // Wire the sticky-tools stuck-state detector (idempotent — only attaches once)
+  _wireStickyTools();
+}
+
+// One-time IntersectionObserver setup for the sticky search toolbar so it
+// gets a subtle shadow when it floats above scrolling content. Idempotent.
+let _stickyToolsWired = false;
+function _wireStickyTools(){
+  if (_stickyToolsWired) return;
+  const el = document.getElementById('hrStaffTools'); if (!el) return;
+  // Use a 1px sentinel above the toolbar to detect when it's pinned
+  const sentinel = document.createElement('div');
+  sentinel.style.cssText = 'position:relative;width:100%;height:1px;margin-top:-1px';
+  el.parentNode.insertBefore(sentinel, el);
+  const scroller = el.closest('.main-area') || document.scrollingElement;
+  const io = new IntersectionObserver(
+    ([e]) => el.classList.toggle('is-stuck', e.intersectionRatio < 1),
+    { threshold: [1], root: scroller && scroller.classList?.contains('main-area') ? scroller : null }
+  );
+  io.observe(sentinel);
+  _stickyToolsWired = true;
 }
 
 function deleteEmployee(id){

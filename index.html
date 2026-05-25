@@ -1447,6 +1447,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="nav-item" onclick="hrNav('disciplinary')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg></span>Disciplinary</div>
               <div class="nav-item" onclick="hrNav('staff-assets')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></span>Staff Assets</div>
               <div class="nav-item" onclick="hrNav('reports')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg></span>Reports &amp; Analytics</div>
+              <div class="nav-item" onclick="hrNav('requests')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Staff Requests</div>
               <div class="nav-lbl">Compliance</div>
               <div class="nav-item" onclick="hrNav('expiring-docs')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>Expiring Documents</div>
               <div class="nav-item" onclick="hrNav('probation-contracts')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>Probation &amp; Contracts</div>
@@ -1767,6 +1768,33 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 </select>
               </div>
               <div id="allStaffAssetsList"></div>
+            </div>
+
+            <!-- ── STAFF REQUESTS (self-service queue) ── -->
+            <div class="page" id="hr-page-requests">
+              <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+                <div>
+                  <div class="page-title">Staff Requests</div>
+                  <div class="page-sub">Self-service queue: profile update, letter, and loan/advance requests submitted by staff. Review and approve or reject.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
+                <button class="staff-tab active" id="rqTab-profile" onclick="rqSetTab('profile')">Profile Updates <span class="staff-tab-count" id="rqCount-profile"></span></button>
+                <button class="staff-tab" id="rqTab-letter"  onclick="rqSetTab('letter')">Letters <span class="staff-tab-count" id="rqCount-letter"></span></button>
+                <button class="staff-tab" id="rqTab-loan"    onclick="rqSetTab('loan')">Loans / Advances <span class="staff-tab-count" id="rqCount-loan"></span></button>
+              </div>
+              <div class="toolbar" style="margin-bottom:12px">
+                <select id="rqFilterStatus" onchange="_renderRqList()">
+                  <option value="pending" selected>Pending only</option>
+                  <option value="">All</option>
+                  <option value="applied">Applied</option>
+                  <option value="approved">Approved</option>
+                  <option value="issued">Issued</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+                <span class="toolbar-count" id="rqCount"></span>
+              </div>
+              <div id="rqList"></div>
             </div>
 
             <!-- ── REPORTS & ANALYTICS ── -->
@@ -2594,6 +2622,28 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
   </div>
 </div>
 
+<!-- ══ MAKE A REQUEST MODAL (self-service) ═══════════ -->
+<div class="modal-backdrop" id="mkReqModal">
+  <div class="modal modal-sm">
+    <div class="modal-hdr">
+      <div class="modal-title">Submit a Request</div>
+      <button class="btn-close" onclick="closeMakeRequest()">&times;</button>
+    </div>
+    <div style="padding:0 0 0 0">
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);padding:0 12px">
+        <button class="staff-tab active" id="mkTab-profile" onclick="_mkSwitch('profile')">Profile Update</button>
+        <button class="staff-tab" id="mkTab-letter"  onclick="_mkSwitch('letter')">Letter</button>
+        <button class="staff-tab" id="mkTab-loan"    onclick="_mkSwitch('loan')">Loan / Advance</button>
+      </div>
+      <div id="mkReqBody" style="padding:18px 24px"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 24px;border-top:1px solid var(--border)">
+        <button class="btn btn-ghost btn-sm" onclick="closeMakeRequest()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="submitMakeRequest()">Submit Request</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ TRAINING RECORD MODAL ═════════════════════════ -->
 <div class="modal-backdrop" id="trnRecModal">
   <div class="modal modal-sm">
@@ -3163,7 +3213,7 @@ function applyPerms(){
   // ── HR SIDEBAR nav items (by position) ───────────────
   const hrNavItems=document.querySelectorAll('#mod-hr .nav-wrap .nav-item');
   // positions: 0=All Staff, 1=Add Emp, 2=Disciplinary, 3=Staff Assets, 4=Payroll, 5=Loans, 6=Pension, 7=Bonus, 8=Leave, 9=Letters
-  const hrMap=['hr_view_all','hr_add_emp','hr_view_all','hr_disc','hr_assets','hr_reports_view','hr_view_all','hr_view_all','hr_training','hr_payroll','hr_view_all','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
+  const hrMap=['hr_view_all','hr_add_emp','hr_view_all','hr_disc','hr_assets','hr_reports_view','hr_self_request_approve','hr_view_all','hr_view_all','hr_training','hr_payroll','hr_view_all','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
   hrMap.forEach((k,i)=>{
     if(!hrNavItems[i]) return;
     // All Staff and Bonus both gate on hr_view_all OR hr_view_own
@@ -4496,6 +4546,7 @@ function hrNav(page, extra){
       'salary-revisions':'hr_view_all',
       'training':'hr_training',
       'reports':'hr_reports_view',
+      'requests':'hr_self_request_approve',
     };
     const permKey=pagePermMap[page];
     const role=currentUser.roleId?appRoles.find(r=>String(r.id)===String(currentUser.roleId)):null;
@@ -4530,7 +4581,7 @@ function hrNav(page, extra){
   const pageEl = document.getElementById('hr-page-'+page);
   if(pageEl) pageEl.classList.add('active');
   const items = document.querySelectorAll('#mod-hr .nav-item');
-  const map = {employees:0,'add-employee':1,'org-chart':2,disciplinary:3,'staff-assets':4,reports:5,'expiring-docs':6,'probation-contracts':7,training:8,payroll:9,'salary-revisions':10,loans:11,pension:12,bonus:13,'dept-leave':14,leave:15,letters:16};
+  const map = {employees:0,'add-employee':1,'org-chart':2,disciplinary:3,'staff-assets':4,reports:5,requests:6,'expiring-docs':7,'probation-contracts':8,training:9,payroll:10,'salary-revisions':11,loans:12,pension:13,bonus:14,'dept-leave':15,leave:16,letters:17};
   if(items[map[page]]) items[map[page]].classList.add('active');
   hrActivePage = page;
   if(page==='employees')     { populateHRFilters(); renderEmployees(); }
@@ -4564,6 +4615,7 @@ function hrNav(page, extra){
   if(page==='salary-revisions')    { renderSalaryRevisions(); }
   if(page==='training')            { renderTrainingPage(); }
   if(page==='reports')             { renderReportsPage(); }
+  if(page==='requests')            { renderRequestsPage(); }
   updateHRSidebar();
 }
 
@@ -5132,6 +5184,207 @@ async function submitMarkRenewed(){
   closeRenewModal();
   renderExpiringDocs();
   toast(_renewCtx?.label+' renewed ✓');
+}
+
+// ══ STAFF REQUESTS (self-service queue) ═══════════════
+let _rqTab = 'profile';
+let _rqCache = { profile: [], letter: [], loan: [] };
+function rqSetTab(t){
+  _rqTab = t;
+  document.querySelectorAll('#hr-page-requests .staff-tab').forEach(b=>b.classList.remove('active'));
+  const btn = document.getElementById('rqTab-'+t); if(btn) btn.classList.add('active');
+  _renderRqList();
+}
+async function renderRequestsPage(){
+  const [profile, letter, loan] = await Promise.all([
+    api('GET','/hr/profile-requests'),
+    api('GET','/hr/letter-requests'),
+    api('GET','/hr/loan-requests')
+  ]);
+  _rqCache.profile = Array.isArray(profile) ? profile : [];
+  _rqCache.letter  = Array.isArray(letter)  ? letter  : [];
+  _rqCache.loan    = Array.isArray(loan)    ? loan    : [];
+  const pendingCt = arr => arr.filter(x => x.status === 'pending').length;
+  const set = (id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v?String(v):''};
+  set('rqCount-profile', pendingCt(_rqCache.profile));
+  set('rqCount-letter',  pendingCt(_rqCache.letter));
+  set('rqCount-loan',    pendingCt(_rqCache.loan));
+  _renderRqList();
+}
+function _renderRqList(){
+  const list = document.getElementById('rqList'); if(!list) return;
+  const fStatus = document.getElementById('rqFilterStatus')?.value || '';
+  const rows = (_rqCache[_rqTab] || []).filter(r => !fStatus || r.status === fStatus);
+  const cnt = document.getElementById('rqCount'); if(cnt) cnt.textContent = rows.length+' request'+(rows.length===1?'':'s');
+  if(!rows.length){
+    list.innerHTML = `<div class="empty-tight"><div class="empty-icon">${ICON_LG('sparkle')}</div><div class="empty-title">Inbox clear</div><div class="empty-sub">No ${_rqTab} requests match the filter.</div></div>`;
+    return;
+  }
+  list.innerHTML = rows.map((r, idx) => _rqRowHtml(r, idx)).join('');
+}
+function _rqStatusBadge(s){
+  const map = {
+    pending:  {cls:'badge-amber', label:'Pending'},
+    approved: {cls:'badge-blue',  label:'Approved'},
+    applied:  {cls:'badge-green', label:'Applied'},
+    issued:   {cls:'badge-green', label:'Issued'},
+    rejected: {cls:'badge-red',   label:'Rejected'}
+  };
+  const b = map[s] || map.pending;
+  return `<span class="badge ${b.cls}" style="font-size:11px">${b.label}</span>`;
+}
+function _rqRowHtml(r, idx){
+  const fmt = d => d ? fmtDate(String(d).slice(0,10)) : '';
+  const submittedLine = `Submitted ${fmt(r.created_at)} by ${r.requested_by_name || r.emp_name || '—'}`;
+  const reviewedLine = r.reviewed_at ? `${r.status==='rejected'?'Rejected':'Reviewed'} ${fmt(r.reviewed_at)} by ${r.reviewed_by_name || '—'}${r.review_note?` · ${r.review_note}`:''}` : '';
+  let detail = '';
+  let primaryActions = '';
+  if (_rqTab === 'profile') {
+    const ch = r.requested_changes || {};
+    const lines = Object.entries(ch).map(([k,v]) => `<div><span style="color:var(--text3)">${k}:</span> <strong>${v}</strong></div>`).join('');
+    detail = `<div style="font-size:12px;color:var(--text2);margin-top:4px">${lines}</div>${r.reason?`<div style="font-size:11px;color:var(--text3);margin-top:3px">Reason: ${r.reason}</div>`:''}`;
+    if (r.status === 'pending') {
+      primaryActions = `<button class="btn btn-green btn-xs" onclick="rqAct('profile','${r.id}','approved')">✓ Approve &amp; Apply</button>
+                        <button class="btn btn-red btn-xs"   onclick="rqAct('profile','${r.id}','rejected')">✕ Reject</button>`;
+    }
+  } else if (_rqTab === 'letter') {
+    detail = `<div style="font-size:12px;color:var(--text2);margin-top:4px">Template: <strong>${r.template}</strong>${r.purpose?` · purpose: ${r.purpose}`:''}${r.addressee?` · to: ${r.addressee}`:''}</div>`;
+    if (r.status === 'pending') {
+      primaryActions = `<button class="btn btn-ghost btn-xs" onclick="rqOpenLetter('${r.template}','${r.emp_id}','${(r.purpose||'').replace(/'/g,'')}','${(r.addressee||'').replace(/'/g,'')}')">Generate &amp; Issue</button>
+                        <button class="btn btn-green btn-xs" onclick="rqAct('letter','${r.id}','issued')">Mark Issued</button>
+                        <button class="btn btn-red btn-xs" onclick="rqAct('letter','${r.id}','rejected')">✕ Reject</button>`;
+    }
+  } else { // loan
+    detail = `<div style="font-size:14px;font-weight:600;color:var(--text);margin-top:4px">${r.currency||'MVR'} ${Number(r.amount||0).toLocaleString()}${r.months?` <span style="color:var(--text3);font-weight:400">over ${r.months} months (≈ ${(r.amount/r.months).toFixed(0)}/mo)</span>`:''}</div>${r.reason?`<div style="font-size:12px;color:var(--text2);margin-top:3px">${r.reason}</div>`:''}`;
+    if (r.status === 'pending') {
+      primaryActions = `<button class="btn btn-green btn-xs" onclick="rqAct('loan','${r.id}','approved')">✓ Approve &amp; Create Loan</button>
+                        <button class="btn btn-red btn-xs"   onclick="rqAct('loan','${r.id}','rejected')">✕ Reject</button>`;
+    }
+  }
+  return `<div class="pay-group-row row-reveal" style="cursor:default;align-items:flex-start;--i:${idx}">
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="pg-name">${r.emp_name || '(unknown)'}</span>
+        ${_rqStatusBadge(r.status)}
+      </div>
+      ${detail}
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">${submittedLine}${reviewedLine?` &middot; ${reviewedLine}`:''}</div>
+    </div>
+    <div class="pg-right">
+      <button class="btn btn-ghost btn-xs" onclick="hrNav('profile','${r.emp_id}')">Profile</button>
+      ${primaryActions}
+    </div>
+  </div>`;
+}
+async function rqAct(kind, id, status){
+  const path = kind === 'profile' ? '/hr/profile-requests/' + id + '/status'
+             : kind === 'letter'  ? '/hr/letter-requests/'  + id + '/status'
+             : '/hr/loan-requests/' + id + '/status';
+  // Letters use 'issued' not 'approved' on the success path
+  let payload = { status };
+  if (kind === 'letter' && status === 'approved') payload.status = 'issued';
+  const res = await api('PATCH', path, payload);
+  if (!res) return;
+  toast(status === 'approved' ? 'Request approved' : status === 'rejected' ? 'Request rejected' : 'Request issued');
+  renderRequestsPage();
+  // Refresh employees cache in case profile update was applied
+  if (kind === 'profile' && status === 'approved') {
+    const fresh = await api('GET','/hr/employees');
+    if (Array.isArray(fresh)) { hrEmployees = fresh; markFresh('hrEmployees'); }
+  }
+}
+function rqOpenLetter(template, empId, purpose, addressee){
+  // Jump to Letters page pre-filled with the request data so HR can quickly issue it
+  hrNav('letters');
+  setTimeout(()=>{
+    if (document.getElementById('ltTemplate')) document.getElementById('ltTemplate').value = template || 'employment';
+    if (document.getElementById('ltEmp'))      document.getElementById('ltEmp').value = empId;
+    if (document.getElementById('ltAddressee') && addressee) document.getElementById('ltAddressee').value = addressee;
+    if (document.getElementById('ltSubject') && purpose) document.getElementById('ltSubject').value = purpose;
+    if (typeof updateLetterPreview === 'function') updateLetterPreview();
+  }, 80);
+}
+
+// ── "Make a Request" widget on the staff own profile ──
+function openMakeRequest(){
+  document.getElementById('mkReqModal').classList.add('open');
+  _mkSwitch('profile');
+}
+function closeMakeRequest(){document.getElementById('mkReqModal').classList.remove('open');}
+function _mkSwitch(kind){
+  document.querySelectorAll('#mkReqModal .staff-tab').forEach(b=>b.classList.remove('active'));
+  const btn = document.getElementById('mkTab-'+kind); if(btn) btn.classList.add('active');
+  const body = document.getElementById('mkReqBody'); if(!body) return;
+  body.dataset.kind = kind;
+  if (kind === 'profile') {
+    body.innerHTML = `
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Submit a request to update your personal info. HR will review.</div>
+      <div class="field"><label class="field-label">Phone</label><input type="text" id="mk_phone" placeholder="+960 7xx xxxx"></div>
+      <div class="field"><label class="field-label">Email</label><input type="email" id="mk_email" placeholder="you@email.com"></div>
+      <div class="field"><label class="field-label">Address</label><input type="text" id="mk_address" placeholder="Current address"></div>
+      <div class="field"><label class="field-label">Emergency Contact Name</label><input type="text" id="mk_emgName"></div>
+      <div class="field"><label class="field-label">Emergency Phone</label><input type="text" id="mk_emgPhone"></div>
+      <div class="field"><label class="field-label">Relationship</label><input type="text" id="mk_emgRelation" placeholder="e.g. Spouse, Parent"></div>
+      <div class="field"><label class="field-label">Reason (optional)</label><textarea id="mk_reason" rows="2" placeholder="Any context for HR"></textarea></div>`;
+  } else if (kind === 'letter') {
+    body.innerHTML = `
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Request a staff letter. HR will prepare and notify you when ready.</div>
+      <div class="field"><label class="field-label">Letter Type</label>
+        <select id="mk_template">
+          <option value="employment">Employment Verification</option>
+          <option value="experience">Experience / Service</option>
+          <option value="noc">No Objection Certificate (NOC)</option>
+          <option value="salary_cert">Salary Certificate</option>
+          <option value="bank_letter">Bank Account Opening</option>
+        </select></div>
+      <div class="field"><label class="field-label">Purpose</label><input type="text" id="mk_purpose" placeholder="e.g. Visa application, bank account"></div>
+      <div class="field"><label class="field-label">Addressee (optional)</label><input type="text" id="mk_addressee" placeholder="e.g. Embassy of India, BML"></div>`;
+  } else { // loan
+    body.innerHTML = `
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Request a salary advance or loan. HR will review and create the loan record on approval.</div>
+      <div style="display:grid;grid-template-columns:1fr 100px;gap:10px">
+        <div class="field"><label class="field-label">Amount *</label><input type="number" id="mk_amount" min="1" placeholder="e.g. 5000"></div>
+        <div class="field"><label class="field-label">Currency</label>
+          <select id="mk_currency"><option value="MVR">MVR</option><option value="USD">USD</option></select></div>
+      </div>
+      <div class="field"><label class="field-label">Repay Over (months)</label><input type="number" id="mk_months" min="1" max="60" placeholder="e.g. 6"></div>
+      <div class="field"><label class="field-label">Reason *</label><textarea id="mk_reason" rows="3" placeholder="Why do you need this?"></textarea></div>`;
+  }
+}
+async function submitMakeRequest(){
+  const kind = document.getElementById('mkReqBody').dataset.kind;
+  let payload = {}, path = '';
+  if (kind === 'profile') {
+    const fields = ['phone','email','address','emgName','emgPhone','emgRelation'];
+    const changes = {};
+    fields.forEach(f => { const v = document.getElementById('mk_'+f)?.value?.trim(); if (v) changes[f] = v; });
+    if (!Object.keys(changes).length) { toast('Enter at least one change'); return; }
+    payload = { requestedChanges: changes, reason: document.getElementById('mk_reason')?.value || null };
+    path = '/hr/profile-requests';
+  } else if (kind === 'letter') {
+    payload = {
+      template: document.getElementById('mk_template').value,
+      purpose: document.getElementById('mk_purpose')?.value || null,
+      addressee: document.getElementById('mk_addressee')?.value || null
+    };
+    path = '/hr/letter-requests';
+  } else {
+    const amount = parseFloat(document.getElementById('mk_amount')?.value);
+    const reason = document.getElementById('mk_reason')?.value?.trim();
+    if (!amount || amount <= 0) { toast('Enter an amount'); return; }
+    if (!reason) { toast('Reason required'); return; }
+    payload = {
+      amount,
+      currency: document.getElementById('mk_currency').value,
+      months: parseInt(document.getElementById('mk_months')?.value, 10) || null,
+      reason
+    };
+    path = '/hr/loan-requests';
+  }
+  const res = await api('POST', path, payload);
+  if (!res) return;
+  closeMakeRequest();
+  toast('Request submitted. HR will review.');
 }
 
 // ══ REPORTS & ANALYTICS ═══════════════════════════════
@@ -6204,6 +6457,7 @@ function renderProfile(empId){
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost btn-sm" onclick="hrNav('employees')">← Back</button>
+        ${(String(emp.linkedUserId||'') === String(currentUser?.id||'') && currentUser?.id) ? `<button class="btn btn-primary btn-sm" onclick="openMakeRequest()">Make a Request</button>` : ''}
         <button class="btn btn-amber btn-sm" onclick="guardAction('hr_edit_emp',()=>hrNav('add-employee','${emp.id}'))">Edit</button>
       </div>
     </div>
@@ -14656,6 +14910,8 @@ const PERM_TREE = [
     { label:'Approve Salary Revision', key:'hr_salary_approve', actions:['edit'] },
     { label:'Training & Certs', key:'hr_training', actions:['view','edit'] },
     { label:'Reports & Analytics', key:'hr_reports_view', actions:['view'] },
+    { label:'Self-Service Requests (submit)',  key:'hr_self_request_edit',    actions:['edit'] },
+    { label:'Self-Service Requests (approve)', key:'hr_self_request_approve', actions:['edit'] },
     { label:'Leave', key:'hr_leave', actions:['view','edit'] },
     { label:'Leave Approve / Reject (Stage 1 — Manager)', key:'hr_leave_approve', actions:['edit'] },
     { label:'Leave Final Approve (Stage 2 — GM/COO)', key:'hr_leave_final_approve', actions:['edit'] },

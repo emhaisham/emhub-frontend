@@ -1446,6 +1446,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="nav-item" onclick="hrNav('org-chart')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="9" y="15" width="6" height="6" rx="1"/><path d="M6 9v3h12V9M12 12v3"/></svg></span>Org Chart</div>
               <div class="nav-item" onclick="hrNav('disciplinary')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg></span>Disciplinary</div>
               <div class="nav-item" onclick="hrNav('staff-assets')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></span>Staff Assets</div>
+              <div class="nav-item" onclick="hrNav('reports')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg></span>Reports &amp; Analytics</div>
               <div class="nav-lbl">Compliance</div>
               <div class="nav-item" onclick="hrNav('expiring-docs')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>Expiring Documents</div>
               <div class="nav-item" onclick="hrNav('probation-contracts')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>Probation &amp; Contracts</div>
@@ -1766,6 +1767,26 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 </select>
               </div>
               <div id="allStaffAssetsList"></div>
+            </div>
+
+            <!-- ── REPORTS & ANALYTICS ── -->
+            <div class="page" id="hr-page-reports">
+              <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+                <div>
+                  <div class="page-title">Reports &amp; Analytics</div>
+                  <div class="page-sub">Headcount, turnover, leave consumption, payroll trend, and pending approvals at a glance.</div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <select id="rptPeriod" onchange="renderReportsPage()" style="font-size:13px">
+                    <option value="month">Last Month</option>
+                    <option value="quarter">Last 3 Months</option>
+                    <option value="ytd" selected>Year to Date</option>
+                    <option value="all">All Time</option>
+                  </select>
+                  <button class="btn btn-ghost btn-sm" onclick="printReports()">Print / PDF</button>
+                </div>
+              </div>
+              <div id="reportsBody"></div>
             </div>
 
             <!-- ── TRAINING & CERTIFICATIONS ── -->
@@ -3142,7 +3163,7 @@ function applyPerms(){
   // ── HR SIDEBAR nav items (by position) ───────────────
   const hrNavItems=document.querySelectorAll('#mod-hr .nav-wrap .nav-item');
   // positions: 0=All Staff, 1=Add Emp, 2=Disciplinary, 3=Staff Assets, 4=Payroll, 5=Loans, 6=Pension, 7=Bonus, 8=Leave, 9=Letters
-  const hrMap=['hr_view_all','hr_add_emp','hr_view_all','hr_disc','hr_assets','hr_view_all','hr_view_all','hr_training','hr_payroll','hr_view_all','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
+  const hrMap=['hr_view_all','hr_add_emp','hr_view_all','hr_disc','hr_assets','hr_reports_view','hr_view_all','hr_view_all','hr_training','hr_payroll','hr_view_all','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
   hrMap.forEach((k,i)=>{
     if(!hrNavItems[i]) return;
     // All Staff and Bonus both gate on hr_view_all OR hr_view_own
@@ -4474,6 +4495,7 @@ function hrNav(page, extra){
       'org-chart':'hr_view_all',
       'salary-revisions':'hr_view_all',
       'training':'hr_training',
+      'reports':'hr_reports_view',
     };
     const permKey=pagePermMap[page];
     const role=currentUser.roleId?appRoles.find(r=>String(r.id)===String(currentUser.roleId)):null;
@@ -4508,7 +4530,7 @@ function hrNav(page, extra){
   const pageEl = document.getElementById('hr-page-'+page);
   if(pageEl) pageEl.classList.add('active');
   const items = document.querySelectorAll('#mod-hr .nav-item');
-  const map = {employees:0,'add-employee':1,'org-chart':2,disciplinary:3,'staff-assets':4,'expiring-docs':5,'probation-contracts':6,training:7,payroll:8,'salary-revisions':9,loans:10,pension:11,bonus:12,'dept-leave':13,leave:14,letters:15};
+  const map = {employees:0,'add-employee':1,'org-chart':2,disciplinary:3,'staff-assets':4,reports:5,'expiring-docs':6,'probation-contracts':7,training:8,payroll:9,'salary-revisions':10,loans:11,pension:12,bonus:13,'dept-leave':14,leave:15,letters:16};
   if(items[map[page]]) items[map[page]].classList.add('active');
   hrActivePage = page;
   if(page==='employees')     { populateHRFilters(); renderEmployees(); }
@@ -4541,6 +4563,7 @@ function hrNav(page, extra){
   if(page==='org-chart')           { renderOrgChart(); }
   if(page==='salary-revisions')    { renderSalaryRevisions(); }
   if(page==='training')            { renderTrainingPage(); }
+  if(page==='reports')             { renderReportsPage(); }
   updateHRSidebar();
 }
 
@@ -5109,6 +5132,104 @@ async function submitMarkRenewed(){
   closeRenewModal();
   renderExpiringDocs();
   toast(_renewCtx?.label+' renewed ✓');
+}
+
+// ══ REPORTS & ANALYTICS ═══════════════════════════════
+async function renderReportsPage(){
+  const body = document.getElementById('reportsBody'); if(!body) return;
+  body.innerHTML = `<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px">
+    ${Array.from({length:6}).map(()=>'<div class="skeleton skeleton-row" style="height:84px"></div>').join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">
+    ${Array.from({length:4}).map(()=>'<div class="skeleton" style="height:220px"></div>').join('')}
+  </div>`;
+  const period = document.getElementById('rptPeriod')?.value || 'ytd';
+  const data = await api('GET','/hr/reports?period='+period);
+  if(!data){ body.innerHTML = '<div class="empty"><div class="empty-title">Failed to load reports</div></div>'; return; }
+
+  const h = data.headline;
+  const tile = (label, value, sub, accent) => `
+    <div class="stat-card" style="padding:14px 16px">
+      <div class="stat-top"><span class="stat-label">${label}</span></div>
+      <div class="stat-val ${accent||''}" style="font-size:24px">${value}</div>
+      ${sub?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${sub}</div>`:''}
+    </div>`;
+
+  const headlineHtml = `<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px" class="reports-tiles">
+    ${tile('Active Headcount', h.activeTotal, `${h.local} local · ${h.expat} expat`, 'blue')}
+    ${tile('Avg Tenure',       h.avgTenureYears+'y', 'currently active', '')}
+    ${tile('Turnover',          h.turnoverPct+'%', `${h.exitsInPeriod} exit${h.exitsInPeriod===1?'':'s'} in period`, h.turnoverPct>15?'red':h.turnoverPct>8?'amber':'green')}
+    ${tile('Avg Salary',        'MVR '+(h.avgSalaryMvr||0).toLocaleString(), 'basic only', '')}
+    ${tile('In Probation',      h.inProbation, 'pending confirm', 'amber')}
+    ${tile('Pending Approvals', (h.leavePending + h.salaryPending), `${h.leavePending} leave · ${h.salaryPending} salary`, (h.leavePending+h.salaryPending)>0?'amber':'green')}
+  </div>`;
+
+  // Bar chart helper — CSS only, pure inline divs. max determines bar fill %.
+  const bars = (rows, valueKey, labelKey, colour) => {
+    const max = Math.max(1, ...rows.map(r => Number(r[valueKey]) || 0));
+    if (!rows.length) return '<div style="padding:30px 0;text-align:center;color:var(--text3);font-size:13px">No data in period</div>';
+    return rows.map(r => {
+      const pct = Math.max(2, Math.round(((Number(r[valueKey])||0) / max) * 100));
+      const v = Number(r[valueKey]) || 0;
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+        <div style="font-size:12px;color:var(--text2);min-width:120px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r[labelKey] || '—'}</div>
+        <div style="flex:1;height:18px;background:var(--surface);border-radius:4px;overflow:hidden;position:relative">
+          <div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:${colour};border-radius:4px;transition:width .6s cubic-bezier(.16,1,.3,1)"></div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:var(--text);min-width:60px;text-align:right;font-variant-numeric:tabular-nums">${v.toLocaleString()}</div>
+      </div>`;
+    }).join('');
+  };
+
+  // Headcount by dept
+  const deptCard = `<div class="card"><div class="card-hdr"><div><div class="card-title">Headcount by Department</div><div class="card-sub">Currently active staff</div></div></div>
+    <div style="padding:14px 18px">${bars(data.headcountByDept, 'count', 'dept', 'var(--accent)')}</div></div>`;
+
+  // Leave consumption
+  const leaveCard = `<div class="card"><div class="card-hdr"><div><div class="card-title">Leave Consumption</div><div class="card-sub">Approved days, ${data.from} — ${data.to}</div></div></div>
+    <div style="padding:14px 18px">${bars(data.leaveByType, 'days', 'type', 'var(--green)')}</div></div>`;
+
+  // Payroll trend
+  const payCard = `<div class="card"><div class="card-hdr"><div><div class="card-title">Payroll Trend</div><div class="card-sub">Net payable by month, last 6 months</div></div></div>
+    <div style="padding:14px 18px">${data.payrollByMonth.length
+      ? data.payrollByMonth.map(m => {
+          const max = Math.max(1, ...data.payrollByMonth.map(x => x.net));
+          const pct = Math.max(2, Math.round((m.net / max) * 100));
+          return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+            <div style="font-size:12px;color:var(--text2);min-width:90px">${m.month}</div>
+            <div style="flex:1;height:18px;background:var(--surface);border-radius:4px;overflow:hidden;position:relative">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:var(--amber);border-radius:4px"></div>
+            </div>
+            <div style="font-size:12px;font-weight:600;color:var(--text);min-width:110px;text-align:right;font-variant-numeric:tabular-nums">MVR ${m.net.toLocaleString()}</div>
+          </div>`;
+        }).join('')
+      : '<div style="padding:30px 0;text-align:center;color:var(--text3);font-size:13px">No payroll runs in window</div>'
+    }</div></div>`;
+
+  // Expiring docs summary (uses bucket colours)
+  const eb = data.expiringBuckets;
+  const expCard = `<div class="card"><div class="card-hdr"><div><div class="card-title">Document Expiries</div><div class="card-sub">All staff, next 90 days</div></div></div>
+    <div style="padding:18px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      <div style="padding:14px;border:1px solid var(--red-bd);background:var(--red-bg);border-radius:8px;text-align:center">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red);margin-bottom:6px">Expired</div>
+        <div style="font-size:28px;font-weight:700;color:var(--red)">${eb.expired}</div>
+      </div>
+      <div style="padding:14px;border:1px solid var(--amber-bd);background:var(--amber-bg);border-radius:8px;text-align:center">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);margin-bottom:6px">Next 30 days</div>
+        <div style="font-size:28px;font-weight:700;color:var(--amber)">${eb.next30}</div>
+      </div>
+      <div style="padding:14px;border:1px solid var(--border);background:var(--surface);border-radius:8px;text-align:center">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Next 90 days</div>
+        <div style="font-size:28px;font-weight:700;color:var(--text2)">${eb.next90}</div>
+      </div>
+    </div></div>`;
+
+  body.innerHTML = headlineHtml + `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">${deptCard}${leaveCard}${payCard}${expCard}</div>`;
+}
+
+function printReports(){
+  const html = '<!DOCTYPE html><html><head><title>HR Reports — Event Maldives</title><style>@page{size:A4 portrait;margin:14mm}body{font-family:Inter,sans-serif;padding:0;margin:0}h1{font-size:20px;margin:0 0 8px}.sub{font-size:12px;color:#6b7280;margin-bottom:18px}</style></head><body><h1>HR Reports — Event Maldives</h1><div class="sub">Generated '+new Date().toLocaleString('en-GB')+'</div>'+document.getElementById('reportsBody').innerHTML+'</body></html>';
+  _mobilePrint(html);
 }
 
 // ══ INLINE ICON LIBRARY ═══════════════════════════════
@@ -14534,6 +14655,7 @@ const PERM_TREE = [
     { label:'Propose Salary Revision', key:'hr_salary_revise', actions:['edit'] },
     { label:'Approve Salary Revision', key:'hr_salary_approve', actions:['edit'] },
     { label:'Training & Certs', key:'hr_training', actions:['view','edit'] },
+    { label:'Reports & Analytics', key:'hr_reports_view', actions:['view'] },
     { label:'Leave', key:'hr_leave', actions:['view','edit'] },
     { label:'Leave Approve / Reject (Stage 1 — Manager)', key:'hr_leave_approve', actions:['edit'] },
     { label:'Leave Final Approve (Stage 2 — GM/COO)', key:'hr_leave_final_approve', actions:['edit'] },

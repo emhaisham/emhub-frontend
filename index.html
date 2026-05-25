@@ -377,13 +377,28 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .td-mono{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12.5px}
 .td-green{color:var(--green);font-weight:700;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
 
-/* Numeric column alignment: any th.num + any cell with td-mono/td-green is
-   right-aligned, so the column header and the data underneath line up to
-   the right edge (decimals align). Mirror rule for .detail-dt + payslip
-   tables. This replaces ad-hoc inline text-align on individual headers. */
+/* Numeric column alignment: any th.num or td.num (plus the existing
+   td-mono / td-green numeric classes) right-aligns so the column header
+   and the data underneath line up to the right edge (decimals align).
+   Applies to .data-table, .detail-dt, and the inventory grid header. */
 .data-table th.num, .detail-dt th.num,
+.data-table td.num, .detail-dt td.num,
 .data-table td.td-mono, .data-table td.td-green,
 .detail-dt td.td-mono, .detail-dt td.td-green {
+  text-align: right;
+}
+/* Inventory list grid (not a <table> — a CSS grid). Match data cell
+   alignment to header alignment for the count columns (Units / Working
+   / Faulty). Targeted by grid column position since the children have
+   varied class names. The mobile-meta cell at nth-child(7) is display:
+   none on desktop so the visual column for Actions sits at nth-child(8)
+   in DOM order but takes column 7 in the grid template. */
+.inv-list-header > div:nth-child(4),  /* Units header */
+.inv-list-header > div:nth-child(5),  /* Working header */
+.inv-list-header > div:nth-child(6),  /* Faulty header */
+.inv-row > .inv-row-cell:nth-child(4), /* Units cell */
+.inv-row > div:nth-child(5),           /* Working cell */
+.inv-row > div:nth-child(6) {          /* Faulty cell */
   text-align: right;
 }
 
@@ -4113,13 +4128,17 @@ function renderEvents(keep){
     const isExp=evExpanded.has(ev.id);
     const gSections=groups.map((g,gi)=>{
       const gTot=calcGroup(g);
+      // Numeric columns (Pax, Hours, Rate, Amount) get class="num" on the
+      // cell so they right-align under the matching th.num header. Date
+      // and Time cells stay left-aligned by default (td-mono just enforces
+      // the tabular numeral font, not alignment).
       const dayRows=g.days.map(d=>`<tr>
-        <td class="td-primary">${d.pax}</td>
+        <td class="num td-primary">${d.pax}</td>
         <td class="td-mono">${fmtDate(d.startDate)}</td><td class="td-mono">${fmtTime(d.startTime)}</td>
         <td class="td-mono">${fmtDate(d.endDate)}</td><td class="td-mono">${fmtTime(d.endTime)}</td>
-        <td><span class="chip-hours">${fmtH(d.hours)}</span></td>
-        <td>${d.rateOverride?`<span class="chip-override">⚡ MVR ${d.rateOverride.toLocaleString()}</span>`:`<span class="chip-rate">MVR ${rateFor(d.hours).toLocaleString()}</span>`}</td>
-        <td class="td-green">${fmt(calcDay(d))}</td>
+        <td class="num"><span class="chip-hours">${fmtH(d.hours)}</span></td>
+        <td class="num">${d.rateOverride?`<span class="chip-override">⚡ MVR ${d.rateOverride.toLocaleString()}</span>`:`<span class="chip-rate">MVR ${rateFor(d.hours).toLocaleString()}</span>`}</td>
+        <td class="num td-green">${fmt(calcDay(d))}</td>
       </tr>`).join('');
       return`<div class="g-section"><div class="g-hdr"><span class="g-title">Group ${gi+1}${g.label?' · '+g.label:''}</span><div class="g-subtotal">${fmt(gTot)}<button class="btn btn-red btn-xs" onclick="deleteGroup('${ev.id}','${g.id}')">Remove</button></div></div>
         <table class="detail-dt">
@@ -4302,11 +4321,11 @@ function renderLaborLog(){
     <td class="td-mono">${fmtTime(d.startTime)}</td>
     <td class="td-mono">${fmtDate(d.endDate)}</td>
     <td class="td-mono">${fmtTime(d.endTime)}</td>
-    <td><span class="chip-hours">${fmtH(d.hours)}</span></td>
-    <td>${d.pax}</td>
-    <td><span class="chip-rate">MVR ${rateFor(d.hours).toLocaleString()}</span></td>
-    <td>${d.rateOverride?`<span class="chip-override">⚡${d.rateOverride}</span>`:'—'}</td>
-    <td class="td-green">${fmt(calcDay(d))}</td>
+    <td class="num"><span class="chip-hours">${fmtH(d.hours)}</span></td>
+    <td class="num">${d.pax}</td>
+    <td class="num"><span class="chip-rate">MVR ${rateFor(d.hours).toLocaleString()}</span></td>
+    <td class="num">${d.rateOverride?`<span class="chip-override">⚡${d.rateOverride}</span>`:'—'}</td>
+    <td class="num td-green">${fmt(calcDay(d))}</td>
   </tr>`).join('');
 }
 

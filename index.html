@@ -113,8 +113,12 @@ input,select,textarea{font-size:16px !important}
 .hub-right{display:flex;align-items:center;gap:10px}
 .hub-user{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;cursor:pointer;transition:background .15s}
 .hub-user:hover{background:rgba(255,255,255,.08)}
-.hub-avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
-.hub-uname{font-size:13px;font-weight:500;color:rgba(255,255,255,.85)}
+.hub-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;background-size:cover;background-position:center;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+/* Greeting strip — the warmth move. Time-aware text sits above the name
+   in the user pill. Replaces the previous static role text (role moves
+   to the title attribute / profile screen). */
+.hub-greeting{font-size:11px;font-weight:500;color:rgba(255,255,255,.55);letter-spacing:.02em;line-height:1.2}
+.hub-uname{font-size:13px;font-weight:600;color:rgba(255,255,255,.92);line-height:1.25;margin-top:1px}
 .hub-urole{font-size:11px;color:rgba(255,255,255,.4)}
 .btn-logout{background:none;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:5px 12px;font-family:'Inter',sans-serif;font-size:12.5px;color:rgba(255,255,255,.6);cursor:pointer;transition:all .15s}
 .btn-logout:hover{border-color:rgba(255,255,255,.3);color:#fff}
@@ -229,16 +233,21 @@ input,select,textarea{font-size:16px !important}
   .emp-form-grid{grid-template-columns:1fr!important}
   .cal-month-grid .cal-event-chip{font-size:9px}
 }
-.sidebar-brand{padding:0 20px 16px;border-bottom:1px solid var(--border);margin-bottom:12px}
-.sidebar-brand-name{font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px}
-.sidebar-brand-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.sidebar-brand{padding:0 20px 14px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.sidebar-brand-name{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;letter-spacing:-0.1px}
+.sidebar-brand-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;box-shadow:0 0 0 3px var(--accent-bg)}
 .sidebar-brand-sub{font-size:11px;color:var(--text3);margin-top:2px}
-.nav-wrap{padding:0 12px}
-.nav-lbl{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:0 8px;margin:14px 0 3px}
-.nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .12s;user-select:none;letter-spacing:.01em}
-.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-wrap{padding:0 10px}
+/* Group label — tighter sidebars for 17+ items. Slightly bolder than
+   before, more letter-spacing, more vertical breathing room above so
+   group boundaries read at a glance. */
+.nav-lbl{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);padding:0 10px;margin:18px 0 4px}
+.nav-lbl:first-child{margin-top:4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .12s;user-select:none;letter-spacing:.005em}
+.nav-item:hover{background:var(--surface);color:var(--text)}
 .nav-item.active{background:var(--accent-bg);color:var(--accent);font-weight:600;border-left:2px solid var(--accent);padding-left:8px}
-.nav-icon{width:16px;height:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:.75}
+.nav-icon{width:16px;height:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:.7;color:currentColor}
+.nav-item.active .nav-icon{opacity:1}
 .nav-badge{margin-left:auto;font-size:11px;font-weight:600;padding:1px 7px;border-radius:10px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
 .sidebar-footer{margin-top:auto;padding:14px 20px 0;border-top:1px solid var(--border)}
 .sf-row{margin-bottom:10px}
@@ -253,6 +262,15 @@ input,select,textarea{font-size:16px !important}
 .page-hdr{margin-bottom:20px}
 .page-title{font-size:21px;font-weight:700;color:var(--text);letter-spacing:-.4px}
 .page-sub{font-size:13px;color:var(--text3);margin-top:3px}
+
+/* Breadcrumbs — populated via setBreadcrumbs([{label, onClick?}]). Sit
+   above the page-title on pages that are 2+ levels deep. Last item
+   gets the "current" treatment (no underline, slightly bolder). */
+.breadcrumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--text3);margin-bottom:6px;letter-spacing:.01em}
+.breadcrumbs button,.breadcrumbs a{background:none;border:none;padding:0;font:inherit;color:var(--text3);cursor:pointer;text-decoration:none;border-radius:3px;transition:color .12s}
+.breadcrumbs button:hover,.breadcrumbs a:hover{color:var(--accent)}
+.breadcrumbs .crumb-sep{color:var(--text3);opacity:.5}
+.breadcrumbs .crumb-current{color:var(--text2);font-weight:600;cursor:default}
 
 .card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-sm);margin-bottom:16px}
 .card-hdr{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
@@ -1209,7 +1227,11 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
           </div>
           <div id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle dark mode" style="cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);margin-right:8px;color:#fff"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg></div>
           <div class="hub-avatar" id="hubAvatar">A</div>
-          <div><div class="hub-uname" id="hubUname">Admin</div><div class="hub-urole" id="hubUrole">Administrator</div></div>
+          <div>
+            <div class="hub-greeting" id="hubGreeting">Welcome</div>
+            <div class="hub-uname" id="hubUname">Admin</div>
+            <div class="hub-urole" id="hubUrole" style="display:none">Administrator</div>
+          </div>
         </div>
         <button class="btn-logout" onclick="doLogout()">Sign Out</button>
       </div>
@@ -3079,18 +3101,88 @@ function _mapEmployeeFromApi(e){
   };
 }
 
+// Topbar avatar — uses linked employee photo when available, otherwise the
+// user's initial on a tinted accent disc. Async because the photo URL
+// might need fetching the employee record.
+function setHubAvatar(user, firstName){
+  const av = document.getElementById('hubAvatar'); if(!av) return;
+  av.textContent = firstName ? firstName[0].toUpperCase() : (user.name?.[0]?.toUpperCase() || '?');
+  av.style.backgroundImage = '';
+  // Find the linked employee record by linked_user_id
+  try {
+    const emp = (typeof hrEmployees !== 'undefined' && Array.isArray(hrEmployees))
+      ? hrEmployees.find(e => String(e.linkedUserId||'') === String(user.id||''))
+      : null;
+    const photo = emp?.photo || emp?.docs?.photo?.key;
+    if (photo) {
+      // Photo loads via the existing files endpoint
+      api('GET', '/files/signed-url?key=' + encodeURIComponent(photo)).then(r => {
+        if (r?.url) { av.style.backgroundImage = `url("${r.url}")`; av.textContent = ''; }
+      }).catch(()=>{});
+    }
+  } catch(e) { /* ignore — initial stays */ }
+}
+
+// Breadcrumbs — call from any page render: setBreadcrumbs([{label:'HR', goto:()=>hrNav('employees')}, {label:'All Staff'}])
+// Last item is treated as current (no click handler). Renders into the
+// optional #breadcrumbs slot on the currently active page; if no slot
+// exists, the call is a no-op. To clear, pass [] or null.
+function setBreadcrumbs(parts){
+  const activePage = document.querySelector('.module.active .page.active') || document.querySelector('.module.active');
+  if (!activePage) return;
+  let slot = activePage.querySelector('.breadcrumbs');
+  if (!parts || !parts.length) { if (slot) slot.remove(); return; }
+  if (!slot) {
+    slot = document.createElement('div');
+    slot.className = 'breadcrumbs';
+    const hdr = activePage.querySelector('.page-hdr');
+    if (hdr) hdr.parentNode.insertBefore(slot, hdr);
+    else activePage.insertBefore(slot, activePage.firstChild);
+  }
+  slot.innerHTML = parts.map((p, i) => {
+    const last = i === parts.length - 1;
+    const sep  = i > 0 ? '<span class="crumb-sep">/</span>' : '';
+    if (last) return `${sep}<span class="crumb-current">${p.label}</span>`;
+    if (p.goto) {
+      const idx = i; _breadcrumbHandlers = _breadcrumbHandlers || {};
+      const key = 'bc_'+Date.now()+'_'+idx;
+      _breadcrumbHandlers[key] = p.goto;
+      return `${sep}<button onclick="_breadcrumbHandlers['${key}']?.()">${p.label}</button>`;
+    }
+    return `${sep}<span>${p.label}</span>`;
+  }).join('');
+}
+let _breadcrumbHandlers = {};
+
 function _afterLogin(){
   const user = currentUser;
   if(!user || !user.name){ toast('Invalid login response — please try again'); doLogout(); return; }
-  document.getElementById('hubAvatar').textContent = user.name[0].toUpperCase();
-  document.getElementById('hubUname').textContent = user.name;
-  document.getElementById('hubUrole').textContent = user.role === 'admin' ? 'Administrator' : (user.roleName || 'Staff');
+  const firstName = user.name.split(' ')[0];
+  const role = user.role === 'admin' ? 'Administrator' : (user.roleName || 'Staff');
+  // Photo: linked employee record may have a .photo URL. If yes, use it.
+  setHubAvatar(user, firstName);
+  // Greeting strip — the warmth move. Replaces static role text.
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const greetEl = document.getElementById('hubGreeting');
+  if(greetEl) greetEl.textContent = `${greeting},`;
+  document.getElementById('hubUname').textContent = firstName;
+  document.getElementById('hubUrole').textContent = role;
+  // Role moves to tooltip on the pill — still discoverable, off the topbar.
+  const pill = document.getElementById('hubUserInfo'); if(pill) pill.title = `${user.name} · ${role}`;
   const lName = document.getElementById('launcherName');
-  if(lName) lName.textContent = user.name.split(' ')[0];
+  if(lName) lName.textContent = firstName;
   document.getElementById('screen-login').classList.remove('active');
   document.getElementById('screen-hub').classList.add('active');
   applyPermissions();
-  _loadAllData().then(()=>{ applyPermissions(); renderAll(); setTimeout(checkForceReset, 500); loadInAppNotifs(); if('Notification' in window) initFirebase().catch(()=>{}); });
+  _loadAllData().then(()=>{
+    applyPermissions(); renderAll();
+    // Re-try avatar now that hrEmployees has loaded (initial call ran before data fetch)
+    setHubAvatar(currentUser, currentUser.name.split(' ')[0]);
+    setTimeout(checkForceReset, 500);
+    loadInAppNotifs();
+    if('Notification' in window) initFirebase().catch(()=>{});
+  });
   // Reset any mobile zoom after login
   const mv = document.querySelector('meta[name=viewport]');
   if(mv) mv.content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';

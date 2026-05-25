@@ -20,35 +20,46 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f4f5f7;--white:#ffffff;--surface:#f8f9fa;--border:#e8eaed;--border2:#d0d3d9;
-  --text:#111827;--text2:#374151;--text3:#9ca3af;
-  --accent:#1e40af;--accent-bg:#eff6ff;--accent-bd:#bfdbfe;
-  --accent-hover:#1d3f9e;
+  /* ──────────────────────────────────────────────────────────────────────────
+     EM HUB v2 — Refined Console
+     Neutrals shifted from cool slate (hue ~262°) to warm off-white (hue ~80°).
+     Same near-white lightness, very low chroma; the warmth is felt more than
+     seen. The Maldives context registers without becoming a tropical theme.
+     Accent: Deep Marine Ink, oklch(33% 0.14 230) → #13476f. Deeper and more
+     considered than the previous generic SaaS blue.
+     ──────────────────────────────────────────────────────────────────────────*/
+  --bg:#f6f5f2;--white:#fffefc;--surface:#faf8f4;--border:#ebe7df;--border2:#d8d2c5;
+  --text:#1a1814;--text2:#3a342a;--text3:#9a9388;
+  --accent:#13476f;--accent-bg:#e8f1f9;--accent-bd:#a8c8e0;
+  --accent-hover:#0e3a5d;
   --green:#059669;--green-bg:#ecfdf5;--green-bd:#a7f3d0;
   --red:#dc2626;--red-bg:#fef2f2;--red-bd:#fecaca;
   --amber:#d97706;--amber-bg:#fffbeb;--amber-bd:#fde68a;
   --purple:#7c3aed;--purple-bg:#f5f3ff;
-  --hub:#111827;--hub2:#1f2937;--hub3:#374151;
-  --shadow-sm:0 1px 2px rgba(0,0,0,.05);
-  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
-  --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
-  --shadow-lg:0 10px 15px rgba(0,0,0,.08),0 4px 6px rgba(0,0,0,.05);
+  --hub:#0e1a26;--hub2:#1a2a3a;--hub3:#2d3f55;
+  --shadow-sm:0 1px 2px rgba(20,18,14,.05);
+  --shadow:0 1px 3px rgba(20,18,14,.08),0 1px 2px rgba(20,18,14,.06);
+  --shadow-md:0 4px 6px rgba(20,18,14,.07),0 2px 4px rgba(20,18,14,.06);
+  --shadow-lg:0 10px 15px rgba(20,18,14,.08),0 4px 6px rgba(20,18,14,.05);
   --r:10px;
 }
 [data-theme="dark"]{
-  --bg:#0f172a;--white:#1e293b;--surface:#162032;--border:#2d3f55;--border2:#3d5068;
-  --text:#f1f5f9;--text2:#cbd5e1;--text3:#64748b;
-  --accent:#3b82f6;--accent-bg:#1e3a5f;--accent-bd:#2563eb;
-  --accent-hover:#2563eb;
+  /* Dark slate with the same warmth-toward-blue hue family. The accent
+     brightens in dark mode (62% lightness) so it stays legible on the
+     dark surface — this is the Mode-Aware Shadow Rule applied to color. */
+  --bg:#0e1a26;--white:#1a2a3a;--surface:#152232;--border:#2c3f54;--border2:#3d5068;
+  --text:#f1f3f5;--text2:#c9cfd6;--text3:#6c7785;
+  --accent:#5a9bc7;--accent-bg:#0d2740;--accent-bd:#1f5d8c;
+  --accent-hover:#73aed4;
   --green:#10b981;--green-bg:#052e16;--green-bd:#065f46;
   --red:#f87171;--red-bg:#2d0a0a;--red-bd:#7f1d1d;
   --amber:#fbbf24;--amber-bg:#1c1200;--amber-bd:#78350f;
   --purple:#a78bfa;--purple-bg:#1e1040;
-  --hub:#0f172a;--hub2:#1e293b;--hub3:#334155;
-  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
-  --shadow:0 1px 3px rgba(0,0,0,.4),0 1px 2px rgba(0,0,0,.3);
-  --shadow-md:0 4px 6px rgba(0,0,0,.4),0 2px 4px rgba(0,0,0,.3);
-  --shadow-lg:0 10px 15px rgba(0,0,0,.5),0 4px 6px rgba(0,0,0,.4);
+  --hub:#0a141f;--hub2:#1a2a3a;--hub3:#2d3f55;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+  --shadow:0 1px 3px rgba(0,0,0,.45),0 1px 2px rgba(0,0,0,.3);
+  --shadow-md:0 4px 6px rgba(0,0,0,.45),0 2px 4px rgba(0,0,0,.3);
+  --shadow-lg:0 10px 15px rgba(0,0,0,.55),0 4px 6px rgba(0,0,0,.4);
 }
 html{font-size:14px;height:100%;overflow:hidden;background:var(--bg)}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.5;height:100%;overflow:hidden;transition:background .2s,color .2s}
@@ -62,7 +73,7 @@ input,select,textarea{font-size:16px !important}
 
 /* ══ LOGIN ═══════════════════════════════════════ */
 #screen-login{background:var(--hub);align-items:center;justify-content:center;position:relative;overflow-y:auto}
-#screen-login::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(26,86,219,.15) 0%,transparent 60%),radial-gradient(ellipse at 70% 80%,rgba(109,40,217,.1) 0%,transparent 50%)}
+#screen-login::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(19,71,111,.18) 0%,transparent 60%),radial-gradient(ellipse at 70% 80%,rgba(19,71,111,.08) 0%,transparent 50%)}
 .login-box{background:var(--white);border-radius:16px;padding:40px;width:100%;max-width:420px;box-shadow:var(--shadow-lg);position:relative;z-index:1}
 .login-logo{text-align:center;margin-bottom:32px}
 .login-logo-text{font-size:32px;font-weight:800;color:var(--hub);letter-spacing:-1px}
@@ -73,17 +84,17 @@ input,select,textarea{font-size:16px !important}
 .login-field{margin-bottom:16px}
 .login-field label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;letter-spacing:.03em}
 .login-field input{width:100%;padding:10px 14px;border:1px solid var(--border2);border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s}
-.login-field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,86,219,.1)}
+.login-field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(19,71,111,.12)}
 .login-err{color:var(--red);font-size:12.5px;margin-bottom:12px;display:none}
 .btn-login{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s;margin-top:4px}
-.btn-login:hover{background:#1648c0}
+.btn-login:hover{background:var(--accent-hover)}
 .login-hint{font-size:11.5px;color:var(--text3);text-align:center;margin-top:16px}
 
 /* ══ HUB SHELL ═══════════════════════════════════ */
 #screen-hub{flex-direction:column;height:100%;overflow:hidden}
 .hub-topbar{background:var(--hub);padding:0 24px;display:flex;align-items:center;gap:0;height:52px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.08)}
 .hub-logo{font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.5px;margin-right:32px}
-.hub-logo span{color:#60a5fa}
+.hub-logo span{color:#5a9bc7}
 .hub-nav{display:flex;align-items:center;gap:2px;flex:1}
 .hub-tab{display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:7px;font-size:13px;font-weight:500;color:rgba(255,255,255,.6);cursor:pointer;transition:all .15s;user-select:none;border:none;background:none;font-family:'Inter',sans-serif}
 .hub-tab:hover{color:#fff;background:rgba(255,255,255,.07)}
@@ -116,7 +127,7 @@ input,select,textarea{font-size:16px !important}
 .launcher-sub{font-size:14px;color:var(--text3);margin-bottom:36px}
 .module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .mod-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:22px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow-sm);display:flex;flex-direction:column}
-.mod-card:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(30,64,175,.1);transform:translateY(-2px)}
+.mod-card:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(19,71,111,.12);transform:translateY(-2px)}
 .mod-card.locked{opacity:.5;cursor:not-allowed}
 .mod-card.locked:hover{transform:none;border-color:var(--border);box-shadow:var(--shadow-sm)}
 .mod-card-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;flex-shrink:0}
@@ -251,13 +262,13 @@ input[type=text],input[type=date],input[type=time],input[type=number],input[type
   transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;-moz-appearance:textfield
 }
 input[type=number]::-webkit-inner-spin-button{display:none}
-input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,86,219,.1)}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(19,71,111,.12)}
 input::placeholder{color:var(--text3);font-weight:400}
 input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{opacity:.5;cursor:pointer}
 
 .btn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:7px;padding:8px 16px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
-.btn-primary{background:var(--accent);color:#fff;box-shadow:0 1px 4px rgba(26,86,219,.25)}
-.btn-primary:hover{background:#1648c0;transform:translateY(-1px)}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 1px 4px rgba(19,71,111,.28)}
+.btn-primary:hover{background:var(--accent-hover);transform:translateY(-1px)}
 .btn-ghost{background:none;border:1px solid var(--border2);color:var(--text2)}
 .btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
 .btn-green{background:var(--green-bg);border:1px solid var(--green-bd);color:var(--green)}
@@ -1220,7 +1231,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 
             <!-- Events -->
             <div class="mod-card" onclick="switchModule('calendar')" id="mod-card-calendar">
-              <div class="mod-card-icon" style="background:#eff6ff;color:#1e40af">
+              <div class="mod-card-icon" style="background:var(--accent-bg);color:var(--accent)">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               </div>
               <div class="mod-name">Events</div>
@@ -4145,7 +4156,7 @@ function renderLaborLog(){
 }
 
 // ══ RENDER: USERS ════════════════════════════════════
-const AVATAR_COLORS=['#1a56db','#0a7c4e','#b45309','#6d28d9','#b91c1c','#0369a1'];
+const AVATAR_COLORS=['#13476f','#0a7c4e','#b45309','#6d28d9','#b91c1c','#1f5d8c'];
 function avatarColor(name){return AVATAR_COLORS[name.charCodeAt(0)%AVATAR_COLORS.length]}
 
 function renderUsers(){
@@ -4527,7 +4538,7 @@ async function leaveSave(){ hrLeave = await api('GET','/hr/leave') || hrLeave; }
 
 const DEPTS = ['Management','Admin','Technical','Logistics','Production','Studio'];
 const NATIONALITIES = ['Afghan','Albanian','Algerian','American','Andorran','Angolan','Argentine','Armenian','Australian','Austrian','Azerbaijani','Bahraini','Bangladeshi','Belarusian','Belgian','Belizean','Beninese','Bhutanese','Bolivian','Bosnian','Brazilian','British','Bruneian','Bulgarian','Burkinabe','Burundian','Cambodian','Cameroonian','Canadian','Chilean','Chinese','Colombian','Congolese','Croatian','Cuban','Cypriot','Czech','Danish','Djiboutian','Dominican','Dutch','Ecuadorean','Egyptian','Emirati','Estonian','Ethiopian','Fijian','Finnish','French','Gabonese','Gambian','Georgian','German','Ghanaian','Greek','Guatemalan','Guinean','Haitian','Honduran','Hungarian','Icelandic','Indian','Indonesian','Iranian','Iraqi','Irish','Israeli','Italian','Ivorian','Jamaican','Japanese','Jordanian','Kazakhstani','Kenyan','Korean','Kuwaiti','Kyrgyzstani','Lao','Latvian','Lebanese','Liberian','Libyan','Lithuanian','Luxembourgish','Macedonian','Malagasy','Malawian','Malaysian','Maldivian','Malian','Maltese','Mauritanian','Mauritian','Mexican','Moldovan','Mongolian','Montenegrin','Moroccan','Mozambican','Namibian','Nepalese','New Zealander','Nicaraguan','Nigerien','Nigerian','Norwegian','Omani','Pakistani','Panamanian','Paraguayan','Peruvian','Filipino','Polish','Portuguese','Qatari','Romanian','Russian','Rwandan','Saudi','Senegalese','Serbian','Sierra Leonean','Singaporean','Slovak','Slovenian','Somali','South African','Spanish','Sri Lankan','Sudanese','Swedish','Swiss','Syrian','Tajikistani','Tanzanian','Thai','Togolese','Trinidadian','Tunisian','Turkish','Ugandan','Ukrainian','Uruguayan','Uzbekistani','Venezuelan','Vietnamese','Yemeni','Zambian','Zimbabwean'];
-const AVATAR_HR = ['#1a56db','#0a7c4e','#b45309','#6d28d9','#b91c1c','#0369a1','#7c3aed','#065f46'];
+const AVATAR_HR = ['#13476f','#0a7c4e','#b45309','#6d28d9','#b91c1c','#1f5d8c','#7c3aed','#065f46'];
 function hrAvColor(name){ return AVATAR_HR[(name||'?').charCodeAt(0) % AVATAR_HR.length]; }
 function fmtMVR(n){ const v=parseFloat(n)||0; return 'MVR '+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function monthLabel(ym){ if(!ym)return'—'; const[y,m]=ym.split('-'); return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+y; }

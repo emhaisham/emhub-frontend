@@ -306,6 +306,16 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .td-mono{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12.5px}
 .td-green{color:var(--green);font-weight:700;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
 
+/* Numeric column alignment: any th.num + any cell with td-mono/td-green is
+   right-aligned, so the column header and the data underneath line up to
+   the right edge (decimals align). Mirror rule for .detail-dt + payslip
+   tables. This replaces ad-hoc inline text-align on individual headers. */
+.data-table th.num, .detail-dt th.num,
+.data-table td.td-mono, .data-table td.td-green,
+.detail-dt td.td-mono, .detail-dt td.td-green {
+  text-align: right;
+}
+
 /* Chips */
 .chip-rate{display:inline-block;background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber);border-radius:4px;padding:2px 7px;font-size:11.5px;font-weight:600;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
 .chip-hours{display:inline-block;background:var(--accent-bg);border:1px solid var(--accent-bd);color:var(--accent);border-radius:4px;padding:2px 7px;font-size:11.5px;font-weight:600;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
@@ -1396,7 +1406,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <div class="rpt-card"><div class="rpt-title">Payout by Month</div><div id="rptMonth"></div></div>
               </div>
               <div class="card"><div class="card-hdr"><div class="card-hdr-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div><div class="card-title">All Events Summary</div></div></div>
-              <div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Event</th><th>Date</th><th>Groups</th><th>Pax</th><th>Hours</th><th>Amount</th><th>Status</th></tr></thead><tbody id="rptBody"></tbody></table></div></div>
+              <div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Event</th><th>Date</th><th class="num">Groups</th><th class="num">Pax</th><th class="num">Hours</th><th class="num">Amount</th><th>Status</th></tr></thead><tbody id="rptBody"></tbody></table></div></div>
 
               <!-- Local Crew by Staff -->
               <div class="card" style="margin-top:16px">
@@ -1418,7 +1428,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                     </div>
                     <div style="overflow-x:auto">
                       <table class="data-table">
-                        <thead><tr><th>Event</th><th>Date</th><th>Setup (d×rate)</th><th>Event (d×rate)</th><th>Subtotal</th><th>Adj.</th><th>Payout</th></tr></thead>
+                        <thead><tr><th>Event</th><th>Date</th><th class="num">Setup (d×rate)</th><th class="num">Event (d×rate)</th><th class="num">Subtotal</th><th class="num">Adj.</th><th class="num">Payout</th></tr></thead>
                         <tbody id="rptLcBody"></tbody>
                       </table>
                     </div>
@@ -3659,7 +3669,7 @@ function openReport(eid){
     return`<div style="margin-bottom:16px">
       <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:6px">Group ${gi+1}${g.label?' · '+g.label:''}</div>
       <table class="report-table">
-        <thead><tr><th>Pax</th><th>Date In</th><th>Time In</th><th>Date Out</th><th>Time Out</th><th>Hours</th><th>Rate/Person</th><th>Amount</th></tr></thead>
+        <thead><tr><th class="num">Pax</th><th>Date In</th><th>Time In</th><th>Date Out</th><th>Time Out</th><th class="num">Hours</th><th class="num">Rate/Person</th><th class="num">Amount</th></tr></thead>
         <tbody>${rows}<tr style="background:#f8f9fb"><td colspan="7" style="font-weight:700;color:var(--text)">Group Subtotal</td><td class="rt-money">${fmt(gTotal)}</td></tr></tbody>
       </table>
     </div>`;
@@ -3801,7 +3811,7 @@ function exportReportPDF(){
       <div class="sbox"><div class="sval">${filteredEvents.length?fmt(tot/filteredEvents.length):'MVR 0'}</div><div class="slbl">Avg / Event</div></div>
     </div>
     <table>
-      <thead><tr><th>Event Name</th><th>Date</th><th>Groups</th><th>Pax</th><th>Hours</th><th>Amount</th><th>Status</th></tr></thead>
+      <thead><tr><th>Event Name</th><th>Date</th><th class="num">Groups</th><th class="num">Pax</th><th class="num">Hours</th><th class="num">Amount</th><th>Status</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div class="footer">Confidential · EM HUB CrewPay · Event Maldives</div>
@@ -3947,7 +3957,7 @@ function renderEvents(keep){
       </tr>`).join('');
       return`<div class="g-section"><div class="g-hdr"><span class="g-title">Group ${gi+1}${g.label?' · '+g.label:''}</span><div class="g-subtotal">${fmt(gTot)}<button class="btn btn-red btn-xs" onclick="deleteGroup('${ev.id}','${g.id}')">Remove</button></div></div>
         <table class="detail-dt">
-          <thead><tr><th>Pax</th><th>Date In</th><th>Time In</th><th>Date Out</th><th>Time Out</th><th>Hours</th><th>Rate</th><th>Amount</th></tr></thead>
+          <thead><tr><th class="num">Pax</th><th>Date In</th><th>Time In</th><th>Date Out</th><th>Time Out</th><th class="num">Hours</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
         <tbody>${dayRows}</tbody></table></div>`;
     }).join('');
     return`<div class="ev-card ${isExp?'expanded':''}" id="ecard_${ev.id}">
@@ -6840,7 +6850,7 @@ function getPayslipHTML(pr,emp){
     const sameCurAllow = lines.length
       ? lines.filter(a => (a.currency||baseCur)===baseCur).reduce((s,a)=>s+(parseFloat(a.amount)||0),0)
       : (parseFloat(pr.allowances)||0);
-    return `<table><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody>
+    return `<table><thead><tr><th>Description</th><th class="num">Amount</th></tr></thead><tbody>
       <tr><td>Basic Salary</td><td>${fmtCur(parseFloat(pr.basic)||0)}</td></tr>
       ${allowanceRowsHtml}
       <tr><td style="color:#6b7280;font-style:italic">Gross (${baseCur})</td><td style="color:#6b7280;font-style:italic">${fmtCur((parseFloat(pr.basic)||0)+sameCurAllow)}</td></tr>
@@ -6972,7 +6982,7 @@ function exportPayrollSheet(){
     <div style="text-align:center;margin-bottom:8px"><img src="${EM_LOGO_URL}" alt="Event Maldives" style="display:block;height:60px;width:auto;margin:0 auto 10px"></div><h1>Payroll Sheet — ${monthLabel(month)}</h1>
     <div class="sub">EM HUB · HR Module · ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} · ${prs.length} employees</div>
     <table>
-      <thead><tr><th>Emp ID</th><th>Name</th><th>Dept</th><th>Basic</th><th>Allowances</th><th style="text-align:right">Net Payable</th><th>Method</th><th>Bank Details</th><th>Status</th></tr></thead>
+      <thead><tr><th>Emp ID</th><th>Name</th><th>Dept</th><th class="num">Basic</th><th class="num">Allowances</th><th class="num">Net Payable</th><th>Method</th><th>Bank Details</th><th>Status</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     ${totalsHtml}
@@ -7231,7 +7241,7 @@ function renderPension(){
   if(!eligible.length){ el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v1a3 3 0 006 0V7m0 1a3 3 0 006 0V7m0 1a3 3 0 006 0V7L12 2 3 7z"/></svg></div><div class="empty-title">No eligible staff</div></div>'; return; }
   el.innerHTML=`<div class="card"><div class="card-hdr"><div class="card-hdr-icon"></div><div><div class="card-title">Pension — ${monthLabel(month)}</div><div class="card-sub">Employee 7.5% + Employer 7.5% of basic salary</div></div></div>
     <div style="overflow-x:auto"><table class="data-table">
-      <thead><tr><th>Employee</th><th>Dept</th><th>Basic</th><th>Employee (7.5%)</th><th>Employer (7.5%)</th><th>Total</th><th>Status</th></tr></thead>
+      <thead><tr><th>Employee</th><th>Dept</th><th class="num">Basic</th><th class="num">Employee (7.5%)</th><th class="num">Employer (7.5%)</th><th class="num">Total</th><th>Status</th></tr></thead>
       <tbody>
         ${eligible.map(emp=>{
           const rec=hrPensions.find(p=>p.empId===emp.id&&p.month===month);
@@ -8410,7 +8420,7 @@ function renderLeaveBalances(){
   if(!active.length){el.innerHTML='<div class="empty"><div class="empty-title">No employee record found</div></div>';return;}
   const leaveTypesWithDays=hrLeaveTypes.filter(lt=>(lt.days||lt.days_allowed||0)>0);
   el.innerHTML=`<div class="card"><div style="overflow-x:auto"><table class="data-table">
-    <thead><tr><th>Employee</th><th>Dept</th>${leaveTypesWithDays.map(lt=>`<th>${lt.name} (${lt.days||lt.days_allowed||0}d)</th>`).join('')}<th>Total Used</th></tr></thead>
+    <thead><tr><th>Employee</th><th>Dept</th>${leaveTypesWithDays.map(lt=>`<th class="num">${lt.name} (${lt.days||lt.days_allowed||0}d)</th>`).join('')}<th class="num">Total Used</th></tr></thead>
     <tbody>${active.map(emp=>{
       const empLeave=hrLeave.filter(l=>{
         const lEmpId=String(l.empId||l.emp_id);
@@ -9620,7 +9630,7 @@ function openLocalCrewReport(eid){
     </div>
     <div class="report-section-title">Staff Breakdown</div>
     <table class="report-table">
-      <thead><tr><th>Staff</th><th>Cur</th><th>Setup (d × rate)</th><th>Event (d × rate)</th><th>Subtotal</th><th>Adj</th><th>Payout</th><th>Status</th></tr></thead>
+      <thead><tr><th>Staff</th><th>Cur</th><th class="num">Setup (d × rate)</th><th class="num">Event (d × rate)</th><th class="num">Subtotal</th><th class="num">Adj</th><th class="num">Payout</th><th>Status</th></tr></thead>
       <tbody>${rows||'<tr><td colspan="8" style="text-align:center;color:#9aa3af">No staff entries</td></tr>'}</tbody>
     </table>
     <div class="report-grand"><div class="rg-label">Grand Total — ${ev.name}</div><div class="rg-val" style="font-size:14px">${fmtCurMap(totalMap)}</div></div>
@@ -14155,7 +14165,7 @@ function _buildEquipPDF(ev, lists){
     return `
       <div class="team-header">${list.teamName} <span style="font-weight:400;font-size:11px;color:#94a3b8">${list.items.length} item${list.items.length!==1?'s':''}</span></div>
       <table><colgroup><col style="width:24px"><col style="width:auto"><col style="width:80px"><col style="width:50px"><col style="width:80px"><col style="width:140px"><col style="width:42px"><col style="width:42px"></colgroup>
-      <thead><tr><th>#</th><th>Item</th><th>EM Serial</th><th>Qty</th><th>Item Serial</th><th>Flight Case</th><th>Status</th><th>Packed</th></tr></thead>
+      <thead><tr><th>#</th><th>Item</th><th>EM Serial</th><th class="num">Qty</th><th>Item Serial</th><th>Flight Case</th><th>Status</th><th>Packed</th></tr></thead>
       <tbody>${rows}</tbody></table>
       <div style="height:14px"></div>
     `;

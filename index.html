@@ -133,24 +133,108 @@ input,select,textarea{font-size:16px !important}
 /* Modules that scroll themselves */
 #mod-launcher.active{display:block;overflow-y:auto;padding:40px 40px;background:var(--bg)}
 
-/* ══ MODULE LAUNCHER ════════════════════════════ */
+/* ══ MODULE LAUNCHER v2 — The Operations Console home ════════════════════
+   Two-zone layout: ⅔ main column (greeting + inbox + modules), ⅓ aside
+   (today panel). Single column on tablet/mobile. The page is the place
+   the user lands every morning; density follows the data — sparse where
+   it should breathe, signal-dense where it matters. */
 #mod-launcher{background:var(--bg)}
-.launcher-inner{width:100%;max-width:960px;margin:0 auto}
-.launcher-title{font-size:26px;font-weight:800;color:var(--text);letter-spacing:-.5px;margin-bottom:6px}
-.launcher-sub{font-size:14px;color:var(--text3);margin-bottom:36px}
-.module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.mod-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:22px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow-sm);display:flex;flex-direction:column}
+.launcher-inner{width:100%;max-width:1180px;margin:0 auto}
+
+/* Top-level two-zone grid */
+.launcher-grid{display:grid;grid-template-columns:1fr 320px;gap:32px;align-items:start}
+
+/* ── Greeting header ── */
+.launcher-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px}
+.launcher-greeting{font-size:13px;font-weight:500;color:var(--text3);margin-bottom:4px;letter-spacing:.02em}
+.launcher-name{font-size:28px;font-weight:700;color:var(--text);letter-spacing:-.6px;line-height:1.15}
+.launcher-date{font-size:13px;color:var(--text3);margin-top:4px}
+.launcher-tip{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);margin-top:10px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:5px}
+.launcher-tip kbd{font-family:'Inter',sans-serif;font-size:10px;font-weight:700;color:var(--text2);background:var(--white);border:1px solid var(--border2);border-bottom-width:2px;border-radius:3px;padding:1px 4px;letter-spacing:.02em}
+.launcher-logo{height:42px;width:auto;opacity:.88;flex-shrink:0;margin-left:24px}
+
+/* ── Section labels ── */
+.launcher-section{margin-bottom:28px}
+.launcher-section-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text3);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.launcher-section-label .lbl-count{font-size:10.5px;font-weight:600;color:var(--text3);letter-spacing:0;text-transform:none}
+
+/* ── Inbox strip ── */
+.launcher-inbox{background:var(--white);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-sm);overflow:hidden}
+.inbox-row{display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;border-bottom:1px solid var(--border);transition:background-color .12s}
+.inbox-row:last-child{border-bottom:none}
+.inbox-row:hover{background:var(--surface)}
+.inbox-row-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.inbox-row-icon.tone-amber{background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber)}
+.inbox-row-icon.tone-red{background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red)}
+.inbox-row-icon.tone-blue{background:var(--accent-bg);border:1px solid var(--accent-bd);color:var(--accent)}
+.inbox-row-text{flex:1;min-width:0}
+.inbox-row-title{font-size:13.5px;font-weight:500;color:var(--text);line-height:1.35;letter-spacing:-.005em}
+.inbox-row-title strong{font-weight:700}
+.inbox-row-sub{font-size:11.5px;color:var(--text3);margin-top:2px}
+.inbox-row-chev{color:var(--text3);flex-shrink:0;opacity:.5;transition:opacity .12s,transform .12s}
+.inbox-row:hover .inbox-row-chev{opacity:1;transform:translateX(2px);color:var(--accent)}
+.launcher-inbox-empty{padding:30px 18px;text-align:center}
+.launcher-inbox-empty-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.launcher-inbox-empty-sub{font-size:12px;color:var(--text3)}
+
+/* ── Module grid (re-shaped — adds a state badge slot) ── */
+.module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.mod-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:18px;cursor:pointer;transition:transform .15s cubic-bezier(.16,1,.3,1),box-shadow .15s,border-color .15s;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;min-height:140px;position:relative}
 .mod-card:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(19,71,111,.12);transform:translateY(-2px)}
 .mod-card.locked{opacity:.5;cursor:not-allowed}
 .mod-card.locked:hover{transform:none;border-color:var(--border);box-shadow:var(--shadow-sm)}
-.mod-card-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;flex-shrink:0}
-.mod-icon{font-size:36px;margin-bottom:16px}
-.mod-name{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;letter-spacing:-.01em}
-.mod-desc{font-size:13px;color:var(--text3);line-height:1.6}
-.mod-card-footer{margin-top:14px}
-.mod-badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:4px;margin-top:12px}
-.mod-badge.active-b{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
-.mod-badge.soon{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.mod-card-row1{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;gap:10px}
+.mod-card-icon{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mod-card-state{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;line-height:1.2;flex-shrink:0;white-space:nowrap}
+.mod-card-state.state-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.mod-card-state.state-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+.mod-card-state.state-blue{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd)}
+.mod-card-state.state-quiet{background:var(--surface);color:var(--text3);border:1px solid var(--border)}
+.mod-name{font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;letter-spacing:-.01em}
+.mod-desc{font-size:12px;color:var(--text3);line-height:1.5;margin-top:auto}
+
+/* ── Today aside panel ── */
+.launcher-aside{position:sticky;top:24px}
+.launcher-today{background:var(--white);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-sm);padding:20px}
+.today-date-big{font-size:32px;font-weight:700;color:var(--text);letter-spacing:-.8px;line-height:1}
+.today-date-sub{font-size:12px;color:var(--text3);margin-top:4px;letter-spacing:.02em}
+.today-divider{height:1px;background:var(--border);margin:18px 0}
+.today-section{margin-bottom:16px}
+.today-section:last-child{margin-bottom:0}
+.today-section-lbl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:8px}
+.today-event-name{font-size:14px;font-weight:600;color:var(--text);line-height:1.3;letter-spacing:-.005em}
+.today-event-date{font-size:11.5px;color:var(--text3);margin-top:2px;font-variant-numeric:tabular-nums}
+.today-event-none{font-size:12.5px;color:var(--text3);padding:4px 0}
+
+/* This-week mini grid: 7 columns, top = day initial, bottom = density dot */
+.week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:4px}
+.week-day{text-align:center;padding:6px 0;border-radius:6px;background:var(--surface);border:1px solid var(--border);transition:transform .12s}
+.week-day.is-today{background:var(--accent-bg);border-color:var(--accent-bd)}
+.week-day.is-today .week-day-num{color:var(--accent)}
+.week-day-dow{font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.week-day-num{font-size:14px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.2;margin-top:2px}
+.week-day-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);margin:4px auto 0;opacity:.85}
+.week-day-dot.dot-empty{background:transparent;border:1px solid var(--border)}
+.week-day-dot.dot-double{box-shadow:0 0 0 2px var(--white), 0 0 0 3px var(--accent)}
+
+.today-count-row{display:flex;align-items:baseline;gap:6px}
+.today-count{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.4px;font-variant-numeric:tabular-nums}
+.today-count.muted{color:var(--text3)}
+.today-count-lbl{font-size:12px;color:var(--text3)}
+
+/* ── Responsive ── */
+@media(max-width:1024px){
+  .launcher-grid{grid-template-columns:1fr;gap:24px}
+  .launcher-aside{position:static;order:-1}
+  .launcher-today{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  .launcher-today .today-divider{display:none}
+  .launcher-today .today-section{margin-bottom:0}
+}
+@media(max-width:640px){
+  .launcher-today{grid-template-columns:1fr}
+  .launcher-header{flex-direction:column;align-items:flex-start;gap:16px}
+  .launcher-logo{margin-left:0}
+}
 
 /* ══ SHARED APP SHELL ════════════════════════════ */
 .app-shell{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
@@ -1293,82 +1377,45 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
       <!-- ── LAUNCHER ────────────────────────────── -->
       <div class="module active" id="mod-launcher">
         <div class="launcher-inner">
+          <div class="launcher-grid">
 
-          <!-- Header -->
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:32px">
-            <div>
-              <div id="launcherGreeting" style="font-size:13px;font-weight:500;color:var(--text3);margin-bottom:4px;letter-spacing:.02em">Good Morning</div>
-              <div id="launcherName" style="font-size:26px;font-weight:700;color:var(--text);letter-spacing:-.5px;line-height:1.2">EM HUB</div>
-              <div style="font-size:13px;color:var(--text3);margin-top:4px" id="launcherDate"></div>
-            </div>
-            <div style="text-align:right">
-              <img alt="Event Maldives" src="em-logo.png" width="101" height="44" style="display:inline-block;height:44px;width:auto;opacity:.92">
-            </div>
-          </div>
+            <!-- Main column: greeting, inbox, modules -->
+            <div class="launcher-main">
 
-          <!-- Module grid -->
-          <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:14px">Modules</div>
-          <div class="module-grid">
-
-            <!-- Events -->
-            <div class="mod-card" onclick="switchModule('calendar')" id="mod-card-calendar">
-              <div class="mod-card-icon" style="background:var(--accent-bg);color:var(--accent)">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <div class="launcher-header">
+                <div>
+                  <div id="launcherGreeting" class="launcher-greeting">Welcome</div>
+                  <div id="launcherName" class="launcher-name">EM HUB</div>
+                  <div id="launcherDate" class="launcher-date"></div>
+                  <div class="launcher-tip"><kbd>⌘</kbd><kbd>K</kbd> to search anything</div>
+                </div>
+                <img alt="Event Maldives" src="em-logo.png" class="launcher-logo">
               </div>
-              <div class="mod-name">Events</div>
-              <div class="mod-desc">Plan and manage events with calendar view, phases, staff assignments and conflict tracking.</div>
-              <div class="mod-card-footer"><span class="mod-badge active-b">Active</span></div>
+
+              <!-- Inbox: personally-actionable items -->
+              <div class="launcher-section">
+                <div class="launcher-section-label">Your Inbox <span class="lbl-count" id="launcherInboxCount"></span></div>
+                <div class="launcher-inbox" id="launcherInbox">
+                  <!-- Populated by renderLauncher() -->
+                </div>
+              </div>
+
+              <!-- Module grid -->
+              <div class="launcher-section">
+                <div class="launcher-section-label">Modules</div>
+                <div class="module-grid" id="launcherModules">
+                  <!-- Populated by renderLauncher() -->
+                </div>
+              </div>
+
             </div>
 
-            <!-- Equipment -->
-            <div class="mod-card" onclick="switchModule('loans')" id="mod-card-loans">
-              <div class="mod-card-icon" style="background:#f0fdf4;color:#059669">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            <!-- Aside: Today panel -->
+            <aside class="launcher-aside">
+              <div class="launcher-today" id="launcherToday">
+                <!-- Populated by renderLauncher() -->
               </div>
-              <div class="mod-name">Equipment</div>
-              <div class="mod-desc">Inventory management, flight cases, fault tracking, event equipment lists and check-in/out.</div>
-              <div class="mod-card-footer"><span class="mod-badge active-b">Active</span></div>
-            </div>
-
-            <!-- CrewPay -->
-            <div class="mod-card" onclick="switchModule('crewpay')" id="mod-card-crewpay">
-              <div class="mod-card-icon" style="background:#fffbeb;color:#d97706">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
-              </div>
-              <div class="mod-name">CrewPay</div>
-              <div class="mod-desc">Track labor payments, manage staff groups, calculate wages and generate payment reports.</div>
-              <div class="mod-card-footer"><span class="mod-badge active-b">Active</span></div>
-            </div>
-
-            <!-- HR -->
-            <div class="mod-card" onclick="switchModule('hr')" id="mod-card-hr">
-              <div class="mod-card-icon" style="background:#f5f3ff;color:#7c3aed">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-              </div>
-              <div class="mod-name">HR</div>
-              <div class="mod-desc">Employee records, payroll, loans, pension tracking and document management for all staff.</div>
-              <div class="mod-card-footer"><span class="mod-badge active-b">Active</span></div>
-            </div>
-
-            <!-- Push Notification -->
-            <div class="mod-card" onclick="switchModule('msging')" id="mod-card-msging">
-              <div class="mod-card-icon" style="background:#fef2f2;color:#dc2626">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-              </div>
-              <div class="mod-name">Push Notification</div>
-              <div class="mod-desc">Send push notifications to all staff or specific members. View notification history.</div>
-              <div class="mod-card-footer"><span class="mod-badge active-b">Active</span></div>
-            </div>
-
-            <!-- Users -->
-            <div class="mod-card" onclick="switchModule('users')" id="mod-card-users">
-              <div class="mod-card-icon" style="background:#f0f9ff;color:#0284c7">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><path d="M18 3a3 3 0 010 6"/><path d="M21 20c0-3-1.8-5-4-6"/></svg>
-              </div>
-              <div class="mod-name">Users</div>
-              <div class="mod-desc">Add and manage users, create custom roles with granular permissions and access controls.</div>
-              <div class="mod-card-footer"><span class="mod-badge active-b">Active</span></div>
-            </div>
+            </aside>
 
           </div>
         </div>
@@ -3467,6 +3514,11 @@ function switchModule(name){
   if(mod) mod.classList.add('active');
   const tab=document.getElementById('tab-'+name);
   if(tab) tab.classList.add('active');
+  // Refresh the launcher each time it becomes active — inbox + module badges
+  // + today panel are all "live" reflections of in-memory caches.
+  if (name === 'launcher' && typeof renderLauncher === 'function') {
+    requestAnimationFrame(() => renderLauncher());
+  }
   requestAnimationFrame(()=>{
     if(name==='crewpay'){
       const _renderCp = () => { renderAll(); };
@@ -9518,7 +9570,345 @@ function setRptRange(preset){
   renderReports();
 }
 
+// ══ HOME LAUNCHER ═════════════════════════════════════
+// The first screen every staff member sees. Three components, all populated
+// from already-loaded caches (no network calls during render):
+//   - "Your Inbox": items personally awaiting THIS user's action.
+//   - Module grid: each card carries a live state badge.
+//   - Today panel: date, next event, week strip, leave-today count.
+//
+// Defensive against caches that haven't loaded yet — every accessor falls
+// back to [] / 0 so the launcher renders cleanly on first paint too.
+
+function _safeArr(v){ return Array.isArray(v) ? v : []; }
+function _myPerms(){
+  const role = currentUser?.roleId ? appRoles.find(r=>String(r.id)===String(currentUser.roleId)) : null;
+  return role?.perms || currentUser?.rolePerms || {};
+}
+function _myEmp(){
+  if (typeof hrEmployees==='undefined' || !Array.isArray(hrEmployees)) return null;
+  return hrEmployees.find(e =>
+    (e.linkedUserId && String(e.linkedUserId)===String(currentUser?.id||'')) ||
+    (!e.linkedUserId && currentUser?.name && e.name===currentUser.name)
+  );
+}
+function _isAdmin(){ return currentUser?.role === 'admin'; }
+function _hasPerm(key){
+  if (_isAdmin()) return true;
+  const p = _myPerms();
+  return p[key]===true || p[key+'_view']===true || p[key+'_edit']===true;
+}
+
+function _daysUntilFrom(dateStr){
+  if (!dateStr) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(dateStr); d.setHours(0,0,0,0);
+  return Math.round((d - today) / 86400000);
+}
+
+// Build the inbox: up to 5 items needing this user's action. Order matters —
+// most urgent first. Each item is { tone, icon, html, sub, onClick }.
+function _buildInbox(){
+  const items = [];
+  const isAdmin = _isAdmin();
+  const myEmp = _myEmp();
+  const myUserId = String(currentUser?.id||'');
+
+  // 1. Leave requests awaiting MY action (Stage 1 manager OR Stage 2 final)
+  const leave = _safeArr(typeof hrLeave!=='undefined' && hrLeave);
+  if (leave.length) {
+    // Stage 1: I'm the direct manager OR I have hr_leave_approve OR admin
+    const stage1Mine = leave.filter(l => {
+      if (l.status !== 'pending') return false;
+      if (l.managerUserId && String(l.managerUserId)===myUserId) return true;
+      if (_hasPerm('hr_leave_approve')) return true;
+      return false;
+    });
+    // Stage 2: I have hr_leave_final_approve OR admin
+    const stage2Mine = leave.filter(l => {
+      if (l.status !== 'manager_approved') return false;
+      return _hasPerm('hr_leave_final_approve');
+    });
+    const totalLeave = stage1Mine.length + stage2Mine.length;
+    if (totalLeave > 0) items.push({
+      tone:'amber',
+      icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+      html:`<strong>${totalLeave}</strong> leave request${totalLeave===1?'':'s'} awaiting your approval`,
+      sub: stage2Mine.length ? `${stage1Mine.length} stage 1 · ${stage2Mine.length} stage 2 (final)` : `${stage1Mine.length} pending direct approval`,
+      onClick: () => { switchModule('hr'); setTimeout(()=>hrNav('leave'),60); }
+    });
+  }
+
+  // 2. My own work permit / contract expiring within 60 days (if I'm an emp)
+  if (myEmp) {
+    const checks = [
+      { key:'workPermitExpiry', label:'work permit' },
+      { key:'passportExpiry', label:'passport' },
+      { key:'contractExpiry', label:'contract' },
+      { key:'insuranceExpiry', label:'insurance' }
+    ];
+    checks.forEach(c => {
+      const d = _daysUntilFrom(myEmp[c.key]);
+      if (d !== null && d <= 60) {
+        const tone = d < 0 ? 'red' : (d <= 14 ? 'red' : 'amber');
+        const word = d < 0 ? `expired ${Math.abs(d)} day${d===-1?'':'s'} ago` : (d===0 ? 'expires today' : `expires in ${d} day${d===1?'':'s'}`);
+        items.push({
+          tone,
+          icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+          html:`Your <strong>${c.label}</strong> ${word}`,
+          sub: myEmp[c.key] ? fmtDate(myEmp[c.key]) : '',
+          onClick: () => { switchModule('hr'); setTimeout(()=>hrNav('profile', myEmp.id),60); }
+        });
+      }
+    });
+  }
+
+  // 3. Faults assigned to me (open). Uses inventory items in memory.
+  if (typeof invItems!=='undefined' && Array.isArray(invItems)) {
+    let mineCount = 0;
+    invItems.forEach(it => (it.units||[]).forEach(u => (u.faults||[]).forEach(f => {
+      if (!f.repairedDate && String(f.assignedToUserId||'')===myUserId) mineCount++;
+    })));
+    if (mineCount > 0) items.push({
+      tone:'red',
+      icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></svg>',
+      html:`<strong>${mineCount}</strong> fault${mineCount===1?'':'s'} assigned to you`,
+      sub:'Equipment > Fault Reports',
+      onClick: () => switchModule('loans')
+    });
+  }
+
+  // 4. Equipment overdue (any user with inv_view perm)
+  if (_hasPerm('inv_view') && typeof events!=='undefined') {
+    // Compute overdue check-outs from calEvents (which has equip-lists with returnDate)
+    const cal = _safeArr(typeof calEvents!=='undefined' ? calEvents : []);
+    const today = new Date(); today.setHours(0,0,0,0);
+    let overdue = 0;
+    cal.forEach(ev => (ev.equipLists||[]).forEach(list => (list.items||[]).forEach(it => {
+      if (it.checkOutDate && !it.checkInDate) {
+        const ret = it.returnDate ? new Date(it.returnDate) : null;
+        if (ret && ret < today) overdue++;
+      }
+    })));
+    if (overdue > 0) items.push({
+      tone:'red',
+      icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+      html:`<strong>${overdue}</strong> equipment item${overdue===1?'':'s'} overdue`,
+      sub:'Equipment > Loan Tracking > Overdue',
+      onClick: () => switchModule('loans')
+    });
+  }
+
+  return items.slice(0, 5);
+}
+
+// Compute a state badge for each module — most relevant pending count.
+function _moduleBadges(){
+  const out = {};
+  const today = new Date(); today.setHours(0,0,0,0);
+  const cal = _safeArr(typeof calEvents!=='undefined' ? calEvents : []);
+
+  // Events: count of events in the next 7 days
+  const in7 = new Date(today.getTime() + 7*86400000);
+  const upcoming = cal.filter(e => {
+    const from = e.eventDateFrom ? new Date(String(e.eventDateFrom).slice(0,10)) : null;
+    return from && from >= today && from <= in7 && !e.completed;
+  });
+  if (upcoming.length) out.calendar = { tone:'blue', text:`${upcoming.length} this week` };
+
+  // Equipment: overdue check-outs
+  let overdue = 0;
+  cal.forEach(ev => (ev.equipLists||[]).forEach(list => (list.items||[]).forEach(it => {
+    if (it.checkOutDate && !it.checkInDate) {
+      const ret = it.returnDate ? new Date(it.returnDate) : null;
+      if (ret && ret < today) overdue++;
+    }
+  })));
+  if (overdue) out.loans = { tone:'red', text:`${overdue} overdue` };
+
+  // CrewPay: count of unpaid events
+  const crew = _safeArr(typeof crewEvents!=='undefined' ? crewEvents : []);
+  const unpaid = crew.filter(ev => !ev.paid).length;
+  if (unpaid) out.crewpay = { tone:'amber', text:`${unpaid} unpaid` };
+
+  // HR: pending leave to approve + my pending docs
+  const leave = _safeArr(typeof hrLeave!=='undefined' ? hrLeave : []);
+  const myUserId = String(currentUser?.id||'');
+  const hrPending = leave.filter(l =>
+    (l.status==='pending' && (_hasPerm('hr_leave_approve') || (l.managerUserId && String(l.managerUserId)===myUserId))) ||
+    (l.status==='manager_approved' && _hasPerm('hr_leave_final_approve'))
+  ).length;
+  if (hrPending) out.hr = { tone:'amber', text:`${hrPending} pending` };
+
+  // Notifications: unread count (use the existing notifBadge if populated)
+  const nbEl = document.getElementById('notifBadge');
+  if (nbEl && nbEl.style.display !== 'none' && nbEl.textContent) {
+    out.msging = { tone:'red', text:`${nbEl.textContent} unread` };
+  }
+
+  return out;
+}
+
+// Today aside panel content
+function _todayPanel(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const cal = _safeArr(typeof calEvents!=='undefined' ? calEvents : []);
+  // Next upcoming event
+  const upcoming = cal.filter(e => {
+    const to = e.eventDateTo ? new Date(String(e.eventDateTo).slice(0,10)) : null;
+    return !e.completed && to && to >= today;
+  }).sort((a,b) => String(a.eventDateFrom||'').slice(0,10).localeCompare(String(b.eventDateFrom||'').slice(0,10)));
+  const next = upcoming[0];
+  // This-week mini grid (Mon → Sun starting today's week)
+  const dow = today.getDay(); // 0=Sun
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  const weekStart = new Date(today); weekStart.setDate(today.getDate() + mondayOffset);
+  const days = Array.from({length:7}).map((_, i) => {
+    const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
+    // Count events ON this day (overlap)
+    const dStr = d.toISOString().slice(0,10);
+    const count = cal.filter(e => {
+      const f = String(e.eventDateFrom||'').slice(0,10);
+      const t = String(e.eventDateTo||e.eventDateFrom||'').slice(0,10);
+      return f <= dStr && dStr <= t && !e.completed;
+    }).length;
+    return { date: d, count, isToday: d.getTime()===today.getTime() };
+  });
+  // Staff on approved leave today
+  const leave = _safeArr(typeof hrLeave!=='undefined' ? hrLeave : []);
+  const todayStr = today.toISOString().slice(0,10);
+  const onLeaveToday = leave.filter(l => {
+    if (l.status !== 'approved') return false;
+    const f = String(l.fromDate||l.from_date||'').slice(0,10);
+    const t = String(l.toDate||l.to_date||l.fromDate||'').slice(0,10);
+    return f <= todayStr && todayStr <= t;
+  }).length;
+
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const todayBig = `${today.getDate()}`;
+  const todaySub = `${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][today.getDay()]} · ${monthNames[today.getMonth()]} ${today.getFullYear()}`;
+  const dowShort = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  const weekHtml = days.map((d, i) => {
+    const dotCls = d.count === 0 ? 'dot-empty' : (d.count >= 2 ? 'dot-double' : '');
+    return `<div class="week-day ${d.isToday?'is-today':''}" title="${d.date.toDateString()} — ${d.count} event${d.count===1?'':'s'}">
+      <div class="week-day-dow">${dowShort[i]}</div>
+      <div class="week-day-num">${d.date.getDate()}</div>
+      <div class="week-day-dot ${dotCls}"></div>
+    </div>`;
+  }).join('');
+
+  const nextHtml = next
+    ? `<div class="today-event-name">${next.name||'(untitled event)'}</div>
+       <div class="today-event-date">${fmtDate(next.eventDateFrom)}${next.eventDateTo && next.eventDateTo!==next.eventDateFrom?' → '+fmtDate(next.eventDateTo):''}</div>`
+    : `<div class="today-event-none">No upcoming events</div>`;
+
+  return `
+    <div class="today-date-big">${todayBig}</div>
+    <div class="today-date-sub">${todaySub}</div>
+    <div class="today-divider"></div>
+    <div class="today-section">
+      <div class="today-section-lbl">Next Event</div>
+      ${nextHtml}
+    </div>
+    <div class="today-section">
+      <div class="today-section-lbl">This Week</div>
+      <div class="week-strip">${weekHtml}</div>
+    </div>
+    <div class="today-section">
+      <div class="today-section-lbl">On Leave Today</div>
+      <div class="today-count-row">
+        <div class="today-count ${onLeaveToday===0?'muted':''}">${onLeaveToday}</div>
+        <div class="today-count-lbl">staff member${onLeaveToday===1?'':'s'}</div>
+      </div>
+    </div>`;
+}
+
+// Modules registry — id + icon + name + description + tint
+const LAUNCHER_MODULES = [
+  { id:'calendar', name:'Events',            desc:'Plan and manage events with calendar view, phases, staff assignments and conflict tracking.', iconBg:'var(--accent-bg)', iconClr:'var(--accent)', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' },
+  { id:'loans',    name:'Equipment',         desc:'Inventory, flight cases, fault tracking, event equipment lists and check-in/out.',           iconBg:'var(--green-bg)',  iconClr:'var(--green)',  icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>' },
+  { id:'crewpay',  name:'CrewPay',           desc:'Track labour payments, manage staff groups, calculate wages and generate payment reports.',  iconBg:'var(--amber-bg)',  iconClr:'var(--amber)',  icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>' },
+  { id:'hr',       name:'HR',                desc:'Employee records, payroll, leave, loans, training, probation, salary revisions, reports.',   iconBg:'var(--purple-bg)', iconClr:'var(--purple)', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>' },
+  { id:'msging',   name:'Push Notification', desc:'Send push notifications to all staff or specific members. View notification history.',       iconBg:'var(--red-bg)',    iconClr:'var(--red)',    icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>' },
+  { id:'users',    name:'Users',             desc:'Add and manage users, create custom roles with granular permissions and access controls.',    iconBg:'var(--accent-bg)', iconClr:'var(--accent)', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><path d="M18 3a3 3 0 010 6"/><path d="M21 20c0-3-1.8-5-4-6"/></svg>' }
+];
+
+const _CHEV_RIGHT_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="inbox-row-chev"><polyline points="9 18 15 12 9 6"/></svg>';
+
+let _launcherInboxHandlers = {};
+function _launcherActivate(key){
+  const fn = _launcherInboxHandlers[key];
+  if (fn) try { fn(); } catch(e){}
+}
+
+function renderLauncher(){
+  // Guard: only render if the launcher DOM is mounted (i.e. user is past login)
+  const wrap = document.getElementById('launcherInbox'); if (!wrap) return;
+
+  // Greeting + date
+  const today = new Date();
+  const dow = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][today.getDay()];
+  const mn  = ['January','February','March','April','May','June','July','August','September','October','November','December'][today.getMonth()];
+  const dateEl = document.getElementById('launcherDate');
+  if (dateEl) dateEl.textContent = `${dow}, ${today.getDate()} ${mn} ${today.getFullYear()}`;
+
+  // Inbox
+  _launcherInboxHandlers = {};
+  const inbox = _buildInbox();
+  document.getElementById('launcherInboxCount').textContent = inbox.length ? `${inbox.length} item${inbox.length===1?'':'s'}` : '';
+  if (!inbox.length) {
+    wrap.innerHTML = `<div class="launcher-inbox-empty">
+      <div class="launcher-inbox-empty-title">You're all caught up.</div>
+      <div class="launcher-inbox-empty-sub">Nothing needs your attention right now.</div>
+    </div>`;
+  } else {
+    wrap.innerHTML = inbox.map((item, i) => {
+      const key = 'inbox_'+i;
+      _launcherInboxHandlers[key] = item.onClick;
+      return `<div class="inbox-row" onclick="_launcherActivate('${key}')">
+        <div class="inbox-row-icon tone-${item.tone}">${item.icon}</div>
+        <div class="inbox-row-text">
+          <div class="inbox-row-title">${item.html}</div>
+          ${item.sub?`<div class="inbox-row-sub">${item.sub}</div>`:''}
+        </div>
+        ${_CHEV_RIGHT_SVG}
+      </div>`;
+    }).join('');
+  }
+
+  // Modules grid
+  const badges = _moduleBadges();
+  const myPerms = _myPerms();
+  const isAdmin = _isAdmin();
+  const visibleModules = LAUNCHER_MODULES.filter(m => {
+    if (isAdmin) return true;
+    // Lightweight visibility: show calendar+hr+crewpay+loans always (any view perm); users module only if user_view
+    if (m.id === 'users') return myPerms['user_view'] === true || myPerms['user_view_view'] === true || myPerms['user_view_edit'] === true;
+    if (m.id === 'msging') return myPerms['msg_send'] === true || myPerms['msg_send_edit'] === true || myPerms['msg_history'] === true || myPerms['msg_history_view'] === true;
+    return true;
+  });
+  document.getElementById('launcherModules').innerHTML = visibleModules.map(m => {
+    const b = badges[m.id];
+    const badgeHtml = b
+      ? `<span class="mod-card-state state-${b.tone}">${b.text}</span>`
+      : `<span class="mod-card-state state-quiet">Open</span>`;
+    return `<div class="mod-card" onclick="switchModule('${m.id}')" id="mod-card-${m.id}">
+      <div class="mod-card-row1">
+        <div class="mod-card-icon" style="background:${m.iconBg};color:${m.iconClr}">${m.icon}</div>
+        ${badgeHtml}
+      </div>
+      <div class="mod-name">${m.name}</div>
+      <div class="mod-desc">${m.desc}</div>
+    </div>`;
+  }).join('');
+
+  // Today panel
+  document.getElementById('launcherToday').innerHTML = _todayPanel();
+}
+
 function renderAll(){
+  renderLauncher();
   renderDashboard();renderEvents(true);
   if(cpActivePage==='payments')renderPayments();
   if(cpActivePage==='reports')renderReports();

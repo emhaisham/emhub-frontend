@@ -419,6 +419,61 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .modal .field{margin-bottom:16px}
 .modal .field .field-label{margin-bottom:6px;display:block;font-size:11.5px;font-weight:600;color:var(--text2);letter-spacing:.02em}
 .modal .field input,.modal .field select,.modal .field textarea{font-size:13.5px}
+
+/* ── TASTE PASS — TACTILE + MOTION ─────────────────────────────────────────
+   Subtle physical feedback on press, staggered list reveals so new rows
+   feel like they "arrived" rather than blinked, a shimmer for skeleton
+   placeholders, and a slow pulse on the urgency dots so they read as
+   "live" status indicators rather than static colour swatches.
+   All transform/opacity-based so they stay GPU-accelerated and never
+   trigger layout reflow. */
+
+/* Tactile press — applied globally to every .btn. Pulls slightly down
+   and shrinks on active to mimic a physical key-press. */
+.btn{transition:transform .12s cubic-bezier(.16,1,.3,1), background-color .15s, color .15s, border-color .15s, box-shadow .15s}
+.btn:active{transform:translateY(1px) scale(.98)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Cards and pay-group-row get a softer transform on hover so the surface
+   feels alive without distracting the eye away from content. */
+.pay-group-row{transition:transform .15s cubic-bezier(.16,1,.3,1), border-color .15s, background-color .15s}
+.pay-group-row:hover{border-color:var(--border2)}
+
+/* Staggered fade-up reveal. Used by adding class="row-reveal" and a
+   --i CSS variable on each row (set inline via style="--i:N"). Animation
+   runs once on mount; @media (prefers-reduced-motion) disables it. */
+@keyframes rowRevealUp{
+  from{opacity:0;transform:translateY(4px)}
+  to  {opacity:1;transform:translateY(0)}
+}
+.row-reveal{opacity:0;animation:rowRevealUp .35s cubic-bezier(.16,1,.3,1) forwards;animation-delay:calc(var(--i,0)*28ms)}
+
+/* Skeleton shimmer — base block + animated gradient sweep. Used to
+   replace plain "Loading…" text on async list loads. */
+@keyframes skeletonShimmer{
+  0%  {background-position:-200px 0}
+  100%{background-position:calc(200px + 100%) 0}
+}
+.skeleton{display:block;background:linear-gradient(90deg, var(--surface) 0%, var(--border) 50%, var(--surface) 100%);background-size:200px 100%;background-repeat:no-repeat;border-radius:6px;animation:skeletonShimmer 1.2s linear infinite}
+.skeleton-row{height:54px;margin-bottom:8px}
+.skeleton-line{height:10px;margin-bottom:6px;width:60%}
+.skeleton-line.lg{height:14px;width:80%}
+
+/* Bucket-header dot pulse — slow infinite pulse on the red urgency
+   pip so "Expired / 0–7 days" group breaks feel live. */
+@keyframes bucketPulse{
+  0%,100%{opacity:.55}
+  50%   {opacity:1}
+}
+.bucket-hdr.bucket-red::before{animation:bucketPulse 2.2s ease-in-out infinite}
+
+/* Respect users who've asked for less motion at the OS level. */
+@media (prefers-reduced-motion: reduce){
+  .row-reveal{animation:none;opacity:1}
+  .skeleton{animation:none}
+  .bucket-hdr.bucket-red::before{animation:none}
+  .btn{transition:none}
+}
 .pg-amount{font-size:14px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
 .pg-paid-info{font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;text-align:right}
 
@@ -1121,7 +1176,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <button onclick="closeNotifDropdown();switchModule('msging')" class="btn btn-ghost btn-sm" style="width:100%">View all →</button>
             </div>
           </div>
-          <div id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle dark mode" style="cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);margin-right:8px;font-size:16px">🌙</div>
+          <div id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle dark mode" style="cursor:pointer;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);margin-right:8px;color:#fff"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg></div>
           <div class="hub-avatar" id="hubAvatar">A</div>
           <div><div class="hub-uname" id="hubUname">Admin</div><div class="hub-urole" id="hubUrole">Administrator</div></div>
         </div>
@@ -1427,7 +1482,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               </div>
               <!-- Staff status tabs -->
               <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
-                <button class="staff-tab active" id="staffTab-active" onclick="setStaffTab('active')">✅ Active <span class="staff-tab-count" id="staffTabCount-active"></span></button>
+                <button class="staff-tab active" id="staffTab-active" onclick="setStaffTab('active')">Active <span class="staff-tab-count" id="staffTabCount-active"></span></button>
                 <button class="staff-tab" id="staffTab-former" onclick="setStaffTab('former')">Resigned / Terminated <span class="staff-tab-count" id="staffTabCount-former"></span></button>
                 <button class="staff-tab" id="staffTab-all" onclick="setStaffTab('all')">All <span class="staff-tab-count" id="staffTabCount-all"></span></button>
               </div>
@@ -1625,7 +1680,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
             <div class="page" id="hr-page-letters">
               <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between">
                 <div><div class="page-title">Staff Letters</div><div class="page-sub">Generate employment, experience, NOC, salary certificate, warning, increment, transfer, termination, and bank letters. Supports bulk generation for multiple staff in one print job.</div></div>
-                <button class="btn btn-ghost btn-sm" id="ltBulkToggle" onclick="ltToggleBulk()">📑 Bulk Mode</button>
+                <button class="btn btn-ghost btn-sm" id="ltBulkToggle" onclick="ltToggleBulk()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Bulk Mode</button>
               </div>
               <div class="card">
                 <div class="card-hdr"><div class="card-hdr-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div><div class="card-title" id="ltCardTitle">Generate Staff Letter</div><div class="card-sub" id="ltCardSub">Select template, fill in details, then click Generate</div></div></div>
@@ -1721,14 +1776,14 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                   <div class="page-sub">Catalog of certs (first aid, rigging, electrical, driver's licence…) with per-employee records and automated renewal reminders.</div>
                 </div>
                 <div style="display:flex;gap:6px">
-                  <button class="btn btn-ghost btn-sm" onclick="guardAction('hr_training_edit', openTrainingTypesModal)">⚙ Manage Types</button>
+                  <button class="btn btn-ghost btn-sm" onclick="guardAction('hr_training_edit', openTrainingTypesModal)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>Manage Types</button>
                   <button class="btn btn-primary btn-sm" onclick="guardAction('hr_training_edit', ()=>openTrainingRecordModal(null,null))">＋ New Record</button>
                 </div>
               </div>
               <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
-                <button class="staff-tab active" id="trnTab-expiring" onclick="trnSetTab('expiring')">⚠️ Expiring (90d) <span class="staff-tab-count" id="trnCount-expiring"></span></button>
-                <button class="staff-tab" id="trnTab-active"   onclick="trnSetTab('active')">✓ Active <span class="staff-tab-count" id="trnCount-active"></span></button>
-                <button class="staff-tab" id="trnTab-expired"  onclick="trnSetTab('expired')">✕ Expired <span class="staff-tab-count" id="trnCount-expired"></span></button>
+                <button class="staff-tab active" id="trnTab-expiring" onclick="trnSetTab('expiring')">Expiring (90d) <span class="staff-tab-count" id="trnCount-expiring"></span></button>
+                <button class="staff-tab" id="trnTab-active"   onclick="trnSetTab('active')">Active <span class="staff-tab-count" id="trnCount-active"></span></button>
+                <button class="staff-tab" id="trnTab-expired"  onclick="trnSetTab('expired')">Expired <span class="staff-tab-count" id="trnCount-expired"></span></button>
                 <button class="staff-tab" id="trnTab-all"      onclick="trnSetTab('all')">All <span class="staff-tab-count" id="trnCount-all"></span></button>
               </div>
               <div class="toolbar" style="margin-bottom:14px">
@@ -1749,10 +1804,10 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <button class="btn btn-primary btn-sm" onclick="guardAction('hr_salary_revise', ()=>openProposeRevision(null))">＋ Propose Revision</button>
               </div>
               <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
-                <button class="staff-tab active" id="srvTab-pending" onclick="srvSetTab('pending')">⏳ Pending <span class="staff-tab-count" id="srvCount-pending"></span></button>
-                <button class="staff-tab" id="srvTab-approved" onclick="srvSetTab('approved')">✓ Approved <span class="staff-tab-count" id="srvCount-approved"></span></button>
-                <button class="staff-tab" id="srvTab-applied"  onclick="srvSetTab('applied')">💰 Applied <span class="staff-tab-count" id="srvCount-applied"></span></button>
-                <button class="staff-tab" id="srvTab-rejected" onclick="srvSetTab('rejected')">✕ Rejected <span class="staff-tab-count" id="srvCount-rejected"></span></button>
+                <button class="staff-tab active" id="srvTab-pending" onclick="srvSetTab('pending')">Pending <span class="staff-tab-count" id="srvCount-pending"></span></button>
+                <button class="staff-tab" id="srvTab-approved" onclick="srvSetTab('approved')">Approved <span class="staff-tab-count" id="srvCount-approved"></span></button>
+                <button class="staff-tab" id="srvTab-applied"  onclick="srvSetTab('applied')">Applied <span class="staff-tab-count" id="srvCount-applied"></span></button>
+                <button class="staff-tab" id="srvTab-rejected" onclick="srvSetTab('rejected')">Rejected <span class="staff-tab-count" id="srvCount-rejected"></span></button>
               </div>
               <div id="srvList"></div>
             </div>
@@ -1781,8 +1836,8 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <!-- right column reserved for visual rhythm with other HR pages -->
               </div>
               <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
-                <button class="staff-tab active" id="pcTab-probation" onclick="pcSetTab('probation')">🧪 Probation Ending <span class="staff-tab-count" id="pcCount-probation"></span></button>
-                <button class="staff-tab" id="pcTab-contracts" onclick="pcSetTab('contracts')">📜 Contracts Ending <span class="staff-tab-count" id="pcCount-contracts"></span></button>
+                <button class="staff-tab active" id="pcTab-probation" onclick="pcSetTab('probation')">Probation Ending <span class="staff-tab-count" id="pcCount-probation"></span></button>
+                <button class="staff-tab" id="pcTab-contracts" onclick="pcSetTab('contracts')">Contracts Ending <span class="staff-tab-count" id="pcCount-contracts"></span></button>
               </div>
               <div class="toolbar" style="margin-bottom:14px">
                 <select id="pcFilterWindow" onchange="renderProbationContracts()">
@@ -1803,7 +1858,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                   <div class="page-title">Expiring Documents</div>
                   <div class="page-sub">Passport, work permit, NID, insurance, quota, medical and contract expiries — sorted by urgency. Reminders fire automatically at configured thresholds.</div>
                 </div>
-                <button class="btn btn-ghost btn-sm" onclick="guardAction('hr_settings_edit', openHrSettingsModal)" title="Reminder thresholds and notification rules">⚙ Settings</button>
+                <button class="btn btn-ghost btn-sm" onclick="guardAction('hr_settings_edit', openHrSettingsModal)" title="Reminder thresholds and notification rules"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>Settings</button>
               </div>
               <div class="toolbar" style="margin-bottom:14px">
                 <select id="exFilterDoc" onchange="renderExpiringDocs()">
@@ -1987,16 +2042,16 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                     <label class="field-label">Notification Type</label>
                     <div style="display:flex;gap:8px;flex-wrap:wrap" id="msgTypeRow">
                       <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;font-weight:500">
-                        <input type="radio" name="msgType" value="info" checked style="accent-color:var(--accent)"> ℹ️ Info
+                        <input type="radio" name="msgType" value="info" checked style="accent-color:var(--accent)"> Info
                       </label>
                       <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;font-weight:500">
                         <input type="radio" name="msgType" value="event" style="accent-color:var(--accent)"> Event
                       </label>
                       <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;font-weight:500">
-                        <input type="radio" name="msgType" value="urgent" style="accent-color:var(--red)"> 🔴 Urgent
+                        <input type="radio" name="msgType" value="urgent" style="accent-color:var(--red)"> Urgent
                       </label>
                       <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;font-weight:500">
-                        <input type="radio" name="msgType" value="reminder" style="accent-color:var(--amber)"> ⏰ Reminder
+                        <input type="radio" name="msgType" value="reminder" style="accent-color:var(--amber)"> Reminder
                       </label>
                     </div>
                   </div>
@@ -2072,12 +2127,12 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               </div>
               <div class="stat-row stat-row-4" style="margin-bottom:20px">
                 <div class="stat-card"><div class="stat-top"><span class="stat-label">Total Requests</span><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span></div><div class="stat-val blue" id="eqStatTotal">0</div></div>
-                <div class="stat-card"><div class="stat-top"><span class="stat-label">Out (Not Returned)</span><span class="stat-icon">🔴</span></div><div class="stat-val red" id="eqStatOut">0</div></div>
+                <div class="stat-card"><div class="stat-top"><span class="stat-label">Out (Not Returned)</span><span class="stat-icon" style="color:var(--red)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg></span></div><div class="stat-val red" id="eqStatOut">0</div></div>
                 <div class="stat-card"><div class="stat-top"><span class="stat-label">Returned</span><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span></div><div class="stat-val green" id="eqStatReturned">0</div></div>
                 <div class="stat-card"><div class="stat-top"><span class="stat-label">Overdue</span><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span></div><div class="stat-val amber" id="eqStatOverdue">0</div></div>
               </div>
               <div class="card">
-                <div class="card-hdr"><div class="card-hdr-icon">🔴</div><div><div class="card-title">Currently Out</div><div class="card-sub">Equipment not yet returned</div></div></div>
+                <div class="card-hdr"><div class="card-hdr-icon" style="color:var(--red)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg></div><div><div class="card-title">Currently Out</div><div class="card-sub">Equipment not yet returned</div></div></div>
                 <div class="card-body" id="eqDashOut"></div>
               </div>
             </div>
@@ -2128,8 +2183,8 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <select id="invFilterWh" onchange="_pages.inv=1;renderInventory()"><option value="">All Locations</option></select>
                 <select id="invFilterStatus" onchange="_pages.inv=1;renderInventory()">
                   <option value="">All Status</option>
-                  <option value="working">✅ Working units</option>
-                  <option value="faulty">⚠️ Has Faulty</option>
+                  <option value="working">Working units</option>
+                  <option value="faulty">Has Faulty</option>
                 </select>
               </div>
               <div id="invList"></div>
@@ -2195,10 +2250,10 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="toolbar" style="margin-bottom:14px">
                 <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;width:fit-content">
                   <button id="frTab-all" class="staff-tab active" onclick="setFRTab('')" style="border-radius:0;border:none;padding:7px 16px;font-size:13px">All</button>
-                  <button id="frTab-mine" class="staff-tab" onclick="setFRTab('mine')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">🛠 Mine</button>
-                  <button id="frTab-open" class="staff-tab" onclick="setFRTab('open')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">🔴 Open</button>
-                  <button id="frTab-repaired" class="staff-tab" onclick="setFRTab('repaired')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">✅ Repaired</button>
-                  <button id="frTab-discarded" class="staff-tab" onclick="setFRTab('discarded')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">🗑️ Discarded</button>
+                  <button id="frTab-mine" class="staff-tab" onclick="setFRTab('mine')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">Mine</button>
+                  <button id="frTab-open" class="staff-tab" onclick="setFRTab('open')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">Open</button>
+                  <button id="frTab-repaired" class="staff-tab" onclick="setFRTab('repaired')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">Repaired</button>
+                  <button id="frTab-discarded" class="staff-tab" onclick="setFRTab('discarded')" style="border-radius:0;border:none;border-left:1px solid var(--border);padding:7px 16px;font-size:13px">Discarded</button>
                 </div>
               </div>
               <div id="faultReportsList"></div>
@@ -4073,7 +4128,7 @@ function userForm(u){
     `<div class="field"><label class="field-label">Temporary Password <span style="font-size:11px;color:var(--green)">(auto-generated)</span></label>
       <div style="display:flex;gap:8px;align-items:center">
         <input type="text" id="uf_pass" value="${tempPass}" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:600;flex:1" readonly>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('uf_pass').value=generateTempPassword()" title="Generate new password">🔄 New</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('uf_pass').value=generateTempPassword()" title="Generate new password"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>New</button>
         <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('uf_pass').value);toast('Password copied ✓')" title="Copy password">📋 Copy</button>
       </div></div>`}
     <div class="field"><label class="field-label">Account Type</label>
@@ -4989,7 +5044,7 @@ async function renderExpiringDocs(initialDocFilter){
   const filtered = docFilter ? data.filter(x=>x.docKey===docFilter) : data;
   const cnt = document.getElementById('exCount'); if(cnt) cnt.textContent = filtered.length+' item'+(filtered.length===1?'':'s');
   const list = document.getElementById('exDocsList'); if(!list) return;
-  if(!filtered.length){ list.innerHTML='<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Nothing expiring</div><div class="empty-sub">Within the selected window. Try a longer window.</div></div>'; return; }
+  if(!filtered.length){ list.innerHTML=`<div class="empty"><div class="empty-icon">${ICON_LG('calendar')}</div><div class="empty-title">Nothing expiring</div><div class="empty-sub">Within the selected window. Try a longer window.</div></div>`; return; }
   // Group by urgency bucket
   const buckets = [
     { label: 'Expired',       test: x => x.daysRemaining < 0,                       cls: 'bucket-red'   },
@@ -4999,6 +5054,7 @@ async function renderExpiringDocs(initialDocFilter){
     { label: '61–90 days',    test: x => x.daysRemaining >= 61 && x.daysRemaining <= 90, cls: 'bucket-grey'  },
     { label: '90+ days',      test: x => x.daysRemaining > 90,                            cls: 'bucket-grey'  }
   ];
+  let out_idx = 0; // monotonically incremented across buckets so stagger flows naturally — see CSS .row-reveal
   const html = buckets.map(b => {
     const rows = filtered.filter(b.test);
     if(!rows.length) return '';
@@ -5011,7 +5067,7 @@ async function renderExpiringDocs(initialDocFilter){
             : r.daysRemaining === 0
               ? `<span style="color:var(--red);font-weight:700">Today</span>`
               : `<span style="color:${r.daysRemaining<=7?'var(--red)':r.daysRemaining<=30?'var(--amber)':'var(--text2)'};font-weight:700">In ${r.daysRemaining}d</span>`;
-          return `<div class="pay-group-row" style="cursor:default">
+          return `<div class="pay-group-row row-reveal" style="cursor:default;--i:${out_idx++}">
             <div>
               <div class="pg-name">${r.empName||'(unknown)'} <span style="font-size:10px;background:var(--surface);color:var(--text3);border:1px solid var(--border);border-radius:6px;padding:1px 5px;margin-left:4px;font-weight:600">${r.docLabel}</span></div>
               <div class="pg-detail">${r.dept||'—'} · ${r.designation||'—'} · expires ${fmtDate(r.expiryDate)}</div>
@@ -5054,6 +5110,38 @@ async function submitMarkRenewed(){
   renderExpiringDocs();
   toast(_renewCtx?.label+' renewed ✓');
 }
+
+// ══ INLINE ICON LIBRARY ═══════════════════════════════
+// Replaces emoji-as-icon usage across the app per the design-taste rule:
+// emojis render inconsistently and read as "AI placeholder" content.
+// All icons: 14x14, stroke 1.75, currentColor — pair cleanly with text and
+// inherit the surrounding colour (badge red, button ghost, etc).
+const ICON = {
+  alert:    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  hourglass:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>',
+  check:    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><polyline points="20 6 9 17 4 12"/></svg>',
+  checkCircle:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><circle cx="12" cy="12" r="10"/><polyline points="9 12 12 15 16 10"/></svg>',
+  wrench:   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/></svg>',
+  cog:      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>',
+  layers:   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+  paperclip:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 17.99 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>',
+  graduation:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>',
+  coin:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M9 9h4.5a2.5 2.5 0 0 1 0 5H9.5a2.5 2.5 0 0 0 0 5H15"/></svg>',
+  calendar: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  sparkle:  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><path d="m12 3-1.91 5.81L4 10l5.81 1.91L12 17l1.91-5.81L20 10l-5.81-1.91L12 3z"/></svg>',
+  flask:    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 0 1 3.7 9.92A2 2 0 0 1 16 21H8a2 2 0 0 1-1.7-1.78 6.5 6.5 0 0 1 3.7-9.92"/><path d="M5.58 16.5h12.85"/></svg>',
+  scroll:   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M21 21v-7a2 2 0 0 0-2-2H10l-2 2v7l2 2h9a2 2 0 0 0 2-2Z"/></svg>',
+  info:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+  clock:    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  dot:      '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;vertical-align:-1px"><circle cx="12" cy="12" r="6"/></svg>',
+  pencil:   '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  trash:    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>',
+  sun:      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>',
+  moon:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>',
+  scale:    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-2px"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>'
+};
+// Bigger versions for empty-state icon slots
+const ICON_LG = (k) => (ICON[k]||'').replace(/width="14" height="14"/, 'width="28" height="28"').replace(/stroke-width="1.75"/, 'stroke-width="1.5"').replace(/stroke-width="2"/, 'stroke-width="1.5"');
 
 // ══ TRAINING & CERTIFICATIONS ═════════════════════════
 let _trnTab = 'expiring';
@@ -5106,12 +5194,12 @@ function _renderTrnList(){
     return true;
   });
   const cnt = document.getElementById('trnCount'); if(cnt) cnt.textContent = rows.length+' record'+(rows.length===1?'':'s');
-  if(!rows.length){ list.innerHTML='<div class="empty"><div class="empty-icon">🎓</div><div class="empty-title">Nothing here</div><div class="empty-sub">Add a certification via ＋ New Record.</div></div>'; return; }
+  if(!rows.length){ list.innerHTML=`<div class="empty"><div class="empty-icon">${ICON_LG('graduation')}</div><div class="empty-title">Nothing here</div><div class="empty-sub">Add a certification via + New Record.</div></div>`; return; }
   const isAdmin = currentUser?.role==='admin';
   const role = currentUser?.roleId ? appRoles.find(r=>String(r.id)===String(currentUser.roleId)) : null;
   const myPerms = role?.perms || currentUser?.rolePerms || {};
   const canEdit = isAdmin || myPerms.hr_training_edit===true || myPerms.hr_training_edit_edit===true;
-  list.innerHTML = rows.map(r => {
+  list.innerHTML = rows.map((r, idx) => {
     const d = r.expiresDate ? Math.round((new Date(r.expiresDate)-today)/86400000) : null;
     const expBadge = d===null
       ? `<span class="badge" style="font-size:10px;background:var(--surface);color:var(--text3);border:1px solid var(--border)">No expiry</span>`
@@ -5123,11 +5211,11 @@ function _renderTrnList(){
             ? `<span class="badge badge-amber" style="font-size:10px">In ${d}d</span>`
             : `<span class="badge badge-green" style="font-size:10px">In ${d}d</span>`;
     const colour = r.typeColor || '#6366f1';
-    const docLink = r.docUrl ? `<a href="${r.docUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-size:11px">📎 doc</a>` : '';
+    const docLink = r.docUrl ? `<a href="${r.docUrl}" target="_blank" rel="noopener" style="color:var(--accent);font-size:11px;display:inline-flex;align-items:center;gap:3px">${ICON.paperclip}doc</a>` : '';
     const editBtns = canEdit ? `
       <button class="btn btn-ghost btn-xs" onclick="openTrainingRecordModal('${r.id}','${r.empId}')">Edit</button>
       <button class="btn btn-red btn-xs" onclick="deleteTrainingRecord('${r.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>` : '';
-    return `<div class="pay-group-row" style="cursor:default">
+    return `<div class="pay-group-row row-reveal" style="cursor:default;--i:${idx}">
       <div>
         <div class="pg-name">${r.empName||'(unknown)'} <span class="badge" style="font-size:10px;background:${colour}22;color:${colour};border:1px solid ${colour}44">${r.typeName||'(unknown type)'}</span></div>
         <div class="pg-detail">issued ${fmtDate(r.issuedDate)||'—'} · expires ${fmtDate(r.expiresDate)||'—'}${r.issuer?' · '+r.issuer:''}${r.certNo?' · '+r.certNo:''}</div>
@@ -5337,12 +5425,12 @@ async function renderTrainingTab(empId){
       <div style="font-size:12px;color:var(--text2);margin-top:4px">issued ${fmtDate(r.issuedDate)||'—'} · expires ${fmtDate(r.expiresDate)||'—'}${r.issuer?' · '+r.issuer:''}${r.certNo?' · '+r.certNo:''}</div>
       ${r.notes?`<div style="font-size:11px;color:var(--text3);margin-top:3px">${r.notes}</div>`:''}
       <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px">
-        ${r.docUrl?`<a href="${r.docUrl}" target="_blank" rel="noopener" class="btn btn-ghost btn-xs">📎 Open Doc</a>`:''}
+        ${r.docUrl?`<a href="${r.docUrl}" target="_blank" rel="noopener" class="btn btn-ghost btn-xs" style="display:inline-flex;align-items:center;gap:4px">${ICON.paperclip}Open Doc</a>`:''}
         ${canEdit?`<button class="btn btn-ghost btn-xs" onclick="openTrainingRecordModal('${r.id}','${empId}')">Edit</button>
                    <button class="btn btn-red btn-xs" onclick="deleteTrainingRecord('${r.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>`:''}
       </div>
     </div>`;
-  }).join('') : '<div class="empty"><div class="empty-icon">🎓</div><div class="empty-title">No training records</div></div>';
+  }).join('') : `<div class="empty"><div class="empty-icon">${ICON_LG('graduation')}</div><div class="empty-title">No training records</div></div>`;
   const addBtn = canEdit ? `<button class="btn btn-primary btn-sm" onclick="openTrainingRecordModal(null,'${empId}')">＋ Add Record</button>` : '';
   body.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -5401,7 +5489,7 @@ function _renderSrvList(){
       applied:  'No applied revisions yet.',
       rejected: 'No rejected revisions.'
     }[_srvTab] || 'Nothing here.';
-    list.innerHTML=`<div class="empty-tight"><div class="empty-icon">💰</div><div class="empty-title">${{pending:'Inbox is empty',approved:'All clear',applied:'No history yet',rejected:'None rejected'}[_srvTab]||'Nothing here'}</div><div class="empty-sub">${emptyText}</div></div>`;
+    list.innerHTML=`<div class="empty-tight"><div class="empty-icon">${ICON_LG('coin')}</div><div class="empty-title">${{pending:'Inbox is empty',approved:'All clear',applied:'No history yet',rejected:'None rejected'}[_srvTab]||'Nothing here'}</div><div class="empty-sub">${emptyText}</div></div>`;
     return;
   }
   const isAdmin = currentUser?.role === 'admin';
@@ -5409,7 +5497,7 @@ function _renderSrvList(){
   const myPerms = role?.perms || currentUser?.rolePerms || {};
   const canApprove = isAdmin || myPerms.hr_salary_approve===true || myPerms.hr_salary_approve_edit===true;
 
-  list.innerHTML = rows.map(r => {
+  list.innerHTML = rows.map((r, idx) => {
     const actions = (_srvTab==='pending' && canApprove && (isAdmin || String(r.proposedBy||'') !== String(currentUser?.id||'')))
       ? `<button class="btn btn-green btn-xs" onclick="srvActStatus('${r.id}','approved')">✓ Approve</button>
          <button class="btn btn-red btn-xs"   onclick="srvActStatus('${r.id}','rejected')">✕ Reject</button>`
@@ -5429,7 +5517,7 @@ function _renderSrvList(){
     if (r.proposedByName) meta.push(`Proposed by <strong>${r.proposedByName}</strong>${r.proposedAt?` · ${fmtDate(String(r.proposedAt).slice(0,10))}`:''}`);
     if (r.approvedByName) meta.push(`${r.status==='rejected'?'Rejected':'Approved'} by <strong>${r.approvedByName}</strong>${r.approvedAt?` · ${fmtDate(String(r.approvedAt).slice(0,10))}`:''}`);
     if (r.appliedAt)      meta.push(`Applied ${fmtDate(String(r.appliedAt).slice(0,10))}`);
-    return `<div class="pay-group-row" style="cursor:default;align-items:flex-start">
+    return `<div class="pay-group-row row-reveal" style="cursor:default;align-items:flex-start;--i:${idx}">
       <div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
           <span class="pg-name" style="font-size:14px">${r.empName||'(unknown)'}</span>
@@ -5659,7 +5747,7 @@ function _renderPcList(){
   const list = document.getElementById('pcList'); if(!list) return;
   const items = _pcTab==='probation' ? _pcCache.probation : _pcCache.contracts;
   const cnt = document.getElementById('pcCount'); if(cnt) cnt.textContent = (items?.length||0)+' item'+((items?.length||0)===1?'':'s');
-  if(!items?.length){ list.innerHTML='<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Nothing in window</div><div class="empty-sub">Try a longer look-ahead window.</div></div>'; return; }
+  if(!items?.length){ list.innerHTML=`<div class="empty"><div class="empty-icon">${ICON_LG('calendar')}</div><div class="empty-title">Nothing in window</div><div class="empty-sub">Try a longer look-ahead window.</div></div>`; return; }
   const buckets = [
     { label: 'Overdue',     test: x => x.daysRemaining < 0,                            cls:'bucket-red'   },
     { label: '0–7 days',    test: x => x.daysRemaining >= 0  && x.daysRemaining <= 7,  cls:'bucket-red'   },
@@ -5668,6 +5756,7 @@ function _renderPcList(){
     { label: '61–90 days',  test: x => x.daysRemaining >= 61 && x.daysRemaining <= 90, cls:'bucket-grey'  },
     { label: '90+ days',    test: x => x.daysRemaining > 90,                            cls:'bucket-grey'  }
   ];
+  _pcRowIdx = 0; // reset stagger counter for this render
   list.innerHTML = buckets.map(b=>{
     const rows = items.filter(b.test);
     if(!rows.length) return '';
@@ -5676,8 +5765,9 @@ function _renderPcList(){
         <div class="bucket-hdr ${b.cls}">${b.label} <span class="bucket-count">(${rows.length})</span></div>
         ${rows.map(r => _pcRowHtml(r)).join('')}
       </div>`;
-  }).join('') || '<div class="empty-tight"><div class="empty-icon">🎉</div><div class="empty-title">All clear</div><div class="empty-sub">No probation or contracts in the selected window.</div></div>';
+  }).join('') || `<div class="empty-tight"><div class="empty-icon">${ICON_LG('sparkle')}</div><div class="empty-title">All clear</div><div class="empty-sub">No probation or contracts in the selected window.</div></div>`;
 }
+let _pcRowIdx = 0; // reset by _renderPcList before each bucket sweep
 function _pcRowHtml(r){
   const dayLbl = r.daysRemaining < 0
     ? `<span style="color:var(--red);font-weight:700">${Math.abs(r.daysRemaining)}d overdue</span>`
@@ -5686,11 +5776,12 @@ function _pcRowHtml(r){
       : `<span style="color:${r.daysRemaining<=7?'var(--red)':r.daysRemaining<=30?'var(--amber)':'var(--text2)'};font-weight:700">In ${r.daysRemaining}d</span>`;
   const histCount = (r.events||[]).length;
   const histBtn = histCount ? `<button class="btn btn-ghost btn-xs" onclick="openPcHistory('${r.empId}','${_pcTab}')">History (${histCount})</button>` : '';
+  const idx = _pcRowIdx++;
   if(_pcTab==='probation'){
     const startTxt = r.probationStart ? fmtDate(r.probationStart) : '—';
     const stTag = r.status==='extended' ? `<span class="badge" style="font-size:10px;background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)">Extended</span>` :
                   r.status==='pending'  ? `<span class="badge" style="font-size:10px;background:var(--surface);color:var(--text3);border:1px solid var(--border)">In Probation</span>` : '';
-    return `<div class="pay-group-row" style="cursor:default">
+    return `<div class="pay-group-row row-reveal" style="cursor:default;--i:${idx}">
       <div>
         <div class="pg-name">${r.empName||'(unknown)'} ${stTag}</div>
         <div class="pg-detail">${r.dept||'—'} · ${r.designation||'—'} · started ${startTxt} · ends ${fmtDate(r.probationEnd)}</div>
@@ -5706,7 +5797,7 @@ function _pcRowHtml(r){
     </div>`;
   } else {
     const startTxt = r.contractStart ? fmtDate(r.contractStart) : '—';
-    return `<div class="pay-group-row" style="cursor:default">
+    return `<div class="pay-group-row row-reveal" style="cursor:default;--i:${idx}">
       <div>
         <div class="pg-name">${r.empName||'(unknown)'}</div>
         <div class="pg-detail">${r.dept||'—'} · ${r.designation||'—'} · started ${startTxt} · expires ${fmtDate(r.contractEnd)}</div>
@@ -5978,7 +6069,7 @@ function renderProfile(empId){
   let wpBadge='';
   if(emp.type==='expat'&&emp.workPermitExpiry){
     if(days<0) wpBadge=`<span class="badge badge-red">WP Expired</span>`;
-    else if(days<=30) wpBadge=`<span class="badge badge-red">⚠️ WP expires in ${days}d</span>`;
+    else if(days<=30) wpBadge=`<span class="badge badge-red">WP expires in ${days}d</span>`;
     else if(days<=90) wpBadge=`<span class="badge badge-amber">WP in ${days}d</span>`;
     else wpBadge=`<span class="badge badge-green">WP Valid</span>`;
   }
@@ -6271,7 +6362,7 @@ function renderPayroll(){
   let html = _p.shown.map(({pr,emp})=>renderPayslipCard(pr,emp,canEdit)).join('')+_p.footer;
   if(isAdmin&&orphaned.length){
     html += `<div class="orphan-payroll-section" style="margin-top:16px;padding:14px 16px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:10px">
-      <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:8px">⚠️ ${orphaned.length} payroll record${orphaned.length>1?'s':''} with no matching employee</div>
+      <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:8px">${orphaned.length} payroll record${orphaned.length>1?'s':''} with no matching employee</div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:10px">These records belong to employees that have been deleted. You can safely remove them.</div>
       ${orphaned.map(pr=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--white);border-radius:7px;margin-bottom:6px;font-size:12px">
         <span style="color:var(--text3)">EmpID: ${pr.empId} · ${monthLabel(pr.month)} · ${fmtMVR(pr.net_pay||pr.net||0)}</span>
@@ -6290,7 +6381,7 @@ function renderPayslipCard(pr,emp,showBtn){
     <div class="payslip-hdr" onclick="this.parentElement.classList.toggle('expanded')">
       <div><div style="font-size:14px;font-weight:600;color:var(--text)">${emp.name}</div><div style="font-size:12px;color:var(--text3)">${emp.dept||'—'} · ${monthLabel(pr.month)} · ${isBank?' Bank':'Cash'}${pr.isOnProbation?' · <span style="color:var(--amber);font-weight:600">Probation</span>':''}${curr==='USD'?' · <span style="color:var(--accent);font-weight:600">USD</span>':''}</div></div>
       <span class="badge badge-blue" style="font-size:11px">Basic: ${fmt(parseFloat(pr.basic)||0)}</span>
-      <span class="badge ${pr.status==='paid'?'badge-green':'badge-amber'}" style="font-size:11px">${pr.status==='paid'?'Paid':'⏳ Pending'}</span>
+      <span class="badge ${pr.status==='paid'?'badge-green':'badge-amber'}" style="font-size:11px">${pr.status==='paid'?'Paid':'Pending'}</span>
       <div style="font-size:16px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;min-width:100px;text-align:right">${fmt(parseFloat(pr.net_pay)||0)}</div>
       <span class="payslip-hdr-chevron">▼</span>
     </div>
@@ -6321,7 +6412,7 @@ function renderPayslipCard(pr,emp,showBtn){
         <button class="btn btn-ghost btn-sm" onclick="printPayslip('${pr.id}')">Print/PDF</button>
         <button class="btn btn-ghost btn-sm" onclick="savePayslipJpeg('${pr.id}')">JPEG</button>
         ${showBtn&&pr.status!=='paid'?`<button class="btn btn-green btn-sm" onclick="markPayslipPaid('${pr.id}')">✓ Mark Paid</button>`:''}
-        ${pr.status==='paid'?`<span style="font-size:12px;color:var(--green);font-weight:600">✅ Paid ${pr.paidDate||''}</span>`:''}
+        ${pr.status==='paid'?`<span style="font-size:12px;color:var(--green);font-weight:600">Paid ${pr.paidDate||''}</span>`:''}
         ${showBtn?`<button class="btn btn-red btn-sm" onclick="deletePayslip('${pr.id}')">Delete</button>`:''}
       </div>
     </div>
@@ -6643,11 +6734,11 @@ function renderLoanCard(loan,emp){
   return`<div class="loan-card ${isExp?'expanded':''}" id="lcard_${loan.id}">
     <div class="loan-hdr" onclick="loanExpanded.has('${loan.id}')?loanExpanded.delete('${loan.id}'):loanExpanded.add('${loan.id}');document.getElementById('lcard_${loan.id}').classList.toggle('expanded')">
       <div><div style="font-size:14px;font-weight:600;color:var(--text)">${emp.name}</div><div style="font-size:12px;color:var(--text3)">${fmtMVR(loan.monthlyAmount)}/month · ${monthLabel(loan.start)}</div></div>
-      <span class="badge ${loan.status==='active'?'badge-amber':'badge-green'}">${loan.status==='active'?'⏳ Active':'✅ Completed'}</span>
+      <span class="badge ${loan.status==='active'?'badge-amber':'badge-green'}">${loan.status==='active'?'Active':'Completed'}</span>
       <div style="text-align:right"><div style="font-size:13px;font-weight:700;color:var(--red);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${fmtMVR(loan.remaining)}</div><div style="font-size:11px;color:var(--text3)">of ${fmtMVR(loan.amount)}</div></div>
       <div style="display:flex;gap:5px" onclick="event.stopPropagation()">
         ${loan.status==='active'?`<button class="btn btn-green btn-xs" onclick="lumpSumLoan('${loan.id}')" title="Pay remaining balance in full">Lump Sum</button>`:''}
-        <button class="btn btn-ghost btn-xs" onclick="openEditLoan('${loan.id}')">✏️</button>
+        <button class="btn btn-ghost btn-xs" onclick="openEditLoan('${loan.id}')" title="Edit">${ICON.pencil}</button>
         <button class="btn btn-red btn-xs" onclick="deleteLoan('${loan.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
       </div>
       <span style="color:var(--text3);font-size:11px;transition:transform .2s;display:inline-block;${isExp?'transform:rotate(180deg)':''}">▼</span>
@@ -6770,7 +6861,7 @@ function renderPension(){
         ${eligible.map(emp=>{
           const rec=hrPensions.find(p=>p.empId===emp.id&&p.month===month);
           const ea=+((emp.basicSalary||0)*0.075).toFixed(2), era=+((emp.basicSalary||0)*0.075).toFixed(2);
-          return`<tr><td class="td-primary">${emp.name}</td><td>${emp.dept||'—'}</td><td class="td-mono">${fmtMVR(emp.basicSalary)}</td><td class="td-mono" style="color:var(--purple)">${fmtMVR(ea)}</td><td class="td-mono" style="color:var(--green)">${fmtMVR(era)}</td><td class="td-mono" style="font-weight:700">${fmtMVR(ea+era)}</td><td>${rec?`<span class="badge badge-green" style="font-size:11px">✅ Paid ${rec.paidDate}</span>`:`<span class="badge badge-amber" style="font-size:11px">⏳ Pending</span>`}</td></tr>`;
+          return`<tr><td class="td-primary">${emp.name}</td><td>${emp.dept||'—'}</td><td class="td-mono">${fmtMVR(emp.basicSalary)}</td><td class="td-mono" style="color:var(--purple)">${fmtMVR(ea)}</td><td class="td-mono" style="color:var(--green)">${fmtMVR(era)}</td><td class="td-mono" style="font-weight:700">${fmtMVR(ea+era)}</td><td>${rec?`<span class="badge badge-green" style="font-size:11px">Paid ${rec.paidDate}</span>`:`<span class="badge badge-amber" style="font-size:11px">Pending</span>`}</td></tr>`;
         }).join('')}
         <tr style="background:var(--surface)"><td colspan="3" style="font-weight:700">TOTAL</td><td class="td-mono" style="color:var(--purple)">${fmtMVR(totEmp)}</td><td class="td-mono" style="color:var(--green)">${fmtMVR(totEmpr)}</td><td class="td-mono" style="font-weight:800">${fmtMVR(totEmp+totEmpr)}</td><td></td></tr>
       </tbody>
@@ -7140,7 +7231,7 @@ function renderCal(){
         html+=`<div class="cal-agenda-event" onclick="showCalPopup('${ev.id}',event)" style="${isCompleted?'opacity:0.6':''}">
           <div class="cal-agenda-dot" style="background:${col}"></div>
           <div style="flex:1;min-width:0">
-            <div class="cal-agenda-name" style="${isCompleted?'text-decoration:line-through;color:var(--text3)':''};display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span>${ev.name}</span> ${isCompleted?'<span style="font-size:11px;color:var(--green);font-weight:600">✅</span>':''}${statusTag}</div>
+            <div class="cal-agenda-name" style="${isCompleted?'text-decoration:line-through;color:var(--text3)':''};display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span>${ev.name}</span> ${isCompleted?`<span style="color:var(--green)">${ICON.check}</span>`:''}${statusTag}</div>
             <div class="cal-agenda-time">${calFmtDate(ev.eventDateFrom)} ${ev.eventDateFrom!==ev.eventDateTo?'→ '+calFmtDate(ev.eventDateTo):''}</div>
           </div>
         </div>`;
@@ -7261,7 +7352,7 @@ function showCalPopup(eid, evt){
         <div style="font-size:12px;color:var(--text3);margin-top:2px">${calFmtDate(ev.eventDateFrom)}${ev.eventDateFrom!==ev.eventDateTo?' → '+calFmtDate(ev.eventDateTo):''}</div>${ev.venue?`<div style="font-size:12px;color:var(--text3);margin-top:2px">📍 ${ev.venue}</div>`:''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
           ${renderEventStatusBadge(ev.color)}
-          ${isCompleted?`<span class="badge badge-green" style="font-size:10px">✅ Completed</span>`:''}
+          ${isCompleted?`<span class="badge badge-green" style="font-size:10px">Completed</span>`:''}
         </div>
       </div>
     </div>
@@ -7641,7 +7732,7 @@ async function checkLeaveConflicts(){
       return `<strong>${l.empName}</strong>${status}: ${String(l.fromDate).slice(0,10)} → ${String(l.toDate).slice(0,10)}`;
     }).join('<br>');
     const extra = overlaps.length>5 ? `<br><span style="opacity:.8">+${overlaps.length-5} more in ${dept}</span>` : '';
-    noticeEl.innerHTML = `⚠️ Colleague leave overlap in <strong>${dept}</strong>:<br>${lines}${extra}`;
+    noticeEl.innerHTML = `Colleague leave overlap in <strong>${dept}</strong>:<br>${lines}${extra}`;
   }, 300);
 }
 
@@ -8255,7 +8346,10 @@ function _ltFieldVisibility(){
 let _ltBulkMode = false;
 function ltToggleBulk(){
   _ltBulkMode = !_ltBulkMode;
-  document.getElementById('ltBulkToggle').textContent = _ltBulkMode ? '✕ Exit Bulk Mode' : '📑 Bulk Mode';
+  // Inline SVG icons for the two states — match the static markup variant.
+  const ltBulkOnHtml  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Exit Bulk Mode';
+  const ltBulkOffHtml = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Bulk Mode';
+  document.getElementById('ltBulkToggle').innerHTML = _ltBulkMode ? ltBulkOnHtml : ltBulkOffHtml;
   document.getElementById('ltEmpWrap').style.display     = _ltBulkMode ? 'none' : 'block';
   document.getElementById('ltBulkWrap').style.display    = _ltBulkMode ? 'block' : 'none';
   document.getElementById('ltCardTitle').textContent     = _ltBulkMode ? 'Bulk Generate Letters' : 'Generate Staff Letter';
@@ -9358,7 +9452,7 @@ function applyTheme(theme){
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('em_theme', theme);
   const btn = document.getElementById('darkModeToggle');
-  if(btn) btn.textContent = theme==='dark' ? '☀️' : '🌙';
+  if(btn) btn.innerHTML = theme==='dark' ? ICON.sun : ICON.moon;
 }
 function toggleDarkMode(){
   const current = document.documentElement.getAttribute('data-theme') || 'light';
@@ -9530,11 +9624,11 @@ async function renderMsgHistory(){
     return;
   }
   const typeColors = { info:'#dbeafe', event:'#fef3c7', urgent:'#fee2e2', reminder:'#d1fae5' };
-  const typeLabels = { info:'ℹ️ Info', event:'📅 Event', urgent:'🔴 Urgent', reminder:'⏰ Reminder' };
+  const typeLabels = { info:'Info', event:'Event', urgent:'Urgent', reminder:'Reminder' };
   el.innerHTML = msgs.map(m=>`
     <div style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start">
       <div style="width:36px;height:36px;border-radius:8px;background:${typeColors[m.type]||'#f3f4f6'};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">
-        ${m.type==='info'?'ℹ️':m.type==='urgent'?'🔴':m.type==='reminder'?'⏰':'📅'}
+        ${m.type==='info'?ICON.info:m.type==='urgent'?ICON.alert:m.type==='reminder'?ICON.clock:ICON.calendar}
       </div>
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:13px;margin-bottom:2px">${m.title}</div>
@@ -9638,7 +9732,7 @@ async function sendEventNotify(){
     ? fmtDate(ev.eventDateFrom)
     : `${fmtDate(ev.eventDateFrom)} → ${fmtDate(ev.eventDateTo)}`;
 
-  const title = `📅 New Event: ${ev.name}`;
+  const title = `New Event: ${ev.name}`;
   const body = `${dateRange}${ev.venue?' · '+ev.venue:''}${extraMsg?'\n\n'+extraMsg:''}`;
 
   const res = await api('POST','/notifications',{
@@ -9732,7 +9826,7 @@ function renderEquipDashboard(){
   const dashOut = document.getElementById('eqDashOut');
   if(!dashOut) return;
   const outList = equipRequests.filter(r=>r.status!=='returned');
-  if(!outList.length){ dashOut.innerHTML='<div class="empty" style="padding:20px 0"><div class="empty-icon">✅</div><div class="empty-title">All equipment returned</div></div>'; return; }
+  if(!outList.length){ dashOut.innerHTML=`<div class="empty" style="padding:20px 0"><div class="empty-icon" style="color:var(--green)">${ICON_LG('checkCircle')}</div><div class="empty-title">All equipment returned</div></div>`; return; }
   dashOut.innerHTML = outList.map(r=>equipCardHtml(r)).join('');
 }
 
@@ -9754,17 +9848,17 @@ function renderEquipRequests(){
 function renderEquipOverdue(){
   const list = equipRequests.filter(r=>equipIsOverdue(r));
   const el = document.getElementById('eqOverdueList'); if(!el) return;
-  if(!list.length){ el.innerHTML='<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">No overdue equipment</div><div class="empty-sub">Everything is on schedule</div></div>'; return; }
+  if(!list.length){ el.innerHTML=`<div class="empty"><div class="empty-icon" style="color:var(--green)">${ICON_LG('checkCircle')}</div><div class="empty-title">No overdue equipment</div><div class="empty-sub">Everything is on schedule</div></div>`; return; }
   el.innerHTML = list.map(r=>equipCardHtml(r)).join('');
 }
 
 function equipCardHtml(r){
   const overdue = equipIsOverdue(r);
   const statusHtml = r.status==='returned'
-    ? `<span class="eq-status-returned">✅ Returned ${r.returnedDate||''}</span>`
+    ? `<span class="eq-status-returned">Returned ${r.returnedDate||''}</span>`
     : overdue
-      ? `<span class="eq-status-overdue">⚠️ Overdue since ${fmtDate(String(r.returnDate).slice(0,10))}</span>`
-      : `<span class="eq-status-out">🔴 Out</span>`;
+      ? `<span class="eq-status-overdue">Overdue since ${fmtDate(String(r.returnDate).slice(0,10))}</span>`
+      : `<span class="eq-status-out">Out</span>`;
 
   // Build items list — support both new (items[]) and old (itemName/quantity) format
   const items = r.items && r.items.length ? r.items : [{name: r.itemName||'Unknown', qty: r.quantity||1}];
@@ -10023,7 +10117,7 @@ function openEditEquipRequest(id){
   }
   const inner=document.getElementById('userModalInner');
   if(inner){inner.classList.remove('modal-sm');inner.classList.add('modal-wide');}
-  document.getElementById('userModalTitle').textContent='✏️ Edit Equipment Request';
+  document.getElementById('userModalTitle').textContent='Edit Equipment Request';
   document.getElementById('userModalForm').innerHTML=_equipFormHtml(r);
   document.getElementById('userModal').classList.add('open');
 }
@@ -10100,7 +10194,7 @@ function renderInvCats(){
         <div class="cat-badge">${count} item${count!==1?'s':''}</div>
       </div>
       <div style="display:flex;gap:6px">
-        <button class="btn btn-ghost btn-xs" onclick="guardAction('cat_edit',()=>editInvCat('${c.id}'))">✏️</button>
+        <button class="btn btn-ghost btn-xs" onclick="guardAction('cat_edit',()=>editInvCat('${c.id}'))" title="Edit">${ICON.pencil}</button>
         <button class="btn btn-red btn-xs" onclick="guardAction('cat_edit',()=>deleteInvCat('${c.id}'))"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
       </div>
     </div>`;
@@ -10122,7 +10216,7 @@ function renderInvSubCats(){
         <div class="cat-badge">${cat?cat.name:'—'} · ${count} item${count!==1?'s':''}</div>
       </div>
       <div style="display:flex;gap:6px">
-        <button class="btn btn-ghost btn-xs" onclick="guardAction('subcat_edit',()=>editInvSubCat('${sc.id}'))">✏️</button>
+        <button class="btn btn-ghost btn-xs" onclick="guardAction('subcat_edit',()=>editInvSubCat('${sc.id}'))" title="Edit">${ICON.pencil}</button>
         <button class="btn btn-red btn-xs" onclick="guardAction('subcat_edit',()=>deleteInvSubCat('${sc.id}'))"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
       </div>
     </div>`;
@@ -10277,7 +10371,7 @@ function renderWarehouses(){
         <div class="cat-badge">${itemCount} item${itemCount!==1?'s':''} stored here</div>
       </div>
       <div style="display:flex;gap:6px">
-        <button class="btn btn-ghost btn-xs" onclick="guardAction('wh_edit',()=>editWarehouse('${w.id}'))">✏️</button>
+        <button class="btn btn-ghost btn-xs" onclick="guardAction('wh_edit',()=>editWarehouse('${w.id}'))" title="Edit">${ICON.pencil}</button>
         <button class="btn btn-red btn-xs" onclick="guardAction('wh_delete',()=>deleteWarehouse('${w.id}'))"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
       </div>
     </div>`;
@@ -10524,11 +10618,11 @@ function invParentRowHtml(item){
     </div>
     <div class="inv-row-cell">${catLabel}</div>
     <div class="inv-row-cell" style="font-weight:700;color:var(--text)">${totalActiveQty}${discarded>0?` <span style="font-size:10px;color:var(--text3)">(+${discarded} disc.)</span>`:''}</div>
-    <div><span class="inv-badge-working">✅ ${working}</span></div>
-    <div>${faulty>0?`<span class="inv-badge-faulty">⚠️ ${faulty}</span>`:'-'}</div>
-    <div class="inv-row-mmeta">${mobileMetaParts} <span class="inv-badge-working" style="font-size:10.5px;padding:0 5px">✅ ${working}</span>${faulty>0?` <span class="inv-badge-faulty" style="font-size:10.5px;padding:0 5px">⚠️ ${faulty}</span>`:''}</div>
+    <div><span class="inv-badge-working">${working}</span></div>
+    <div>${faulty>0?`<span class="inv-badge-faulty">${faulty}</span>`:'-'}</div>
+    <div class="inv-row-mmeta">${mobileMetaParts} <span class="inv-badge-working" style="font-size:10.5px;padding:0 5px">${working}</span>${faulty>0?` <span class="inv-badge-faulty" style="font-size:10.5px;padding:0 5px">${faulty}</span>`:''}</div>
     <div class="inv-row-actions" onclick="event.stopPropagation()">
-      <button class="btn btn-ghost btn-xs" onclick="guardAction('inv_edit',()=>openEditInvItem('${item.id}'))" title="Edit parent">✏️</button>
+      <button class="btn btn-ghost btn-xs" onclick="guardAction('inv_edit',()=>openEditInvItem('${item.id}'))" title="Edit parent">${ICON.pencil}</button>
       <button class="btn btn-primary btn-xs" onclick="openAddUnit('${item.id}')" title="Add unit">＋</button>
       <button class="btn btn-red btn-xs" onclick="deleteInvItem('${item.id}')" title="Delete"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
     </div>
@@ -10618,11 +10712,11 @@ function renderUnitsHtml(item){
       const coEvent=u.checkout&&!u.checkout.checkedInAt?calEvents.find(e=>String(e.id)===String(u.checkout.eventId)):null;
       let statusBadge;
       const isPendingDiscard = !u.discarded && u.discardStatus==='requested';
-      if(u.discarded) statusBadge=`<span style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">🗑️ Discarded</span>`;
-      else if(isPendingDiscard) statusBadge=`<span style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700" title="Reason: ${(u.discardReason||'').replace(/"/g,'&quot;')}">⏳ Pending Discard</span>`;
+      if(u.discarded) statusBadge=`<span style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">Discarded</span>`;
+      else if(isPendingDiscard) statusBadge=`<span style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700" title="Reason: ${(u.discardReason||'').replace(/"/g,'&quot;')}">Pending Discard</span>`;
       else if(coEvent) statusBadge=`<span style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">Out: ${coEvent.name}</span>`;
-      else if(u.status==='faulty') statusBadge=`<span class="inv-badge-faulty">⚠️ Faulty${faultCount>0?' ('+faultCount+')':''}</span>`;
-      else statusBadge=`<span class="inv-badge-working">✅ Working</span>`;
+      else if(u.status==='faulty') statusBadge=`<span class="inv-badge-faulty">Faulty${faultCount>0?' ('+faultCount+')':''}</span>`;
+      else statusBadge=`<span class="inv-badge-working">Working</span>`;
       const fcHtml=fc
         ?`<div style="font-size:11px;font-weight:700;color:var(--accent);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${fc.fcSerial||''}</div><div style="font-size:11px;color:var(--text3)">${fc.name}</div>`
         :'<div style="font-size:12px;color:var(--text3)">—</div>';
@@ -10636,7 +10730,7 @@ function renderUnitsHtml(item){
             <button class="btn btn-ghost btn-xs" onclick="guardAction('inv_discard_approve',()=>rejectDiscardUnit('${item.id}','${u.unitId||u.id}'))" title="Reject discard request">✕</button>
             <button class="btn btn-ghost btn-xs" onclick="openUnitDetail('${item.id}','${u.unitId||u.id}')">View</button>`
           :`<button class="btn btn-ghost btn-xs" onclick="openUnitDetail('${item.id}','${u.unitId||u.id}')">View</button>
-            <button class="btn btn-ghost btn-xs" onclick="guardAction('inv_edit',()=>openEditUnit('${item.id}','${u.unitId||u.id}'))">✏️</button>
+            <button class="btn btn-ghost btn-xs" onclick="guardAction('inv_edit',()=>openEditUnit('${item.id}','${u.unitId||u.id}'))" title="Edit">${ICON.pencil}</button>
             <button class="btn btn-ghost btn-xs" onclick="showUnitQR('${item.id}','${u.unitId||u.id}')">QR</button>
             <button class="btn btn-red btn-xs" onclick="deleteUnit('${item.id}','${u.unitId||u.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`;
       return`<div class="units-grid-row" style="background:${u.discarded?'#f9fafb':isPendingDiscard?'var(--amber-bg)':u.status==='faulty'?'var(--red-bg)':'var(--white)'};border:1px solid ${u.discarded?'#e5e7eb':isPendingDiscard?'var(--amber-bd)':u.status==='faulty'?'var(--red-bd)':'var(--border)'};opacity:${u.discarded?'0.6':'1'}">
@@ -10686,8 +10780,8 @@ function renderUnitDetailModal(){
     <div style="padding:0 2px">
       <!-- Tabs -->
       <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
-        <button onclick="openUnitDetail('${item.id}','${unit.unitId}','info')" style="background:none;border:none;border-bottom:3px solid ${_detailTab==='info'?'var(--accent)':'transparent'};padding:9px 18px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:${_detailTab==='info'?'var(--accent)':'var(--text3)'};cursor:pointer;margin-bottom:-2px">ℹ️ Info</button>
-        <button onclick="openUnitDetail('${item.id}','${unit.unitId}','faults')" style="background:none;border:none;border-bottom:3px solid ${_detailTab==='faults'?'var(--accent)':'transparent'};padding:9px 18px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:${_detailTab==='faults'?'var(--accent)':'var(--text3)'};cursor:pointer;margin-bottom:-2px">⚠️ Faults ${openFaults>0?`<span style="background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px">${openFaults}</span>`:faults.length>0?`(${faults.length})`:'(0)'}</button>
+        <button onclick="openUnitDetail('${item.id}','${unit.unitId}','info')" style="background:none;border:none;border-bottom:3px solid ${_detailTab==='info'?'var(--accent)':'transparent'};padding:9px 18px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:${_detailTab==='info'?'var(--accent)':'var(--text3)'};cursor:pointer;margin-bottom:-2px">Info</button>
+        <button onclick="openUnitDetail('${item.id}','${unit.unitId}','faults')" style="background:none;border:none;border-bottom:3px solid ${_detailTab==='faults'?'var(--accent)':'transparent'};padding:9px 18px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:${_detailTab==='faults'?'var(--accent)':'var(--text3)'};cursor:pointer;margin-bottom:-2px">Faults ${openFaults>0?`<span style="background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px">${openFaults}</span>`:faults.length>0?`(${faults.length})`:'(0)'}</button>
       </div>
       ${_detailTab==='info'?_unitInfoTab(item,unit,fc,wh,qrData):_unitFaultsTab(item,unit)}
     </div>`;
@@ -10695,7 +10789,7 @@ function renderUnitDetailModal(){
 }
 
 function _unitInfoTab(item,unit,fc,wh,qrData){
-  const statusBadge=unit.discarded?`<span style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700">Discarded</span>`:unit.status==='faulty'?`<span class="inv-badge-faulty" style="padding:3px 12px">⚠️ Faulty — ${(unit.faults||[]).filter(f=>!f.repairedDate).length} open fault(s)</span>`:`<span class="inv-badge-working" style="padding:3px 12px">✅ Working</span>`;
+  const statusBadge=unit.discarded?`<span style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700">Discarded</span>`:unit.status==='faulty'?`<span class="inv-badge-faulty" style="padding:3px 12px">Faulty — ${(unit.faults||[]).filter(f=>!f.repairedDate).length} open fault(s)</span>`:`<span class="inv-badge-working" style="padding:3px 12px">Working</span>`;
   return`<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
     <div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
@@ -10709,7 +10803,7 @@ function _unitInfoTab(item,unit,fc,wh,qrData){
         <tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Flight Case</td><td>${fc?fc.fcSerial+' — '+fc.name:'—'}</td></tr>
         ${unit.notes?`<tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Notes</td><td>${unit.notes}</td></tr>`:''}
         ${unit.discarded?`<tr><td style="color:var(--text3);padding:6px 14px 6px 0;font-weight:600">Discarded</td><td>${unit.discardReason||'—'}${unit.discardReasonOther?' — '+unit.discardReasonOther:''}</td></tr>`:''}
-        ${unit.discardStatus==='requested'?`<tr><td style="color:var(--amber);padding:6px 14px 6px 0;font-weight:600">⏳ Pending Discard</td><td>Reason: ${unit.discardReason||'—'}${unit.discardRequestedAt?` · requested ${new Date(unit.discardRequestedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}`:''}</td></tr>`:''}
+        ${unit.discardStatus==='requested'?`<tr><td style="color:var(--amber);padding:6px 14px 6px 0;font-weight:600">Pending Discard</td><td>Reason: ${unit.discardReason||'—'}${unit.discardRequestedAt?` · requested ${new Date(unit.discardRequestedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}`:''}</td></tr>`:''}
       </table>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="openEditUnit('${item.id}','${unit.unitId}')">Edit</button>
@@ -10741,11 +10835,11 @@ function _unitFaultsTab(item,unit){
   const userOpts=users.map(u=>`<option value="${u.name}">${u.name}</option>`).join('');
   return`<div>
     ${!unit.discarded?`<button class="btn btn-primary btn-sm" style="margin-bottom:14px" onclick="openReportFault('${item.id}','${unit.unitId||unit.id}')">＋ Report Fault</button>`:''}
-    ${unit.discarded&&faults.length?`<div style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#6b7280">🗑️ This unit has been discarded. All faults are closed.</div>`:''}
+    ${unit.discarded&&faults.length?`<div style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#6b7280">This unit has been discarded. All faults are closed.</div>`:''}
     ${!faults.length?'<div style="color:var(--text3);font-size:13px;padding:20px 0;text-align:center">No faults reported for this unit.</div>':
     `${open.length?`<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red);margin-bottom:8px">Open Faults (${open.length})</div>
       ${open.map(f=>_faultCard(item,unit,f)).join('')}`:''}
-    ${fixed.length?`<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${unit.discarded?'#6b7280':'var(--green)'};margin-top:${open.length?14:0}px;margin-bottom:8px">${unit.discarded?'🗑️ Closed — Unit Discarded':'Repaired'} (${fixed.length})</div>
+    ${fixed.length?`<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${unit.discarded?'#6b7280':'var(--green)'};margin-top:${open.length?14:0}px;margin-bottom:8px">${unit.discarded?'Closed — Unit Discarded':'Repaired'} (${fixed.length})</div>
       ${fixed.map(f=>_faultCard(item,unit,f)).join('')}`:''}
     `}
   </div>`;
@@ -10760,7 +10854,7 @@ function _faultCard(item,unit,f){
   const assigneeName = f.assignedToUserName || '';
   const isMine = f.assignedToUserId && String(f.assignedToUserId) === String(currentUser?.id);
   const assignedLine = assigneeName && !isClosed
-    ? `<div style="display:inline-flex;align-items:center;gap:6px;background:${isMine?'var(--accent-bg)':'#eef2ff'};color:${isMine?'var(--accent)':'#4338ca'};border:1px solid ${isMine?'var(--accent-bd)':'#c7d2fe'};border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;margin-top:4px">🛠 Assigned to: ${assigneeName}${isMine?' (you)':''}${f.assignedAt?` <span style="opacity:.7;font-weight:500">· ${new Date(f.assignedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</span>`:''}</div>`
+    ? `<div style="display:inline-flex;align-items:center;gap:6px;background:${isMine?'var(--accent-bg)':'#eef2ff'};color:${isMine?'var(--accent)':'#4338ca'};border:1px solid ${isMine?'var(--accent-bd)':'#c7d2fe'};border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;margin-top:4px">Assigned to: ${assigneeName}${isMine?' (you)':''}${f.assignedAt?` <span style="opacity:.7;font-weight:500">· ${new Date(f.assignedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</span>`:''}</div>`
     : '';
   return`<div style="border:1px solid ${borderColor};background:${bgColor};border-radius:8px;padding:12px 14px;margin-bottom:8px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
@@ -10771,11 +10865,11 @@ function _faultCard(item,unit,f){
         </div>
         <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Reported by <strong>${f.reportedBy||'—'}</strong> on ${f.reportedDate||'—'}</div>
         ${assignedLine}
-        ${repaired?`<div style="font-size:12px;color:var(--green);font-weight:600;margin-top:6px">✅ Repaired on ${f.repairedDate}${f.repairedBy?' by '+f.repairedBy:''}</div>${f.repairNote?`<div style="font-size:12px;color:var(--text2);margin-top:2px">${f.repairNote}</div>`:''}`:''}
-        ${discarded&&!repaired?`<div style="font-size:12px;color:#6b7280;margin-top:6px">🗑️ Closed — unit discarded (${unit.discardReason||''})</div>`:''}
+        ${repaired?`<div style="font-size:12px;color:var(--green);font-weight:600;margin-top:6px">Repaired on ${f.repairedDate}${f.repairedBy?' by '+f.repairedBy:''}</div>${f.repairNote?`<div style="font-size:12px;color:var(--text2);margin-top:2px">${f.repairNote}</div>`:''}`:''}
+        ${discarded&&!repaired?`<div style="font-size:12px;color:#6b7280;margin-top:6px">Closed — unit discarded (${unit.discardReason||''})</div>`:''}
       </div>
       <div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
-        ${!isClosed?`<button class="btn btn-ghost btn-xs" onclick="guardAction('fault_assign',()=>openAssignFault('${item.id}','${unit.unitId||unit.id}','${f.faultId}'))">${assigneeName?'Reassign':'🛠 Assign'}</button>`:''}
+        ${!isClosed?`<button class="btn btn-ghost btn-xs" onclick="guardAction('fault_assign',()=>openAssignFault('${item.id}','${unit.unitId||unit.id}','${f.faultId}'))">${assigneeName?'Reassign':'Assign'}</button>`:''}
         ${!isClosed?`<button class="btn btn-green btn-xs" onclick="guardAction('fault_repair',()=>openMarkRepaired('${item.id}','${unit.unitId||unit.id}','${f.faultId}'))">✓ Mark Repaired</button>`:''}
         ${repaired&&!discarded?`<button class="btn btn-ghost btn-xs" onclick="guardAction('fault_repair',()=>openMarkRepaired('${item.id}','${unit.unitId||unit.id}','${f.faultId}'))">Edit Repair</button>`:''}
         <button class="btn btn-red btn-xs" onclick="deleteFault('${item.id}','${unit.unitId||unit.id}','${f.faultId}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
@@ -10794,7 +10888,7 @@ function openAssignFault(parentId, unitId, faultId){
   const opts = (users||[]).map(u =>
     `<option value="${u.id}" ${String(fault.assignedToUserId||'')===String(u.id)?'selected':''}>${u.name}${u.username?` (${u.username})`:''}</option>`
   ).join('');
-  document.getElementById('simpleModalTitle').textContent = '🛠 Assign Fault for Repair';
+  document.getElementById('simpleModalTitle').textContent = 'Assign Fault for Repair';
   document.getElementById('simpleModalBody').innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12.5px">
       <div style="font-weight:700;color:var(--text)">${item.name} · <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent)">${unit.serial}</span></div>
@@ -10834,7 +10928,7 @@ async function saveAssignFault(parentId, unitId, faultId){
   if(isNew && String(target.id) !== String(currentUser?.id)){
     try {
       await api('POST','/notifications',{
-        title: '🛠 New fault assigned to you',
+        title: 'New fault assigned to you',
         body:  `${item.name} · ${unit.serial}: ${fault.fault}`,
         type:  'reminder',
         recipient: 'specific',
@@ -11046,7 +11140,7 @@ function openReportFault(parentId, unitId){
   _editUnitParentId=String(parentId); _editUnitId=unitId; _faultPhotos=[];
   const item=invItems.find(x=>String(x.id)===String(parentId));
   const unit=(item?.units||[]).find(u=>u.unitId===unitId);
-  document.getElementById('simpleModalTitle').textContent='⚠️ Report Fault';
+  document.getElementById('simpleModalTitle').textContent='Report Fault';
   document.getElementById('simpleModalBody').innerHTML=`
     <div style="background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12.5px">
       Item: <strong>${item?.name||''}</strong> · Serial: <strong style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit?.serial||''}</strong>
@@ -11101,7 +11195,7 @@ function openMarkRepaired(parentId, unitId, faultId){
   const unit=(item?.units||[]).find(u=>u.unitId===unitId);
   const fault=(unit?.faults||[]).find(f=>f.faultId===faultId);
   const isEdit=!!(fault?.repairedDate);
-  document.getElementById('simpleModalTitle').textContent=isEdit?'✏️ Edit Repair Details':'✅ Mark as Repaired';
+  document.getElementById('simpleModalTitle').textContent=isEdit?'Edit Repair Details':'Mark as Repaired';
   document.getElementById('simpleModalBody').innerHTML=`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12.5px;color:var(--text2)">
       <strong>${item?.name||''}</strong> · <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit?.serial||''}</span><br>
@@ -11355,7 +11449,7 @@ function openEditInvItem(id){
   _editInvId=id; _invPhotoData=null;
   const inner=document.getElementById('userModalInner');
   if(inner){inner.classList.remove('modal-sm');inner.classList.add('modal-wide');}
-  document.getElementById('userModalTitle').textContent='✏️ Edit Item';
+  document.getElementById('userModalTitle').textContent='Edit Item';
   document.getElementById('userModalForm').innerHTML=_invFormHtml(item);
   document.getElementById('userModal').classList.add('open');
   // Load existing photo via signed URL
@@ -11659,7 +11753,7 @@ function _csvParseLine(line){
 function showInvFeedback(type,msg){
   const el=document.getElementById('invImportFeedback');if(!el)return;
   const bg=type==='success'?'var(--green-bg)':'var(--red-bg)';const border=type==='success'?'var(--green-bd)':'var(--red-bd)';
-  el.style.display='block';el.innerHTML=`<div style="padding:12px 16px;background:${bg};border:1px solid ${border};border-radius:10px;font-size:13px">${type==='success'?'✅':'❌'} ${msg}<button onclick="this.parentElement.parentElement.style.display='none'" style="float:right;background:none;border:none;cursor:pointer;color:var(--text3)">✕</button></div>`;
+  el.style.display='block';el.innerHTML=`<div style="padding:12px 16px;background:${bg};border:1px solid ${border};border-radius:10px;font-size:13px;display:flex;align-items:center;gap:8px"><span style="color:${type==='success'?'var(--green)':'var(--red)'};display:inline-flex">${type==='success'?ICON.checkCircle:ICON.alert}</span><span style="flex:1">${msg}</span><button onclick="this.parentElement.parentElement.style.display='none'" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px">×</button></div>`;
   setTimeout(()=>{if(el)el.style.display='none';},8000);
 }
 
@@ -11702,7 +11796,7 @@ function renderFlightCases(){
       </div>
       <div style="display:flex;gap:6px;align-items:center">
         <button class="btn btn-ghost btn-xs" onclick="showFCQR('${fc.id}')">QR</button>
-        <button class="btn btn-ghost btn-xs" onclick="guardAction('fc_edit',()=>editFlightCase('${fc.id}'))">✏️</button>
+        <button class="btn btn-ghost btn-xs" onclick="guardAction('fc_edit',()=>editFlightCase('${fc.id}'))" title="Edit">${ICON.pencil}</button>
         <button class="btn btn-red btn-xs" onclick="guardAction('fc_delete',()=>deleteFlightCase('${fc.id}'))"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
       </div>
     </div>`;
@@ -11866,13 +11960,13 @@ function renderFaultReports(){
     const borderColor=discarded?'#d1d5db':repaired?'var(--green-bd)':'var(--red-bd)';
     const bgColor=discarded?'#f9fafb':repaired?'var(--green-bg)':'var(--white)';
     const badge=discarded
-      ?`<span style="font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;background:#e5e7eb;color:#6b7280">🗑️ Discarded</span>`
+      ?`<span style="font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;background:#e5e7eb;color:#6b7280">Discarded</span>`
       :repaired
-        ?`<span style="font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)">✅ Fixed</span>`
-        :`<span style="font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)">🔴 Open</span>`;
+        ?`<span style="font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)">Fixed</span>`
+        :`<span style="font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)">Open</span>`;
     const isMine = f.assignedToUserId && String(f.assignedToUserId) === String(currentUser?.id);
     const assignedBadge = f.assignedToUserName && !isClosed
-      ? `<span style="display:inline-flex;align-items:center;gap:4px;background:${isMine?'var(--accent-bg)':'#eef2ff'};color:${isMine?'var(--accent)':'#4338ca'};border:1px solid ${isMine?'var(--accent-bd)':'#c7d2fe'};border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:6px">🛠 ${f.assignedToUserName}${isMine?' (you)':''}</span>`
+      ? `<span style="display:inline-flex;align-items:center;gap:4px;background:${isMine?'var(--accent-bg)':'#eef2ff'};color:${isMine?'var(--accent)':'#4338ca'};border:1px solid ${isMine?'var(--accent-bd)':'#c7d2fe'};border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:6px">${f.assignedToUserName}${isMine?' (you)':''}</span>`
       : '';
     return`<div style="border:1px solid ${borderColor};background:${bgColor};border-radius:8px;padding:10px 14px;margin-bottom:6px;display:flex;gap:10px;align-items:flex-start">
       <div style="flex:1;min-width:0">
@@ -11889,7 +11983,7 @@ function renderFaultReports(){
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
         <button class="btn btn-ghost btn-xs" onclick="openInvParent('${f.parentId}');setTimeout(()=>openUnitDetail('${f.parentId}','${f.unitId}','faults'),300)">View</button>
-        ${!isClosed?`<button class="btn btn-ghost btn-xs" onclick="guardAction('fault_assign',()=>openAssignFault('${f.parentId}','${f.unitId}','${f.faultId}'))">${f.assignedToUserName?'Reassign':'🛠 Assign'}</button>`:''}
+        ${!isClosed?`<button class="btn btn-ghost btn-xs" onclick="guardAction('fault_assign',()=>openAssignFault('${f.parentId}','${f.unitId}','${f.faultId}'))">${f.assignedToUserName?'Reassign':'Assign'}</button>`:''}
         ${!isClosed?`<button class="btn btn-green btn-xs" onclick="guardAction('fault_repair',()=>openMarkRepaired('${f.parentId}','${f.unitId}','${f.faultId}'))">✓ Fix</button>`:''}
         ${repaired&&!discarded?`<button class="btn btn-ghost btn-xs" onclick="guardAction('fault_repair',()=>openMarkRepaired('${f.parentId}','${f.unitId}','${f.faultId}'))">Edit</button>`:''}
       </div>
@@ -11913,7 +12007,7 @@ function renderFaultReports(){
 
 function openGlobalFaultReport(){
   _faultPhotos=[];
-  document.getElementById('simpleModalTitle').textContent='⚠️ Report Fault';
+  document.getElementById('simpleModalTitle').textContent='Report Fault';
   document.getElementById('simpleModalBody').innerHTML=`
     <div class="field">
       <label class="field-label">Item / Unit * <span style="font-size:11px;color:var(--text3)">(type to search or scan QR)</span></label>
@@ -12218,7 +12312,7 @@ function renderDisciplinaryPage(){
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
             <span style="font-size:14px;font-weight:700;color:var(--text)">${emp?.name||'Unknown Staff'}</span>
             <span style="font-size:11px;color:var(--text3)">${emp?.empId||''}</span>
-            <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;${closed?'background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)':'background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)'}">${closed?'✅ Closed':'🔴 Open'}</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;${closed?'background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)':'background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)'}">${closed?'Closed':'Open'}</span>
           </div>
           <div style="font-size:13px;color:var(--text2);margin-bottom:6px">${d.details}</div>
           <div style="font-size:12px;color:var(--text3)">Recorded by <strong>${d.enteredBy||'—'}</strong> · ${d.date||'—'}</div>
@@ -12252,7 +12346,7 @@ function renderDisciplinaryPanel(emp){
           <div style="flex:1">
             <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">${d.details}</div>
             <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Date: ${d.date} · Recorded by: ${d.enteredBy||'—'}</div>
-            <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;${closed?'background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)':'background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)'}">${closed?'✅ Closed':'🔴 Open'}</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;${closed?'background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)':'background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)'}">${closed?'Closed':'Open'}</span>
             ${closed?`<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:6px;font-size:12px;display:flex;flex-direction:column;gap:3px">
               <div><span style="color:var(--text3)">How handled:</span> ${d.handling||'—'}</div>
               ${d.action?`<div><span style="color:var(--text3)">Action taken:</span> ${d.action}</div>`:''}
@@ -12270,7 +12364,7 @@ function renderDisciplinaryPanel(emp){
 function openAddDisciplinary(){
   // Searchable staff picker
   const empOpts=hrEmployees.map(e=>`<option value="${e.id}">${e.name} (${e.empId||e.id})</option>`).join('');
-  document.getElementById('simpleModalTitle').textContent='⚖️ New Disciplinary Record';
+  document.getElementById('simpleModalTitle').textContent='New Disciplinary Record';
   document.getElementById('simpleModalBody').innerHTML=`
     <div class="field"><label class="field-label">Staff Member *</label>
       <div style="display:flex;gap:6px">
@@ -12354,7 +12448,7 @@ async function saveDiscNew(){
 }
 function openCloseDisc(id){
   const rec=hrDisciplinary.find(d=>d.id===id);
-  document.getElementById('simpleModalTitle').textContent='✅ Close Case';
+  document.getElementById('simpleModalTitle').textContent='Close Case';
   document.getElementById('simpleModalBody').innerHTML=`
     <div class="field"><label class="field-label">How was this handled? *</label>
       <textarea id="disc_handling" rows="3" placeholder="Describe how the case was resolved..." style="resize:vertical"></textarea></div>
@@ -12461,7 +12555,7 @@ async function markAssetReturned(empId,idx){
 }
 
 function openRecordDamage(empId,idx){
-  document.getElementById('simpleModalTitle').textContent='⚠️ Record Damage';
+  document.getElementById('simpleModalTitle').textContent='Record Damage';
   document.getElementById('simpleModalBody').innerHTML=`
     <div class="field"><label class="field-label">Date Damaged *</label>
       <input type="date" id="dam_date" value="${new Date().toISOString().slice(0,10)}"></div>
@@ -12571,7 +12665,7 @@ function renderAllStaffAssets(){
     </div>
     ${rows.map(({emp,a,idx})=>{
       const statusHtml=a.damagedDate
-        ?`<span class="inv-badge-faulty">⚠️ Damaged</span>`
+        ?`<span class="inv-badge-faulty">Damaged</span>`
         :`<span class="inv-badge-working">Active</span>`;
       return`<div class="sa-row" style="display:grid;grid-template-columns:180px 1fr 120px 120px 120px 130px;gap:12px;padding:10px 16px;background:${a.damagedDate?'var(--red-bg)':'var(--white)'};border:1px solid ${a.damagedDate?'var(--red-bd)':'var(--border)'};border-radius:8px;margin-bottom:6px;align-items:center">
         <div style="min-width:0">
@@ -12589,7 +12683,7 @@ function renderAllStaffAssets(){
         <div><span class="sa-mlabel">Status</span>${statusHtml}</div>
         <div style="font-size:12px;color:var(--text3)"><span class="sa-mlabel">Damaged On</span>${a.damagedDate||'—'}</div>
         <div class="sa-actions" style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:nowrap">
-          ${!a.damagedDate?`<button class="btn btn-ghost btn-xs" onclick="openRecordDamage('${emp.id}','${idx}');document.getElementById('simpleModalSave').onclick=()=>{saveDamage('${emp.id}','${idx}');renderAllStaffAssets();}">⚠️ Damaged</button>`:''}
+          ${!a.damagedDate?`<button class="btn btn-ghost btn-xs" onclick="openRecordDamage('${emp.id}','${idx}');document.getElementById('simpleModalSave').onclick=()=>{saveDamage('${emp.id}','${idx}');renderAllStaffAssets();}">Damaged</button>`:''}
           ${a.damagedDate&&!a.replacementAsset?`<button class="btn btn-primary btn-xs" onclick="openReplaceAsset('${emp.id}','${idx}');document.getElementById('simpleModalSave').onclick=()=>{saveReplacement('${emp.id}','${idx}');renderAllStaffAssets();}">↩ Replace</button>`:''}
           <button class="btn btn-ghost btn-xs" onclick="profileActiveTab='assets';hrNav('profile','${emp.id}')">View</button>
         </div>
@@ -12773,7 +12867,7 @@ function renderEventLists(){
                   : '<span style="color:var(--text3);font-size:12px">1</span>';
                 const coStatus=unit?.unit.checkout&&!unit?.unit.checkout.checkedInAt
                   ?`<span style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd);border-radius:10px;padding:2px 7px;font-size:11px;font-weight:700">Out</span>`
-                  :`<span class="inv-badge-working" style="font-size:11px">✅ In</span>`;
+                  :`<span class="inv-badge-working" style="font-size:11px">In</span>`;
                 const packed = !!item.packed;
                 // "Packed In" column — the FC this item is dynamically packed
                 // into for THIS event. Defaults to '' (use the item's permanent
@@ -12792,7 +12886,7 @@ function renderEventLists(){
                   : `<select onchange="setItemContainer('${evId}',${li},${ii},this.value)" style="width:100%;font-size:11px;padding:3px 4px;border:1px solid var(--border);border-radius:5px;background:${inFc?'var(--accent-bg)':'var(--white)'};color:${inFc?'var(--accent)':'var(--text2)'};font-weight:${inFc?'600':'400'}">${fcOptions}</select>`;
                 const liveOpenFaults = (unit?.unit?.faults||[]).filter(f => !f.repairedDate);
                 const liveFaulty = unit?.unit?.status === 'faulty' || liveOpenFaults.length > 0;
-                const faultBadge = liveFaulty ? ` <span class="inv-badge-faulty" style="font-size:9.5px;padding:1px 5px;font-weight:700;margin-left:4px" title="${(liveOpenFaults[liveOpenFaults.length-1]?.description||'reported damaged').replace(/"/g,'&quot;')}">⚠️</span>` : '';
+                const faultBadge = liveFaulty ? ` <span class="inv-badge-faulty" style="font-size:9.5px;padding:1px 5px;font-weight:700;margin-left:4px" title="${(liveOpenFaults[liveOpenFaults.length-1]?.description||'reported damaged').replace(/"/g,'&quot;')}"></span>` : '';
                 return`<tr style="border-top:1px solid var(--border);${liveFaulty?'background:var(--red-bg)':''}">
                   <td style="padding:7px 14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.parentName}${faultBadge}</td>
                   <td style="padding:7px 14px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:${liveFaulty?'var(--red)':'var(--accent)'};font-weight:700">${item.emSerial}</td>
@@ -13245,16 +13339,16 @@ function filterElFCs(){
           <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent)">${fc.fcSerial||''}</span>
           <span style="margin-left:6px">${fc.name||''}</span>
           <span style="font-size:11px;color:var(--text3);font-weight:500;margin-left:6px">${units.length} unit${units.length!==1?'s':''}</span>
-          ${faultyCount>0?`<span class="inv-badge-faulty" style="font-size:10px;padding:1px 6px;margin-left:6px">⚠️ ${faultyCount} damaged</span>`:''}
+          ${faultyCount>0?`<span class="inv-badge-faulty" style="font-size:10px;padding:1px 6px;margin-left:6px">${faultyCount} damaged</span>`:''}
         </div>
         ${units.length
           ? `<div style="font-size:11.5px;color:var(--text3);margin-top:3px;line-height:1.5">${
               units.slice(0,4).map(x=>{
                 const dmg = x.unit.status==='faulty' || (x.unit.faults||[]).some(f=>!f.repairedDate);
-                return `${x.item.name} <span style="color:${dmg?'var(--red)':'var(--accent)'};font-weight:${dmg?'700':'500'}">${x.unit.serial}${dmg?' ⚠️':''}</span>`;
+                return `${x.item.name} <span style="color:${dmg?'var(--red)':'var(--accent)'};font-weight:${dmg?'700':'500'}">${x.unit.serial}${dmg?' ':''}</span>`;
               }).join(' · ')
             }${units.length>4?` <span style="color:var(--text3)">+${units.length-4} more</span>`:''}</div>`
-          : `<div style="font-size:11px;color:var(--amber);margin-top:3px">⚠️ Empty — no units assigned</div>`}
+          : `<div style="font-size:11px;color:var(--amber);margin-top:3px">Empty — no units assigned</div>`}
       </div>
     </label>`;
   }).join('');
@@ -13460,12 +13554,12 @@ function selectElParent(parentId){
       <input type="checkbox" class="el-unit-chk" value="${u.serial}" data-parent="${item.id}" data-parent-name="${item.name.replace(/"/g,'&quot;')}" data-total-qty="${totalQty}" data-conflicts="${reservation.conflicts.map(c=>c.eventName).join('|').replace(/"/g,'&quot;')}" data-faulty="${isFaulty?'1':''}"
         ${isBlocked?'disabled':''} style="accent-color:var(--accent)">
       <div style="flex:1;min-width:0">
-        <div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:${coEvent||isFaulty?'var(--red)':hasDateConflict?'var(--amber)':'var(--accent)'}">${u.serial}${isBulk?` <span style="background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd);border-radius:8px;padding:0 6px;font-size:10px;margin-left:4px">×${totalQty}</span>`:''}${isFaulty?` <span class="inv-badge-faulty" style="font-size:10px;padding:1px 6px;margin-left:4px;font-weight:700">⚠️ Damaged${openFaults.length>1?` (${openFaults.length})`:''}</span>`:''}</div>
+        <div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:${coEvent||isFaulty?'var(--red)':hasDateConflict?'var(--amber)':'var(--accent)'}">${u.serial}${isBulk?` <span style="background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd);border-radius:8px;padding:0 6px;font-size:10px;margin-left:4px">×${totalQty}</span>`:''}${isFaulty?` <span class="inv-badge-faulty" style="font-size:10px;padding:1px 6px;margin-left:4px;font-weight:700">Damaged${openFaults.length>1?` (${openFaults.length})`:''}</span>`:''}</div>
         <div style="font-size:11px;color:var(--text3)">${u.itemSerial?'Item S/N: '+u.itemSerial+' · ':''} ${fc?''+fc.fcSerial+' — '+fc.name:'No flight case'}</div>
-        ${isFaulty&&latestFault?.description?`<div style="font-size:11px;color:var(--red);font-weight:600;margin-top:2px">⚠️ Fault: ${latestFault.description}</div>`:''}
+        ${isFaulty&&latestFault?.description?`<div style="font-size:11px;color:var(--red);font-weight:600;margin-top:2px">Fault: ${latestFault.description}</div>`:''}
         ${coEvent?`<div style="font-size:11px;color:var(--red);font-weight:600">Checked out to: ${coEvent.name}</div>`:''}
-        ${fullyReservedElsewhere?`<div style="font-size:11px;color:var(--amber);font-weight:600">⚠️ Already assigned to overlapping event${reservation.conflicts.length>1?'s':''}: ${conflictNames} — confirm on add</div>`:''}
-        ${!fullyReservedElsewhere&&hasDateConflict?`<div style="font-size:11px;color:var(--amber);font-weight:600">⚠️ ${reservedQty} of ${totalQty} reserved on: ${conflictNames} — ${available} free</div>`:''}
+        ${fullyReservedElsewhere?`<div style="font-size:11px;color:var(--amber);font-weight:600">Already assigned to overlapping event${reservation.conflicts.length>1?'s':''}: ${conflictNames} — confirm on add</div>`:''}
+        ${!fullyReservedElsewhere&&hasDateConflict?`<div style="font-size:11px;color:var(--amber);font-weight:600">${reservedQty} of ${totalQty} reserved on: ${conflictNames} — ${available} free</div>`:''}
         ${alreadyAdded&&!coEvent?`<div style="font-size:11px;color:var(--text3)">Already in this event's list</div>`:''}
       </div>
       ${isBulk&&!isBlocked?`<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);white-space:nowrap" onclick="event.preventDefault();event.stopPropagation()">
@@ -13557,14 +13651,14 @@ async function saveItemsToList(){
     const blocks = [];
     if(damaged.length){
       const dl = damaged.map(x => `• ${x.parentName} — ${x.emSerial}: ${x.faultDesc}`).join('<br>');
-      blocks.push(`<div style="font-size:12px;color:var(--red);font-weight:600;margin-bottom:4px">⚠️ Reported damaged (${damaged.length}):</div><div style="font-size:12px;color:var(--text2)">${dl}</div>`);
+      blocks.push(`<div style="font-size:12px;color:var(--red);font-weight:600;margin-bottom:4px">Reported damaged (${damaged.length}):</div><div style="font-size:12px;color:var(--text2)">${dl}</div>`);
     }
     if(conflicting.length){
       const cl = conflicting.map(x => {
         const eventList = x.conflicts.map(c=>`${c.eventName} (${c.from}→${c.to})`).join(', ');
         return `• ${x.parentName} — ${x.emSerial}: ${eventList}`;
       }).join('<br>');
-      blocks.push(`<div style="font-size:12px;color:var(--amber);font-weight:600;margin-top:${damaged.length?'10px':'0'};margin-bottom:4px">⚠️ Date conflicts (${conflicting.length}):</div><div style="font-size:12px;color:var(--text2)">${cl}</div>`);
+      blocks.push(`<div style="font-size:12px;color:var(--amber);font-weight:600;margin-top:${damaged.length?'10px':'0'};margin-bottom:4px">Date conflicts (${conflicting.length}):</div><div style="font-size:12px;color:var(--text2)">${cl}</div>`);
     }
     const title = damaged.length && conflicting.length
       ? `Add ${toAdd.length} item${toAdd.length>1?'s':''} despite damage and conflicts?`
@@ -13809,7 +13903,7 @@ function renderCoEventList(){
           const res=_findUnitBySerial(item.emSerial);
           const unit=res?.unit;
           const isOut=unit?.checkout&&!unit?.checkout.checkedInAt;
-          const badge=isOut?'<span class="inv-badge-faulty" style="font-size:11px">Out</span>':'<span class="inv-badge-working" style="font-size:11px">✅ In</span>';
+          const badge=isOut?'<span class="inv-badge-faulty" style="font-size:11px">Out</span>':'<span class="inv-badge-working" style="font-size:11px">In</span>';
           return`<tr style="border-top:1px solid var(--border)">
             <td style="padding:6px 12px">${!isOut?`<input type="checkbox" class="co-item-chk-${li}" data-serial="${item.emSerial}" data-event="${evId}" style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer">`:'<span style="color:var(--text3)">—</span>'}</td>
             <td style="padding:6px 12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.parentName}</td>
@@ -13890,7 +13984,7 @@ function coLookup(){
     if(unit.checkout&&!unit.checkout.checkedInAt){
       const ev=calEvents.find(e=>String(e.id)===String(unit.checkout.eventId));
       preview.style.display='block';
-      preview.innerHTML=`<div style="background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--amber)">⚠️ Already checked out to ${ev?.name||'?'}</div><div style="font-size:13px">${item.name} · <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit.serial}</span></div></div>`;
+      preview.innerHTML=`<div style="background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--amber)">Already checked out to ${ev?.name||'?'}</div><div style="font-size:13px">${item.name} · <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit.serial}</span></div></div>`;
       confirmWrap.style.display='none'; _coTarget=null; return;
     }
     // Check if in event list — auto-select
@@ -13905,7 +13999,7 @@ function coLookup(){
       const wh=invWarehouses.find(w=>String(w.id)===String(unit.warehouseId));
       renderCoEventList();
       preview.innerHTML=`<div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:12px 14px">
-        <div style="font-weight:700;color:var(--green);margin-bottom:8px">✅ Found — auto-selected event: ${ev?.name}</div>
+        <div style="font-weight:700;color:var(--green);margin-bottom:8px">Found — auto-selected event: ${ev?.name}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
           <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Item</div><div style="font-weight:600;font-size:13px">${item.name}</div></div>
           <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">EM Serial</div><div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;color:var(--accent)">${unit.serial}</div></div>
@@ -13916,13 +14010,13 @@ function coLookup(){
       const fc=invFlightCases.find(f=>String(f.id)===String(unit.fcId||unit.flightCaseId));
       const wh=invWarehouses.find(w=>String(w.id)===String(unit.warehouseId));
       preview.innerHTML=`<div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:12px 14px">
-        <div style="font-weight:700;color:var(--green);margin-bottom:8px">✅ Found — select an event below to check out</div>
+        <div style="font-weight:700;color:var(--green);margin-bottom:8px">Found — select an event below to check out</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
           <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Item</div><div style="font-weight:600;font-size:13px">${item.name}</div></div>
           <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">EM Serial</div><div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;color:var(--accent)">${unit.serial}</div></div>
           <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Flight Case</div><div style="font-size:13px">${fc?fc.fcSerial+' — '+fc.name:wh?wh.name:'—'}</div></div>
         </div>
-        <div style="margin-top:8px;font-size:12px;color:var(--amber)">⚠️ Not found in any event equipment list</div>
+        <div style="margin-top:8px;font-size:12px;color:var(--amber)">Not found in any event equipment list</div>
       </div>`;
     }
     confirmWrap.style.display='block'; return;
@@ -13936,7 +14030,7 @@ function coLookup(){
     confirmWrap.style.display='block'; return;
   }
   preview.style.display='block';
-  preview.innerHTML=`<div style="background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--red)">❌ Not found: ${serial}</div></div>`;
+  preview.innerHTML=`<div style="background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--red)">Not found: ${serial}</div></div>`;
   confirmWrap.style.display='none'; _coTarget=null;
 }
 
@@ -14003,9 +14097,9 @@ function renderCiEventList(){
           const res=_findUnitBySerial(item.emSerial);
           const unit=res?.unit;
           const isOut=unit?.checkout&&!unit?.checkout.checkedInAt&&String(unit.checkout.eventId)===String(evId);
-          const badge=isOut?'<span class="inv-badge-faulty" style="font-size:11px">Out</span>':'<span class="inv-badge-working" style="font-size:11px">✅ In</span>';
+          const badge=isOut?'<span class="inv-badge-faulty" style="font-size:11px">Out</span>':'<span class="inv-badge-working" style="font-size:11px">In</span>';
           return`<tr style="border-top:1px solid var(--border);background:${isOut?'var(--amber-bg)':''}">
-            <td style="padding:6px 12px">${isOut?`<input type="checkbox" class="ci-item-chk-${li}" data-serial="${item.emSerial}" style="accent-color:var(--green);width:16px;height:16px;cursor:pointer">`:'<span style="color:var(--green)">✅</span>'}</td>
+            <td style="padding:6px 12px">${isOut?`<input type="checkbox" class="ci-item-chk-${li}" data-serial="${item.emSerial}" style="accent-color:var(--green);width:16px;height:16px;cursor:pointer">`:`<span style="color:var(--green)">${ICON.check}</span>`}</td>
             <td style="padding:6px 12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.parentName}</td>
             <td style="padding:6px 12px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700">${item.emSerial}</td>
             <td style="padding:6px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.fcName?''+item.fcSerial:'—'}</td>
@@ -14053,7 +14147,7 @@ function renderCiRecent(){
   if(!recent.length){el.innerHTML='<div style="color:var(--text3);font-size:13px">Nothing checked in today</div>';return;}
   el.innerHTML=recent.map(({unit,item})=>`<div style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;font-size:12.5px">
     <div><span style="font-weight:600">${item.name}</span><span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:11px;color:var(--accent);margin-left:8px">${unit.serial}</span></div>
-    <span style="color:var(--green);font-size:11px;font-weight:600">✅ Returned</span>
+    <span style="color:var(--green);font-size:11px;font-weight:600">Returned</span>
   </div>`).join('');
 }
 
@@ -14067,14 +14161,14 @@ function ciLookup(){
     const {unit,item}=result;
     if(!unit.checkout||unit.checkout.checkedInAt){
       preview.style.display='block';
-      preview.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--text3)">ℹ️ Already in warehouse</div><div style="font-size:13px">${item.name} · <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit.serial}</span></div></div>`;
+      preview.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--text3)">Already in warehouse</div><div style="font-size:13px">${item.name} · <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit.serial}</span></div></div>`;
       confirmWrap.style.display='none'; _ciTarget=null; return;
     }
     const ev=calEvents.find(e=>String(e.id)===String(unit.checkout.eventId));
     const sel=document.getElementById('ciEventSel'); if(sel){sel.value=String(unit.checkout.eventId);renderCiEventList();}
     _ciTarget={type:'unit',unit,item};
     preview.style.display='block';
-    preview.innerHTML=`<div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--green)">✅ Ready to check in</div><div style="font-size:13px;font-weight:600">${item.name} <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;color:var(--accent)">${unit.serial}</span></div><div style="font-size:12px;color:var(--text3)">From: ${ev?.name||'?'}</div></div>`;
+    preview.innerHTML=`<div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--green)">Ready to check in</div><div style="font-size:13px;font-weight:600">${item.name} <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;color:var(--accent)">${unit.serial}</span></div><div style="font-size:12px;color:var(--text3)">From: ${ev?.name||'?'}</div></div>`;
     confirmWrap.style.display='block'; return;
   }
   const fcResult=_findByFCSerial(serial);
@@ -14082,7 +14176,7 @@ function ciLookup(){
     const outUnits=fcResult.units.filter(x=>x.unit.checkout&&!x.unit.checkout.checkedInAt);
     if(!outUnits.length){
       preview.style.display='block';
-      preview.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--text3)">ℹ️ All units already in</div><div style="font-size:13px">${fcResult.fc.fcSerial} — ${fcResult.fc.name}</div></div>`;
+      preview.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--text3)">All units already in</div><div style="font-size:13px">${fcResult.fc.fcSerial} — ${fcResult.fc.name}</div></div>`;
       confirmWrap.style.display='none'; _ciTarget=null; return;
     }
     _ciTarget={type:'fc',fc:fcResult.fc,units:outUnits};
@@ -14093,7 +14187,7 @@ function ciLookup(){
     confirmWrap.style.display='block'; return;
   }
   preview.style.display='block';
-  preview.innerHTML=`<div style="background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--red)">❌ Not found: ${serial}</div></div>`;
+  preview.innerHTML=`<div style="background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--red)">Not found: ${serial}</div></div>`;
   confirmWrap.style.display='none'; _ciTarget=null;
 }
 
@@ -14248,13 +14342,13 @@ function trLookup(){
   if(result){
     const {unit,item}=result;
     if(!unit.checkout || unit.checkout.checkedInAt){
-      preview.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--text3)">ℹ️ Not currently checked out</div><div style="font-size:13px">${item.name} · <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit.serial}</span></div><div style="font-size:12px;color:var(--text3);margin-top:3px">Items must be currently out at an event before they can be transferred. Use Check-Out first.</div></div>`;
+      preview.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--text3)">Not currently checked out</div><div style="font-size:13px">${item.name} · <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit.serial}</span></div><div style="font-size:12px;color:var(--text3);margin-top:3px">Items must be currently out at an event before they can be transferred. Use Check-Out first.</div></div>`;
       confirmWrap.style.display='none'; _trTarget=null; return;
     }
     const ev=calEvents.find(e=>String(e.id)===String(unit.checkout.eventId));
     _trTarget={type:'unit', unit, item, fromEv:ev};
     preview.innerHTML=`<div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:10px 14px">
-      <div style="font-weight:700;color:var(--green);margin-bottom:6px">✅ Ready to transfer</div>
+      <div style="font-weight:700;color:var(--green);margin-bottom:6px">Ready to transfer</div>
       <div style="font-size:13px;font-weight:600">${item.name} <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;color:var(--accent)">${unit.serial}</span></div>
       <div style="font-size:12px;color:var(--text3);margin-top:3px">Currently at: <strong>${ev?.name||'?'}</strong></div>
     </div>`;
@@ -14266,7 +14360,7 @@ function trLookup(){
   if(fcResult){
     const outUnits=fcResult.units.filter(x => x.unit.checkout && !x.unit.checkout.checkedInAt);
     if(!outUnits.length){
-      preview.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--text3)">ℹ️ No checked-out units in this flight case</div><div style="font-size:13px">${fcResult.fc.fcSerial} — ${fcResult.fc.name}</div></div>`;
+      preview.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--text3)">No checked-out units in this flight case</div><div style="font-size:13px">${fcResult.fc.fcSerial} — ${fcResult.fc.name}</div></div>`;
       confirmWrap.style.display='none'; _trTarget=null; return;
     }
     // Group source events for clarity (an FC's units could be at different events)
@@ -14280,7 +14374,7 @@ function trLookup(){
     confirmWrap.style.display='block';
     return;
   }
-  preview.innerHTML=`<div style="background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--red)">❌ Not found: ${serial}</div></div>`;
+  preview.innerHTML=`<div style="background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--red)">Not found: ${serial}</div></div>`;
   confirmWrap.style.display='none'; _trTarget=null;
 }
 

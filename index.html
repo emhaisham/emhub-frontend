@@ -252,6 +252,11 @@ input,select,textarea{font-size:16px !important}
   .launcher-today .today-section{grid-column:1!important;grid-row:auto!important;margin-bottom:14px}
   .launcher-header{flex-direction:column;align-items:flex-start;gap:16px}
   .launcher-logo{margin-left:0}
+  /* The 7-day mini-calendar adds noise on small screens (each cell becomes
+     too tight to read at a glance). Hide just the "This Week" section on
+     phones; keep date + next event + on-leave count, which carry the
+     same information more efficiently. */
+  .today-section-week{display:none}
 }
 @media(max-width:420px){
   /* Very small phones: stack modules single-col so each card stays readable */
@@ -575,6 +580,21 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 
 /* Group detail inside event */
 .g-section{padding:14px 18px 0}
+/* Wrapper that lets the 8-column .detail-dt table scroll horizontally on
+   phones without clipping. A subtle right-edge gradient hints at more
+   content waiting off-screen so users know to swipe sideways. */
+.detail-dt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:12px;position:relative;
+  background:linear-gradient(to right,transparent calc(100% - 24px),rgba(20,18,14,.06))}
+.detail-dt-wrap > .detail-dt{margin-bottom:0;min-width:560px}
+@media(max-width:768px){
+  /* On phones, give the scroller a subtle hint that there's more content
+     to the right. The gradient is small enough not to interfere with the
+     last column's amount value. */
+  .detail-dt-wrap{margin-bottom:8px}
+  .detail-dt-wrap > .detail-dt{font-size:11.5px}
+  .detail-dt-wrap > .detail-dt th{padding:6px 8px;font-size:9.5px}
+  .detail-dt-wrap > .detail-dt td{padding:7px 8px}
+}
 .g-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .g-title{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
 .g-subtotal{font-size:13px;font-weight:700;color:var(--green);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:10px}
@@ -986,9 +1006,14 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .mobile-nav-item.active svg{stroke:#60a5fa}
 
 /* ══ CALENDAR STYLES ═══════════════════════════════════ */
-.cal-month-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid var(--border);border-top:1px solid var(--border)}
-.cal-day-header{padding:8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);text-align:center;background:var(--surface);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
-.cal-day{min-height:120px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;cursor:pointer;transition:background .1s;position:relative;vertical-align:top}
+/* minmax(0, 1fr) instead of 1fr so grid items can shrink below their
+   content size. Otherwise event chips with long names (e.g. "Crossroads
+   Indian Wedding") push their column wider than the other 6 columns,
+   producing the uneven-Wed/Sat layout. min-width:0 + overflow:hidden on
+   .cal-day are belt-and-braces for the same reason. */
+.cal-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-left:1px solid var(--border);border-top:1px solid var(--border)}
+.cal-day-header{padding:8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);text-align:center;background:var(--surface);border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-width:0;overflow:hidden}
+.cal-day{min-height:120px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;cursor:pointer;transition:background .1s;position:relative;vertical-align:top;min-width:0;overflow:hidden}
 .cal-day:hover{background:#fafbfc}
 .cal-day.today{background:transparent}
 .cal-day.other-month{background:var(--surface);opacity:.55}
@@ -1199,6 +1224,19 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
     width: 100% !important;
     min-width: 0;
     box-sizing: border-box;
+  }
+  /* The Date+Time pairs sit in a 1fr 1fr inner grid which gets too tight
+     on narrow phones (iPhone SE ≈ 148px per cell — below the minimum a
+     native date input can render without truncation). Drop them to a
+     single column on small viewports so each input takes full row width. */
+  .workday-row > div[style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+  /* Tighten the workday-row outer padding so date inputs don't lose width
+     to chrome on narrow phones. */
+  .workday-row {
+    padding: 10px !important;
   }
 }
 /* Default: hide mobile-only labels on desktop (the workday-row table has its
@@ -4276,10 +4314,17 @@ function renderEvents(keep){
         <td class="num">${d.rateOverride?`<span class="chip-override">⚡ MVR ${d.rateOverride.toLocaleString()}</span>`:`<span class="chip-rate">MVR ${rateFor(d.hours).toLocaleString()}</span>`}</td>
         <td class="num td-green">${fmt(calcDay(d))}</td>
       </tr>`).join('');
+      // 8 cols don't fit on a phone in portrait. Wrap in an overflow-x:auto
+      // scroller so users can swipe to see Hours / Rate / Amount which were
+      // being clipped. The shadow-edge indicator (in CSS) hints there's more
+      // content off-screen.
       return`<div class="g-section"><div class="g-hdr"><span class="g-title">Group ${gi+1}${g.label?' · '+g.label:''}</span><div class="g-subtotal">${fmt(gTot)}<button class="btn btn-red btn-xs" onclick="deleteGroup('${ev.id}','${g.id}')">Remove</button></div></div>
-        <table class="detail-dt">
-          <thead><tr><th class="num">Pax</th><th>Date In</th><th>Time In</th><th>Date Out</th><th>Time Out</th><th class="num">Hours</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
-        <tbody>${dayRows}</tbody></table></div>`;
+        <div class="detail-dt-wrap">
+          <table class="detail-dt">
+            <thead><tr><th class="num">Pax</th><th>Date In</th><th>Time In</th><th>Date Out</th><th>Time Out</th><th class="num">Hours</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
+            <tbody>${dayRows}</tbody>
+          </table>
+        </div></div>`;
     }).join('');
     return`<div class="ev-card ${isExp?'expanded':''}" id="ecard_${ev.id}">
       <div class="ev-hdr" onclick="toggleEv('${ev.id}')">
@@ -9940,7 +9985,7 @@ function _todayPanel(){
       <div class="today-section-lbl">Next Event</div>
       ${nextHtml}
     </div>
-    <div class="today-section">
+    <div class="today-section today-section-week">
       <div class="today-section-lbl">This Week</div>
       <div class="week-strip">${weekHtml}</div>
     </div>

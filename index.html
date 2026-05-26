@@ -224,16 +224,38 @@ input,select,textarea{font-size:16px !important}
 
 /* ── Responsive ── */
 @media(max-width:1024px){
+  /* Tablet: aside moves above main; today panel becomes a single
+     horizontal strip — date on the left in display weight, the three
+     sub-sections in a 3-col grid on the right. Reads as a top status
+     bar rather than a 2x2 mess. */
   .launcher-grid{grid-template-columns:1fr;gap:24px}
   .launcher-aside{position:static;order:-1}
-  .launcher-today{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  .launcher-today{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:start;padding:18px 22px}
+  .launcher-today > .today-date-big{font-size:36px;align-self:center}
+  .launcher-today > .today-date-sub{grid-column:1;margin-top:-6px;align-self:start}
   .launcher-today .today-divider{display:none}
   .launcher-today .today-section{margin-bottom:0}
+  /* Wrap the three sections in a sub-grid via grid-area trickery: they're
+     siblings of the date, so use display:contents on a wrapper... actually
+     simpler: just let them auto-flow into the second column rows */
+  .launcher-today .today-section:nth-of-type(1){grid-column:2;grid-row:1/2}
+  .launcher-today .today-section:nth-of-type(2){grid-column:2;grid-row:2/3}
+  .launcher-today .today-section:nth-of-type(3){grid-column:2;grid-row:3/4}
+}
+@media(max-width:768px){
+  /* Phone: 6 modules in 1 col is too tall. 2 cols reads better. */
+  #mod-launcher .module-grid{grid-template-columns:repeat(2,1fr)!important}
 }
 @media(max-width:640px){
-  .launcher-today{grid-template-columns:1fr}
+  /* Today panel collapses to single column on phones; header stacks. */
+  .launcher-today{grid-template-columns:1fr;padding:18px}
+  .launcher-today .today-section{grid-column:1!important;grid-row:auto!important;margin-bottom:14px}
   .launcher-header{flex-direction:column;align-items:flex-start;gap:16px}
   .launcher-logo{margin-left:0}
+}
+@media(max-width:420px){
+  /* Very small phones: stack modules single-col so each card stays readable */
+  #mod-launcher .module-grid{grid-template-columns:1fr!important}
 }
 
 /* ══ SHARED APP SHELL ════════════════════════════ */
@@ -789,6 +811,16 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .emp-row-iconbtn{width:30px;height:30px;border-radius:7px;border:1px solid var(--border2);background:var(--white);color:var(--text3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;flex-shrink:0}
 .emp-row-iconbtn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
 .emp-row-iconbtn.danger:hover{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+@media(max-width:480px){
+  /* Very narrow screens: the avatar shrinks slightly + name area takes more
+     room. Icon buttons stay on the right but get a touch more breathing
+     room from the main block. */
+  .emp-row .pay-group-row, .emp-row{flex-wrap:nowrap}
+  .emp-row-avatar{width:36px;height:36px;font-size:13px}
+  .emp-row-main{gap:10px}
+  .emp-row .pg-right{gap:6px}
+  .emp-row-detail{font-size:11.5px}
+}
 
 /* Type chip — standardised to the design tokens. Replaces the old
    hardcoded baby-blue (.tag-local) and pink (.tag-expat). */
@@ -803,9 +835,15 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .stat-card.is-link:active{transform:translateY(1px)}
 
 /* Sticky tools — keeps search + filters visible while a long list scrolls.
-   Targets .toolbar.sticky-tools so it's opt-in per page, not global. */
+   Targets .toolbar.sticky-tools so it's opt-in per page, not global.
+   On mobile the existing .mob-menubar is already sticky at top:0 z-10;
+   stacking another sticky element on top would overlap. So sticky
+   behaviour is desktop+tablet only. */
 .toolbar.sticky-tools{position:sticky;top:-1px;background:var(--bg);z-index:5;padding:10px 0;margin-top:-2px;border-bottom:1px solid transparent;transition:border-color .15s,box-shadow .15s}
 .toolbar.sticky-tools.is-stuck{border-bottom-color:var(--border);box-shadow:0 4px 8px -6px rgba(20,18,14,.08)}
+@media(max-width:768px){
+  .toolbar.sticky-tools{position:static;padding:0;margin-top:0;border-bottom:none;box-shadow:none}
+}
 .emp-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;flex-shrink:0}
 /* Generic .tag used by Add Employee form sections + WP status pills below.
    The .emp-* / .tag-local / .tag-expat classes were removed when the staff

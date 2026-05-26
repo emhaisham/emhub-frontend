@@ -878,6 +878,59 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .emp-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
 .emp-form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px}
 .emp-form-full{grid-column:1/-1}
+
+/* ── INPUT VOCABULARY v2 ────────────────────────────────────────────────
+   Establishes the form pattern every long form afterward inherits from.
+   Three building blocks:
+     .emp-form-layout   — flex layout that holds main column + side TOC
+     .form-sec          — numbered section wrapper with typographic header
+     .form-sticky-foot  — bottom Save/Cancel bar that stays in view
+     .emp-form-toc      — right-rail nav (desktop ≥1024px)
+*/
+
+/* Top-level layout: form body + right TOC */
+.emp-form-layout{display:flex;gap:28px;align-items:flex-start}
+.emp-form-main{flex:1;min-width:0}
+.emp-form-body{padding-bottom:24px}
+
+/* Right-rail TOC */
+.emp-form-toc{width:200px;flex-shrink:0;position:sticky;top:16px}
+.emp-form-toc-lbl{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);padding:0 12px;margin-bottom:6px}
+.emp-form-toc nav{display:flex;flex-direction:column;gap:1px}
+.form-toc-link{display:flex;align-items:center;gap:10px;padding:7px 12px;font-size:12.5px;color:var(--text2);text-decoration:none;border-radius:6px;border-left:2px solid transparent;transition:background-color .12s,color .12s,border-color .12s;cursor:pointer;letter-spacing:-.005em}
+.form-toc-link:hover{background:var(--surface);color:var(--text)}
+.form-toc-link.active{background:var(--accent-bg);color:var(--accent);border-left-color:var(--accent);font-weight:600;padding-left:10px}
+.form-toc-link-num{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--surface);font-size:10px;font-weight:700;color:var(--text3);flex-shrink:0;border:1px solid var(--border)}
+.form-toc-link.active .form-toc-link-num{background:var(--accent);color:var(--white);border-color:var(--accent)}
+
+/* Numbered section header — replaces .form-section pattern */
+.form-sec{margin-bottom:36px;scroll-margin-top:24px}
+.form-sec:last-child{margin-bottom:0}
+.form-sec-hdr{display:flex;align-items:flex-start;gap:14px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.form-sec-num{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:var(--accent-bg);color:var(--accent);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1px solid var(--accent-bd);font-variant-numeric:tabular-nums;margin-top:1px}
+.form-sec-title{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.01em;margin:0;line-height:1.3}
+.form-sec-sub{font-size:12.5px;color:var(--text3);margin:3px 0 0;line-height:1.45}
+.form-sec-body{}
+/* Sub-heading inside a section (e.g. Passport / Work Permit groups under Expat) */
+.form-sub-hdr{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:14px 0 8px}
+
+/* Sticky bottom save bar */
+.form-sticky-foot{position:sticky;bottom:0;background:var(--white);border-top:1px solid var(--border);box-shadow:0 -4px 16px -8px rgba(20,18,14,.12);padding:12px 0;margin-top:24px;z-index:6;border-radius:0 0 var(--r) var(--r)}
+.form-sticky-foot-inner{display:flex;align-items:center;gap:12px;padding:0 20px}
+.form-sticky-foot-spacer{flex:1}
+.form-sticky-foot-hint{font-size:11.5px;color:var(--text3);font-weight:500}
+
+@media(max-width:1024px){
+  /* Hide right-rail TOC on tablet and below — numbered section headers
+     carry orientation alone on smaller screens. */
+  .emp-form-layout{flex-direction:column;gap:0}
+  .emp-form-toc{display:none}
+}
+@media(max-width:768px){
+  .form-sec-hdr{gap:12px;margin-bottom:16px;padding-bottom:12px}
+  .form-sec-num{width:26px;height:26px;font-size:12px}
+  .form-sticky-foot-inner{padding:0 14px;flex-wrap:wrap;gap:8px}
+}
 .form-section{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;margin-top:4px;padding-bottom:6px;border-bottom:1px solid var(--border)}
 
 .doc-upload-box{background:var(--surface);border:2px dashed var(--border2);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:all .15s;position:relative;overflow:hidden}
@@ -5085,11 +5138,23 @@ function renderEmpForm(empId){
   const autoId = emp ? (emp.empId||'') : nextEmpId();
   const natOpts = NATIONALITIES.map(n=>`<option value="${n}" ${emp?.nationality===n?'selected':''}>${n}</option>`).join('');
   const _photoKeyForLoad = empDocs.photo?.key || null;
-  document.getElementById('hrAddFormWrap').innerHTML = `
-  <div class="card"><div class="card-body">
+  // Section helper — keeps the form-sec wrapper DRY. Title and sub get
+  // the typographic + numbered treatment; body is whatever fields go in.
+  const sec = (n, id, title, sub, body, attrs='') => `
+    <section class="form-sec" id="${id}" data-sec-num="${n}" data-sec-name="${title}"${attrs?' '+attrs:''}>
+      <header class="form-sec-hdr">
+        <div class="form-sec-num">${n}</div>
+        <div>
+          <h3 class="form-sec-title">${title}</h3>
+          <p class="form-sec-sub">${sub}</p>
+        </div>
+      </header>
+      <div class="form-sec-body">${body}</div>
+    </section>`;
 
-    <div class="form-section">Photo &amp; Basic Info</div>
-    <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:14px">
+  // Section 1 — Basic Info
+  const sec1 = sec(1, 'empSec-1', 'Basic Info', 'Identity, role, and how to contact this person.', `
+    <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap">
       <div>
         <div class="field-label" style="margin-bottom:6px">Staff Photo</div>
         <div style="width:100px;height:100px;border-radius:50%;background:var(--surface);border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;position:relative" id="photoWrap">
@@ -5097,18 +5162,25 @@ function renderEmpForm(empId){
           <input type="file" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer" onchange="handleDocUpload('photo',this,true)">
         </div>
       </div>
-      <div style="flex:1">
+      <div style="flex:1;min-width:240px">
         <div class="emp-form-grid">
-          <div class="field"><label class="field-label">Full Name *</label><input type="text" id="ef_name" value="${emp?.name||''}" placeholder="e.g. John Smith"></div>
+          <div class="field"><label class="field-label">Full Name *</label><input type="text" id="ef_name" value="${emp?.name||''}" placeholder="e.g. Aishath Niuma"></div>
           <div class="field"><label class="field-label">Employee ID</label><input type="text" id="ef_empid" value="${autoId}" placeholder="Auto-generated"></div>
           <div class="field"><label class="field-label">Department *</label><select id="ef_dept">${DEPTS.map(d=>`<option value="${d}" ${emp?.dept===d?'selected':''}>${d}</option>`).join('')}</select></div>
           <div class="field"><label class="field-label">Job Title</label><input type="text" id="ef_title" value="${emp?.title||''}" placeholder="e.g. Event Coordinator"></div>
         </div>
       </div>
     </div>
-
     <div class="emp-form-grid">
       <div class="field"><label class="field-label">Staff Type *</label><select id="ef_type" onchange="refreshExpatFields()"><option value="local" ${!isExpat?'selected':''}>Local (Maldivian)</option><option value="expat" ${isExpat?'selected':''}>Expatriate</option></select></div>
+      <div class="field"><label class="field-label">Date Joined</label><input type="date" id="ef_joined" value="${normalizeDate(emp?.joined)||''}"></div>
+      <div class="field"><label class="field-label">Phone</label><input type="text" id="ef_phone" value="${emp?.phone||''}" placeholder="+960 7xx xxxx"></div>
+      <div class="field"><label class="field-label">Email</label><input type="email" id="ef_email" value="${emp?.email||''}" placeholder="staff@eventmaldives.com.mv"></div>
+    </div>`);
+
+  // Section 2 — Employment & Status
+  const sec2 = sec(2, 'empSec-2', 'Employment & Status', 'Engagement type, status, reporting line, and login link.', `
+    <div class="emp-form-grid">
       <div class="field"><label class="field-label">Employment Basis *</label>
         <select id="ef_empbasis">
           <option value="fulltime" ${(!emp||emp.empBasis==='fulltime'||!emp.empBasis)?'selected':''}>Full Time</option>
@@ -5116,9 +5188,6 @@ function renderEmpForm(empId){
           <option value="parttime" ${emp?.empBasis==='parttime'?'selected':''}>Part Time</option>
           <option value="contract" ${emp?.empBasis==='contract'?'selected':''}>Contract</option>
         </select></div>
-      <div class="field"><label class="field-label">Date Joined</label><input type="date" id="ef_joined" value="${normalizeDate(emp?.joined)||''}"></div>
-      <div class="field"><label class="field-label">Phone</label><input type="text" id="ef_phone" value="${emp?.phone||''}" placeholder="+960 xxx xxxx"></div>
-      <div class="field"><label class="field-label">Email</label><input type="email" id="ef_email" value="${emp?.email||''}" placeholder="staff@company.com"></div>
       <div class="field"><label class="field-label">Employment Status</label>
         <select id="ef_status" onchange="refreshStatusFields()">
           <option value="active" ${(!emp||emp.status==='active')?'selected':''}>Active</option>
@@ -5135,7 +5204,7 @@ function renderEmpForm(empId){
     </div>
 
     <div id="exitSection" style="display:${emp&&(emp.status==='resigned'||emp.status==='terminated')?'block':'none'}">
-      <div class="form-section" style="margin-top:8px">Exit Details</div>
+      <div class="form-sub-hdr">Exit Details</div>
       <div class="emp-form-grid">
         <div class="field"><label class="field-label">Exit Type</label>
           <select id="ef_exittype">
@@ -5148,13 +5217,13 @@ function renderEmpForm(empId){
     </div>
 
     <div id="probationSection" style="display:${emp&&(emp.status==='probation'||emp.probationStart||emp.probationStatus)?'block':'none'}">
-      <div class="form-section" style="margin-top:8px">Probation Period</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:10px">
+      <div class="form-sub-hdr">Probation Period</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:10px" class="emp-form-grid-3">
         <div class="field"><label class="field-label">Probation Start Date</label><input type="date" id="ef_probstart" value="${normalizeDate(emp?.probationStart||emp?.joined)||''}"></div>
         <div class="field"><label class="field-label">Duration (months)</label><input type="number" id="ef_probmonths" value="${emp?.probationMonths||3}" min="1" max="12" placeholder="3"></div>
         <div class="field"><label class="field-label">Probation Basic Salary (<span class="sal-curr-label">${emp?.salaryCurrency||'MVR'}</span>)</label><input type="number" id="ef_probsalary" value="${emp?.probationSalary||''}" placeholder="Salary during probation"></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="emp-form-grid">
         <div class="field"><label class="field-label">Probation End (override)</label><input type="date" id="ef_probend" value="${normalizeDate(emp?.probationEndDate)||''}">
           <div style="font-size:11px;color:var(--text3);margin-top:4px">Optional — leave blank to compute from Start + Duration.</div></div>
         <div class="field"><label class="field-label">Probation Status</label>
@@ -5166,18 +5235,11 @@ function renderEmpForm(empId){
           </select>
           <div style="font-size:11px;color:var(--text3);margin-top:4px">Or use the workflow on the Probation &amp; Contracts page.</div></div>
       </div>
-    </div>
+    </div>`);
 
-    <div class="form-section" style="margin-top:8px">Address &amp; Emergency Contact</div>
-    <div class="emp-form-grid">
-      <div class="field emp-form-full"><label class="field-label">Current Address</label><input type="text" id="ef_address" value="${emp?.address||''}" placeholder="Current residential address"></div>
-      <div class="field"><label class="field-label">Emergency Contact Name</label><input type="text" id="ef_emgname" value="${emp?.emgName||''}" placeholder="Full name"></div>
-      <div class="field"><label class="field-label">Relation</label><input type="text" id="ef_emgrel" value="${emp?.emgRelation||''}" placeholder="e.g. Spouse, Parent"></div>
-      <div class="field"><label class="field-label">Emergency Phone</label><input type="text" id="ef_emgphone" value="${emp?.emgPhone||''}" placeholder="+960 xxx xxxx"></div>
-    </div>
-
-    <div class="form-section" style="margin-top:8px">Salary &amp; Payment</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+  // Section 3 — Compensation
+  const sec3 = sec(3, 'empSec-3', 'Compensation', 'Salary, allowances, pension, and how this person is paid.', `
+    <div class="emp-form-grid emp-form-grid-3" style="grid-template-columns:1fr 1fr 1fr 1fr">
       <div class="field"><label class="field-label">Salary Currency</label>
         <select id="ef_salcurr" onchange="document.querySelectorAll('.sal-curr-label').forEach(el=>el.textContent=this.value)">
           <option value="MVR" ${emp?.salaryCurrency!=='USD'?'selected':''}>MVR (Maldivian Rufiyaa)</option>
@@ -5188,84 +5250,93 @@ function renderEmpForm(empId){
       <div class="field"><label class="field-label">Pension Eligible</label><select id="ef_pension"><option value="yes" ${(!emp||emp.pensionEligible!=='no')?'selected':''}>Yes</option><option value="no" ${emp?.pensionEligible==='no'?'selected':''}>No</option></select></div>
     </div>
 
-    <!-- Itemized allowances. Each line: name + amount + currency. This lets
-         you separate e.g. "Food MVR 3000" + "Phone MVR 500" + "Living USD 200"
-         for the same staff member (common for expat contracts). -->
-    <div class="form-section" style="margin-top:6px">Allowances</div>
+    <div class="form-sub-hdr">Allowances</div>
     <div id="ef_allowances_list" style="margin-bottom:8px"></div>
     <button type="button" class="btn btn-ghost btn-sm" onclick="addAllowanceRow()" style="margin-bottom:14px">＋ Add Allowance</button>
+
     <div id="bankDetailsSection" style="display:${(!emp||emp.payMethod!=='cash')?'block':'none'}">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="form-sub-hdr">Bank Details</div>
+      <div class="emp-form-grid emp-form-grid-3">
         <div class="field"><label class="field-label">Bank Name</label><input type="text" id="ef_bank" value="${emp?.bankName||''}" placeholder="e.g. Bank of Maldives"></div>
         <div class="field"><label class="field-label">Account Name</label><input type="text" id="ef_bankacctname" value="${emp?.bankAcctName||''}" placeholder="Account holder name"></div>
         <div class="field"><label class="field-label">Account Number</label><input type="text" id="ef_bankacct" value="${emp?.bankAcct||''}" placeholder="Account number"></div>
       </div>
-    </div>
+    </div>`);
 
+  // Section 4 — Identity & Compliance (the big conditional one)
+  const sec4Body = `
     <div id="expatSection">
-      <div class="form-section" style="margin-top:8px">Expat Details</div>
-
-      <div class="form-section-sub" style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:10px 0 8px;padding-left:2px">Passport</div>
-      <div class="emp-form-grid">
+      <div class="form-sub-hdr">Passport</div>
+      <div class="emp-form-grid-3">
         <div class="field"><label class="field-label">Nationality</label><select id="ef_nationality"><option value="">Select…</option>${natOpts}</select></div>
         <div class="field"><label class="field-label">Passport Number *</label><input type="text" id="ef_passport" value="${emp?.passportNo||''}" placeholder="e.g. A1234567"></div>
         <div class="field"><label class="field-label">Passport Expiry *</label><input type="date" id="ef_ppexp" value="${normalizeDate(emp?.passportExpiry)||''}"></div>
       </div>
 
-      <div class="form-section-sub" style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:10px 0 8px;padding-left:2px">Work Permit</div>
+      <div class="form-sub-hdr">Work Permit</div>
       <div class="emp-form-grid">
         <div class="field"><label class="field-label">Work Permit Number *</label><input type="text" id="ef_wp" value="${emp?.workPermitNo||''}" placeholder="WP number"></div>
         <div class="field"><label class="field-label">Work Permit Expiry *</label><input type="date" id="ef_wpexp" value="${normalizeDate(emp?.workPermitExpiry)||''}"></div>
       </div>
 
-      <div class="form-section-sub" style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:10px 0 8px;padding-left:2px">Insurance</div>
-      <div class="emp-form-grid">
+      <div class="form-sub-hdr">Insurance</div>
+      <div class="emp-form-grid-3">
         <div class="field"><label class="field-label">Insurance Number</label><input type="text" id="ef_ins" value="${emp?.insuranceNo||''}" placeholder="Insurance number"></div>
         <div class="field"><label class="field-label">Insurance Agency</label><input type="text" id="ef_insagency" value="${emp?.insuranceAgency||''}" placeholder="e.g. Allied Insurance"></div>
         <div class="field"><label class="field-label">Insurance Expiry</label><input type="date" id="ef_insexp" value="${normalizeDate(emp?.insuranceExpiry)||''}"></div>
       </div>
 
-      <div class="form-section-sub" style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:10px 0 8px;padding-left:2px">Quota Fee</div>
-      <div class="emp-form-grid">
+      <div class="form-sub-hdr">Quota, Medical & Contract</div>
+      <div class="emp-form-grid-3">
         <div class="field"><label class="field-label">Quota Fee Expiry</label><input type="date" id="ef_quotaexp" value="${normalizeDate(emp?.quotaExpiry)||''}"></div>
-      </div>
-
-      <div class="form-section-sub" style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:10px 0 8px;padding-left:2px">Medical</div>
-      <div class="emp-form-grid">
         <div class="field"><label class="field-label">Medical Expiry</label><input type="date" id="ef_medexp" value="${normalizeDate(emp?.medicalExpiry)||''}"></div>
-      </div>
-
-      <div class="form-section-sub" style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:10px 0 8px;padding-left:2px">Contract</div>
-      <div class="emp-form-grid">
         <div class="field"><label class="field-label">Contract Start Date</label><input type="date" id="ef_contractstart" value="${normalizeDate(emp?.contractStartDate)||''}">
           <div style="font-size:11px;color:var(--text3);margin-top:4px">Defaults to Join Date if blank.</div></div>
+      </div>
+      <div class="emp-form-grid">
         <div class="field"><label class="field-label">Contract Expiry</label><input type="date" id="ef_contractexp" value="${normalizeDate(emp?.contractExpiry)||''}"></div>
       </div>
     </div>
 
     <div id="localSection">
-      <div class="form-section" style="margin-top:8px">Local Staff Details</div>
-      <div class="emp-form-grid">
+      <div class="emp-form-grid-3">
         <div class="field"><label class="field-label">National ID Number *</label><input type="text" id="ef_nid" value="${emp?.nidNo||''}" placeholder="A-number"></div>
         <div class="field"><label class="field-label">NID Expiry</label><input type="date" id="ef_nidexp" value="${normalizeDate(emp?.nidExpiry)||''}"></div>
         <div class="field"><label class="field-label">Date of Birth</label><input type="date" id="ef_dob" value="${normalizeDate(emp?.dob)||''}"></div>
       </div>
-    </div>
+    </div>`;
+  const sec4 = sec(4, 'empSec-4',
+    isExpat ? 'Identity & Compliance' : 'Identity',
+    isExpat ? 'Passport, work permit, insurance, quota, medical, contract — every regulated date.'
+            : 'National ID and date of birth.',
+    sec4Body);
 
-    <div class="form-section" style="margin-top:8px">Documents</div>
+  // Section 5 — Address & Emergency Contact
+  const sec5 = sec(5, 'empSec-5', 'Address & Emergency Contact', 'Where this person lives and who to call if something goes wrong.', `
+    <div class="emp-form-grid">
+      <div class="field emp-form-full"><label class="field-label">Current Address</label><input type="text" id="ef_address" value="${emp?.address||''}" placeholder="Current residential address"></div>
+      <div class="field"><label class="field-label">Emergency Contact Name</label><input type="text" id="ef_emgname" value="${emp?.emgName||''}" placeholder="Full name"></div>
+      <div class="field"><label class="field-label">Relation</label><input type="text" id="ef_emgrel" value="${emp?.emgRelation||''}" placeholder="e.g. Spouse, Parent"></div>
+      <div class="field"><label class="field-label">Emergency Phone</label><input type="text" id="ef_emgphone" value="${emp?.emgPhone||''}" placeholder="+960 7xx xxxx"></div>
+    </div>`);
+
+  // Section 6 — Documents
+  const sec6 = sec(6, 'empSec-6', 'Documents', 'Scans and copies for the personnel file. Stored encrypted; links expire in 15 minutes.', `
     <div id="expatDocs">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="form-sub-hdr">Identity documents</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px" class="emp-form-grid-3">
         ${['passport:Passport Bio Page:DOC','workpermit:Work Permit:DOC','insurance:Insurance Document:'].map(s=>{const[k,lbl,ico]=s.split(':');return`<div><div class="field-label" style="margin-bottom:6px">${ico} ${lbl}</div><div class="doc-upload-box"><input type="file" accept="image/*,.pdf" onchange="handleDocUpload('${k}',this)"><div class="doc-upload-icon">${ico}</div><div class="doc-upload-label">Upload ${lbl}</div><div class="doc-upload-sub">JPG, PNG or PDF</div></div><div id="docprev_${k}">${empDocs[k]?`<div class="doc-preview"><span class="doc-preview-name">✓ ${empDocs[k].name||'Uploaded'}</span><button class="doc-preview-remove" onclick="removeDoc('${k}')">✕</button></div>`:''}</div></div>`;}).join('')}
       </div>
     </div>
     <div id="localDocs">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="form-sub-hdr">Identity document</div>
+      <div class="emp-form-grid">
         <div><div class="field-label" style="margin-bottom:6px">National ID Card</div><div class="doc-upload-box"><input type="file" accept="image/*,.pdf" onchange="handleDocUpload('nid',this)"><div class="doc-upload-icon"></div><div class="doc-upload-label">Upload NID Card</div><div class="doc-upload-sub">JPG, PNG or PDF</div></div><div id="docprev_nid">${empDocs.nid?`<div class="doc-preview"><span class="doc-preview-name">✓ ${empDocs.nid.name||'Uploaded'}</span><button class="doc-preview-remove" onclick="removeDoc('nid')">✕</button></div>`:''}</div></div>
       </div>
     </div>
 
-    <div class="form-section" style="margin-top:8px">Other Documents</div>
-    <div style="margin-bottom:14px">
+    <div class="form-sub-hdr">Other documents</div>
+    <div style="margin-bottom:6px">
       <div id="extraDocsUploadArea" style="display:flex;flex-direction:column;gap:8px">
         ${(emp?.extraDocs||[]).map((d,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
           <span style="flex:1;font-size:13px;font-weight:500">${d.name}</span>
@@ -5276,19 +5347,81 @@ function renderEmpForm(empId){
         ＋ Upload Document
         <input type="file" accept="image/*,.pdf,.doc,.docx" multiple style="display:none" onchange="handleExtraDocUpload(this)">
       </label>
-    </div>
+    </div>`);
 
-    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--border);margin-top:4px">
-      <button class="btn btn-ghost btn-sm" onclick="hrNav('employees')">← Cancel</button>
-      <button class="btn btn-primary" onclick="saveEmployee()">${emp?'Save Changes →':'Add Employee →'}</button>
+  // Right-rail TOC. Hidden on tablet/mobile by CSS.
+  const tocItems = [
+    ['empSec-1','Basic Info'],
+    ['empSec-2','Employment & Status'],
+    ['empSec-3','Compensation'],
+    ['empSec-4', isExpat ? 'Identity & Compliance' : 'Identity'],
+    ['empSec-5','Address & Emergency'],
+    ['empSec-6','Documents']
+  ];
+  const tocHtml = `
+    <aside class="emp-form-toc">
+      <div class="emp-form-toc-lbl">In this form</div>
+      <nav>${tocItems.map(([id,name],i)=>`<a class="form-toc-link" href="#${id}" onclick="event.preventDefault();_empFormScrollTo('${id}')"><span class="form-toc-link-num">${i+1}</span><span>${name}</span></a>`).join('')}</nav>
+    </aside>`;
+
+  document.getElementById('hrAddFormWrap').innerHTML = `
+  <div class="emp-form-layout">
+    <div class="emp-form-main">
+      <div class="card"><div class="card-body emp-form-body">
+        ${sec1}${sec2}${sec3}${sec4}${sec5}${sec6}
+        <div class="form-sticky-foot">
+          <div class="form-sticky-foot-inner">
+            <button class="btn btn-ghost btn-sm" onclick="hrNav('employees')">← Cancel</button>
+            <span class="form-sticky-foot-hint">Fields marked * are required.</span>
+            <div class="form-sticky-foot-spacer"></div>
+            <button class="btn btn-primary" onclick="saveEmployee()">${emp?'Save Changes →':'Add Employee →'}</button>
+          </div>
+        </div>
+      </div></div>
     </div>
-  </div></div>`;
+    ${tocHtml}
+  </div>`;
 
   document.getElementById('ef_paymethod').addEventListener('change',function(){
     document.getElementById('bankDetailsSection').style.display=this.value==='cash'?'none':'block';
   });
   refreshExpatFields();
   renderAllowanceRows();
+  _wireEmpFormTocObserver();
+}
+
+// Smooth-scroll a section into view + immediately highlight in the TOC.
+function _empFormScrollTo(id){
+  const target = document.getElementById(id); if (!target) return;
+  target.scrollIntoView({ behavior:'smooth', block:'start' });
+  document.querySelectorAll('.form-toc-link').forEach(a =>
+    a.classList.toggle('active', a.getAttribute('href') === '#' + id));
+}
+
+// Set up an IntersectionObserver so the TOC highlights whichever section
+// is currently most visible. Re-runs each form render (cleans up any
+// previous observer).
+let _empFormSecObserver = null;
+function _wireEmpFormTocObserver(){
+  if (_empFormSecObserver) { try { _empFormSecObserver.disconnect(); } catch(e){} _empFormSecObserver = null; }
+  const sections = document.querySelectorAll('#hrAddFormWrap .form-sec');
+  if (!sections.length) return;
+  _empFormSecObserver = new IntersectionObserver(entries => {
+    // Find the entry with the largest intersection ratio (the one most in
+    // view). If multiple sections are visible at once, the largest wins.
+    let best = null;
+    entries.forEach(e => {
+      if (e.isIntersecting && (!best || e.intersectionRatio > best.intersectionRatio)) best = e;
+    });
+    if (best) {
+      const id = best.target.id;
+      document.querySelectorAll('.form-toc-link').forEach(a =>
+        a.classList.toggle('active', a.getAttribute('href') === '#' + id));
+    }
+  }, { rootMargin: '-25% 0px -60% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] });
+  sections.forEach(s => _empFormSecObserver.observe(s));
+  // Default: highlight section 1
+  document.querySelector('.form-toc-link[href="#empSec-1"]')?.classList.add('active');
 }
 
 function refreshStatusFields(){

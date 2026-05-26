@@ -5863,8 +5863,14 @@ function _rqRowHtml(r, idx){
   let primaryActions = '';
   if (_rqTab === 'profile') {
     const ch = r.requested_changes || {};
-    const lines = Object.entries(ch).map(([k,v]) => `<div><span style="color:var(--text3)">${k}:</span> <strong>${v}</strong></div>`).join('');
-    detail = `<div style="font-size:12px;color:var(--text2);margin-top:4px">${lines}</div>${r.reason?`<div style="font-size:11px;color:var(--text3);margin-top:3px">Reason: ${r.reason}</div>`:''}`;
+    const labelMap = { phone:'Phone', email:'Email', address:'Address', emgName:'Emergency Name', emgPhone:'Emergency Phone', emgRelation:'Relationship', nidNo:'New NID No', nidExpiry:'New NID Expiry' };
+    const lines = Object.entries(ch).filter(([k])=>k!=='nidDoc').map(([k,v]) =>
+      `<div><span style="color:var(--text3)">${labelMap[k]||k}:</span> <strong>${typeof v==='object'?JSON.stringify(v):v}</strong></div>`
+    ).join('');
+    const docHtml = ch.nidDoc?.key
+      ? `<div style="margin-top:6px"><button class="btn btn-ghost btn-xs" onclick="_rqOpenAttachment('${ch.nidDoc.key}')">📎 View attached NID — ${ch.nidDoc.name||'file'}</button></div>`
+      : '';
+    detail = `<div style="font-size:12px;color:var(--text2);margin-top:4px">${lines}</div>${docHtml}${r.reason?`<div style="font-size:11px;color:var(--text3);margin-top:3px">Reason: ${r.reason}</div>`:''}`;
     if (r.status === 'pending') {
       primaryActions = `<button class="btn btn-green btn-xs" onclick="rqAct('profile','${r.id}','approved')">✓ Approve &amp; Apply</button>
                         <button class="btn btn-red btn-xs"   onclick="rqAct('profile','${r.id}','rejected')">✕ Reject</button>`;
@@ -5928,6 +5934,27 @@ function rqOpenLetter(template, empId, purpose, addressee){
 }
 
 // ── "Make a Request" widget on the staff own profile ──
+// Holds the most recent NID upload so we can submit its key with the request.
+let _mkStagedDoc = null;
+
+async function _mkNidFileChange(input){
+  const file = input.files?.[0]; if(!file) { _mkStagedDoc = null; return; }
+  const status = document.getElementById('mk_nidFileStatus');
+  if(status) status.textContent = 'Uploading…';
+  try {
+    const base64 = await new Promise((res,rej)=>{
+      const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej; r.readAsDataURL(file);
+    });
+    const up = await api('POST','/files/upload',{
+      data: base64, mimeType: file.type || 'application/octet-stream',
+      folder: 'documents', docType: 'nid'
+    });
+    if(!up?.key){ if(status) status.textContent = 'Upload failed'; _mkStagedDoc = null; return; }
+    _mkStagedDoc = { name: file.name, key: up.key, mimeType: file.type || 'application/octet-stream' };
+    if(status) status.innerHTML = `<span style="color:var(--green);font-weight:600">✓ ${file.name} ready</span>`;
+  } catch(e){ if(status) status.textContent = 'Upload failed'; _mkStagedDoc = null; }
+}
+
 function openMakeRequest(){
   document.getElementById('mkReqModal').classList.add('open');
   _mkSwitch('profile');
@@ -5944,10 +5971,21 @@ function _mkSwitch(kind){
       <div class="field"><label class="field-label">Phone</label><input type="text" id="mk_phone" placeholder="+960 7xx xxxx"></div>
       <div class="field"><label class="field-label">Email</label><input type="email" id="mk_email" placeholder="you@email.com"></div>
       <div class="field"><label class="field-label">Address</label><input type="text" id="mk_address" placeholder="Current address"></div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:14px 0 6px">National ID Renewal</div>
+      <div class="field"><label class="field-label">New NID Number</label><input type="text" id="mk_nidNo" placeholder="A123456"></div>
+      <div class="field"><label class="field-label">New NID Expiry</label><input type="date" id="mk_nidExpiry"></div>
+      <div class="field">
+        <label class="field-label">New NID Card (scan or photo)</label>
+        <input type="file" id="mk_nidFile" accept="image/*,application/pdf" onchange="_mkNidFileChange(this)" style="display:block;width:100%;padding:8px;border:1px dashed var(--border2);border-radius:6px;background:var(--surface);font-size:12px">
+        <div id="mk_nidFileStatus" style="font-size:11.5px;color:var(--text3);margin-top:4px"></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:14px 0 6px">Emergency Contact</div>
       <div class="field"><label class="field-label">Emergency Contact Name</label><input type="text" id="mk_emgName"></div>
       <div class="field"><label class="field-label">Emergency Phone</label><input type="text" id="mk_emgPhone"></div>
       <div class="field"><label class="field-label">Relationship</label><input type="text" id="mk_emgRelation" placeholder="e.g. Spouse, Parent"></div>
       <div class="field"><label class="field-label">Reason (optional)</label><textarea id="mk_reason" rows="2" placeholder="Any context for HR"></textarea></div>`;
+    // Reset any prior staged upload when re-opening the form
+    _mkStagedDoc = null;
   } else if (kind === 'letter') {
     body.innerHTML = `
       <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Request a staff letter. HR will prepare and notify you when ready.</div>
@@ -5977,9 +6015,10 @@ async function submitMakeRequest(){
   const kind = document.getElementById('mkReqBody').dataset.kind;
   let payload = {}, path = '';
   if (kind === 'profile') {
-    const fields = ['phone','email','address','emgName','emgPhone','emgRelation'];
+    const fields = ['phone','email','address','emgName','emgPhone','emgRelation','nidNo','nidExpiry'];
     const changes = {};
     fields.forEach(f => { const v = document.getElementById('mk_'+f)?.value?.trim(); if (v) changes[f] = v; });
+    if (_mkStagedDoc && _mkStagedDoc.key) changes.nidDoc = _mkStagedDoc;
     if (!Object.keys(changes).length) { toast('Enter at least one change'); return; }
     payload = { requestedChanges: changes, reason: document.getElementById('mk_reason')?.value || null };
     path = '/hr/profile-requests';
@@ -6005,8 +6044,17 @@ async function submitMakeRequest(){
   }
   const res = await api('POST', path, payload);
   if (!res) return;
+  _mkStagedDoc = null;
   closeMakeRequest();
   toast('Request submitted. HR will review.');
+}
+
+// Approver helper: open the signed URL for a staged NID attachment.
+async function _rqOpenAttachment(key){
+  if(!key) return;
+  const r = await api('GET','/files/signed-url?key='+encodeURIComponent(key));
+  if(r?.url) window.open(r.url,'_blank','noopener');
+  else toast('Could not open attachment');
 }
 
 // ══ REPORTS & ANALYTICS ═══════════════════════════════

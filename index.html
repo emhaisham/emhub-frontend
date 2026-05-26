@@ -247,16 +247,15 @@ input,select,textarea{font-size:16px !important}
   #mod-launcher .module-grid{grid-template-columns:repeat(2,1fr)!important}
 }
 @media(max-width:640px){
-  /* Today panel collapses to single column on phones; header stacks. */
-  .launcher-today{grid-template-columns:1fr;padding:18px}
-  .launcher-today .today-section{grid-column:1!important;grid-row:auto!important;margin-bottom:14px}
+  /* On phones the whole Today aside is removed. The information it carries
+     (date, next event, week strip, on-leave count) duplicates what's already
+     reachable elsewhere on a small screen: today's date is in the OS chrome,
+     the next event is one tap away in Events, on-leave counts in HR. Reducing
+     mobile chrome here gives the Inbox + Modules more vertical room — that's
+     the part users actually act on. */
+  .launcher-aside{display:none}
   .launcher-header{flex-direction:column;align-items:flex-start;gap:16px}
   .launcher-logo{margin-left:0}
-  /* The 7-day mini-calendar adds noise on small screens (each cell becomes
-     too tight to read at a glance). Hide just the "This Week" section on
-     phones; keep date + next event + on-leave count, which carry the
-     same information more efficiently. */
-  .today-section-week{display:none}
 }
 @media(max-width:420px){
   /* Very small phones: stack modules single-col so each card stays readable */
@@ -1065,8 +1064,14 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
    producing the uneven-Wed/Sat layout. min-width:0 + overflow:hidden on
    .cal-day are belt-and-braces for the same reason. */
 .cal-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-left:1px solid var(--border);border-top:1px solid var(--border)}
-.cal-day-header{padding:8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);text-align:center;background:var(--surface);border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-width:0;overflow:hidden}
-.cal-day{min-height:120px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;cursor:pointer;transition:background .1s;position:relative;vertical-align:top;min-width:0;overflow:hidden}
+.cal-day-header{padding:8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);text-align:center;background:var(--surface);border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-width:0}
+/* min-width:0 lets the cell shrink below its content's natural width (combined
+   with minmax(0,1fr) on the grid). NO overflow:hidden here — multi-day event
+   bands are absolutely positioned with width:calc(spanCols*100% ...) so they
+   intentionally extend beyond a single cell. Clipping them would break the
+   "band continues across the week" visualisation. The .cal-event-chip has
+   its own overflow:hidden + text-overflow:ellipsis for in-cell text. */
+.cal-day{min-height:120px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;cursor:pointer;transition:background .1s;position:relative;vertical-align:top;min-width:0}
 .cal-day:hover{background:#fafbfc}
 .cal-day.today{background:transparent}
 .cal-day.other-month{background:var(--surface);opacity:.55}
@@ -1270,26 +1275,50 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
     color: var(--text3);
     margin-bottom: 3px;
   }
-  /* Make the bare date / time inputs full-width and consistent height inside
-     their stacked containers */
+  /* Workday-row inputs: stronger border and better touch height on phones.
+     Default border-2 is a faint warm-cream that becomes invisible on white
+     under bright light, especially on iOS. Bump to var(--text3) so the
+     input field reads as a distinct element even when empty. */
   .workday-row input[type="date"],
-  .workday-row input[type="time"] {
+  .workday-row input[type="time"],
+  .workday-row input[type="number"] {
     width: 100% !important;
     min-width: 0;
     box-sizing: border-box;
+    padding: 10px 12px !important;
+    border-color: var(--border2) !important;
+    background: var(--white);
+    color: var(--text);
+    min-height: 42px;
   }
-  /* The Date+Time pairs sit in a 1fr 1fr inner grid which gets too tight
-     on narrow phones (iPhone SE ≈ 148px per cell — below the minimum a
-     native date input can render without truncation). Drop them to a
-     single column on small viewports so each input takes full row width. */
+  /* Stack Date+Time pairs vertically on phones — iPhone SE (320px) splits a
+     1fr 1fr grid into ~148px cells which is below the minimum a native
+     date input can render without truncation. Each input gets its own row,
+     full width, matching the labels above them. */
   .workday-row > div[style*="grid-template-columns:1fr 1fr"] {
     grid-template-columns: 1fr !important;
-    gap: 6px !important;
+    gap: 8px !important;
   }
-  /* Tighten the workday-row outer padding so date inputs don't lose width
-     to chrome on narrow phones. */
+  /* Tighten workday-row outer padding so inputs don't lose width to chrome. */
   .workday-row {
-    padding: 10px !important;
+    padding: 14px !important;
+    gap: 10px !important;
+  }
+  /* Mobile labels above inputs — slightly larger and darker than desktop so
+     the form scans cleanly even when inputs are empty. */
+  .workday-row .wday-mlabel {
+    font-size: 10.5px !important;
+    color: var(--text2) !important;
+    font-weight: 700 !important;
+  }
+  /* Hours / Rate values: when empty, the placeholder em-dash was a tiny
+     misaligned mark. Set a minimum height + better vertical centring. */
+  .workday-row [id^="dhours_"],
+  .workday-row [id^="drate_"] {
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    font-size: 14px !important;
   }
 }
 /* Default: hide mobile-only labels on desktop (the workday-row table has its

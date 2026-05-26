@@ -1972,7 +1972,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
             <div class="page" id="hr-page-loans">
               <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between">
                 <div><div class="page-title">Staff Loans</div><div class="page-sub">Approve loans and track monthly deductions</div></div>
-                <button class="btn btn-primary" onclick="guardAction('hr_loans', ()=>openAddLoan())">＋ New Loan</button>
+                <button class="btn btn-primary" id="loansHdrCta" onclick="loanHdrCta()">＋ New Loan</button>
               </div>
               <div class="stat-row stat-row-3">
                 <div class="stat-card"><div class="stat-top"><span class="stat-label">Total Loaned</span><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span></div><div class="stat-val blue" id="lnStatTotal">MVR 0</div></div>
@@ -7501,6 +7501,12 @@ function renderProfile(empId){
   }
   const empLoans=hrLoans.filter(l=>String(l.empId)===String(empId));
   const empPRs=hrPayrolls.filter(p=>String(p.empId)===String(empId)).sort((a,b)=>b.month>a.month?1:-1).slice(0,6);
+  // Self-profile detection: the linked-user check is canonical; name-match is a safety net
+  // for accounts that were created before linking became mandatory.
+  const _isOwnProfile = !!currentUser?.id && (
+    String(emp.linkedUserId||'') === String(currentUser.id) ||
+    (!emp.linkedUserId && emp.name && currentUser?.name && emp.name.toLowerCase() === String(currentUser.name).toLowerCase())
+  );
   document.getElementById('hrProfileContent').innerHTML=`
     <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between">
       <div style="display:flex;align-items:center;gap:14px">
@@ -7509,7 +7515,7 @@ function renderProfile(empId){
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost btn-sm" onclick="hrNav('employees')">← Back</button>
-        ${(String(emp.linkedUserId||'') === String(currentUser?.id||'') && currentUser?.id) ? `<button class="btn btn-primary btn-sm" onclick="openMakeRequest()">Make a Request</button>` : ''}
+        ${_isOwnProfile ? `<button class="btn btn-primary btn-sm" onclick="openMakeRequest()">Make a Request</button>` : ''}
         <button class="btn btn-amber btn-sm" onclick="guardAction('hr_edit_emp',()=>hrNav('add-employee','${emp.id}'))">Edit</button>
       </div>
     </div>
@@ -7526,6 +7532,19 @@ function renderProfile(empId){
       <button class="profile-tab ${profileActiveTab==='emergency'?'active':''}" onclick="profileActiveTab='emergency';renderProfile('${emp.id}')">Emergency Contact</button>
     </div>
     <div class="profile-panel ${profileActiveTab==='info'?'active':''}" id="ptab-info">
+      ${_isOwnProfile ? `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--accent-bg);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
+          <div style="min-width:0">
+            <div style="font-size:13.5px;font-weight:600;color:var(--text)">Need to update something?</div>
+            <div style="font-size:11.5px;color:var(--text3)">Submit a profile change, letter, or loan request &mdash; HR will review.</div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openMakeRequest();setTimeout(()=>_mkSwitch('profile'),30)" style="white-space:nowrap;flex-shrink:0">Request Update</button>
+      </div>` : ''}
       <div class="info-grid">
         <div class="info-item"><div class="info-label">Employee ID</div><div class="info-val">${emp.empId||'—'}</div></div>
         <div class="info-item"><div class="info-label">Date Joined</div><div class="info-val">${fmtDate(emp.joined)}</div></div>
@@ -7593,7 +7612,7 @@ function renderProfile(empId){
       <div id="trainingTabBody"></div>
     </div>
     <div class="profile-panel ${profileActiveTab==='loans'?'active':''}" id="ptab-loans">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm" onclick="guardAction('hr_loans', ()=>openAddLoan('${emp.id}'))">＋ New Loan</button></div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">${hasPerm('hr_self_request_approve')?`<button class="btn btn-primary btn-sm" onclick="openAddLoan('${emp.id}')">＋ New Loan</button>`:''}</div>
       ${empLoans.length?empLoans.map(l=>renderLoanCard(l,emp)).join(''):'<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v1a3 3 0 006 0V7m0 1a3 3 0 006 0V7m0 1a3 3 0 006 0V7L12 2 3 7z"/></svg></div><div class="empty-title">No loans</div></div>'}
     </div>
     <div class="profile-panel ${profileActiveTab==='disciplinary'?'active':''}" id="ptab-disciplinary">
@@ -8056,19 +8075,44 @@ function openEditLoan(loanId){
   _openLoanModal(loan.empId,loan);
 }
 
+// Header CTA dispatcher: approvers create directly, everyone else submits a request.
+function loanHdrCta(){
+  if(hasPerm('hr_self_request_approve')){ openAddLoan(); return; }
+  if(typeof openMakeRequest === 'function'){
+    openMakeRequest();
+    setTimeout(()=>{ if(typeof _mkSwitch==='function') _mkSwitch('loan'); }, 30);
+    return;
+  }
+  toast('You don\'t have permission to approve loans');
+}
+
 function _openLoanModal(preEmpId,loan){
-  const empOptions=hrEmployees.filter(e=>e.status!=='inactive').map(e=>`<option value="${e.id}" ${String(e.id)===String(preEmpId)?'selected':''}>${e.name} (${e.dept||'—'})</option>`).join('');
-  document.getElementById('userModalTitle').textContent=loan?'Edit Loan':'New Loan';
+  const canApprove = hasPerm('hr_self_request_approve');
+  // Non-approvers may only act on their own linked employee record.
+  let empOptions;
+  if(canApprove){
+    empOptions = hrEmployees.filter(e=>e.status!=='inactive')
+      .map(e=>`<option value="${e.id}" ${String(e.id)===String(preEmpId)?'selected':''}>${e.name} (${e.dept||'—'})</option>`).join('');
+  } else {
+    const me = hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||''));
+    if(!me){ toast('Your account isn\'t linked to an employee record'); return; }
+    empOptions = `<option value="${me.id}" selected>${me.name} (${me.dept||'—'})</option>`;
+  }
+  const titleTxt = loan ? 'Edit Loan' : (canApprove ? 'New Loan' : 'Request Loan');
+  const btnTxt   = loan ? 'Save Changes' : (canApprove ? 'Approve Loan' : 'Submit Request');
+  const btnTone  = canApprove ? 'btn-primary' : 'btn-green';
+  document.getElementById('userModalTitle').textContent=titleTxt;
   document.getElementById('userModalForm').innerHTML=`
-    <div class="field"><label class="field-label">Employee *</label><select id="ln_emp">${empOptions}</select></div>
+    ${!canApprove?`<div style="font-size:12px;color:var(--text3);margin:-2px 0 12px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px">This will be submitted to HR for approval. Once approved, the loan is recorded against your name.</div>`:''}
+    <div class="field"><label class="field-label">Employee *</label><select id="ln_emp" ${!canApprove?'disabled':''}>${empOptions}</select></div>
     <div class="field"><label class="field-label">Loan Amount (MVR) *</label><input type="number" id="ln_amt" placeholder="10000" value="${loan?.amount||''}" oninput="previewLoanSchedule()"></div>
-    <div class="field"><label class="field-label">Monthly Deduction (MVR) *</label><input type="number" id="ln_monthly" placeholder="1000" value="${loan?.monthlyAmount||''}" oninput="previewLoanSchedule()"></div>
-    <div class="field"><label class="field-label">Starting Month *</label><input type="month" id="ln_start" value="${loan?.start||''}" oninput="previewLoanSchedule()"></div>
-    <div class="field"><label class="field-label">Notes</label><textarea id="ln_notes" rows="2" style="resize:vertical">${loan?.notes||''}</textarea></div>
+    <div class="field"><label class="field-label">Monthly Deduction (MVR) ${canApprove?'*':'(optional)'}</label><input type="number" id="ln_monthly" placeholder="1000" value="${loan?.monthlyAmount||''}" oninput="previewLoanSchedule()"></div>
+    ${canApprove?`<div class="field"><label class="field-label">Starting Month *</label><input type="month" id="ln_start" value="${loan?.start||''}" oninput="previewLoanSchedule()"></div>`:''}
+    <div class="field"><label class="field-label">${canApprove?'Notes':'Reason *'}</label><textarea id="ln_notes" rows="2" style="resize:vertical" placeholder="${canApprove?'':'Why do you need this?'}">${loan?.notes||''}</textarea></div>
     <div id="lnPreview" style="font-size:12.5px;color:var(--accent);font-weight:600;min-height:18px"></div>
     <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:8px;border-top:1px solid var(--border)">
       <button class="btn btn-ghost btn-sm" onclick="closeUserModal()">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="saveLoan()">${loan?'Save Changes':'Approve Loan'}</button>
+      <button class="btn ${btnTone} btn-sm" onclick="saveLoan()">${btnTxt}</button>
     </div>`;
   if(loan) setTimeout(previewLoanSchedule,50);
   document.getElementById('userModal').classList.add('open');
@@ -8089,6 +8133,20 @@ async function saveLoan(){
   const monthly=parseFloat(document.getElementById('ln_monthly')?.value);
   const start=document.getElementById('ln_start')?.value;
   const notes=document.getElementById('ln_notes')?.value.trim();
+
+  // Non-approvers go through the request queue, not direct loan creation.
+  const canApprove = hasPerm('hr_self_request_approve');
+  if(!editingLoanId && !canApprove){
+    if(!amount||amount<=0) return toast('Enter an amount');
+    if(!notes) return toast('Reason required');
+    const months = monthly>0 ? Math.max(1, Math.ceil(amount/monthly)) : null;
+    const res = await api('POST','/hr/loan-requests',{ amount, currency:'MVR', months, reason: notes });
+    if(!res) return;
+    closeUserModal();
+    toast('Loan request submitted. HR will review.');
+    return;
+  }
+
   if(!empId||!amount||!monthly||!start) return toast('Fill all required fields');
 
   const schedule=[];let[y,m]=start.split('-').map(Number);let rem=amount;
@@ -8123,6 +8181,9 @@ async function saveLoan(){
 
 function renderLoans(){
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
+  // Header CTA label tracks approval right (request flow vs. direct creation)
+  const hdrCta=document.getElementById('loansHdrCta');
+  if(hdrCta) hdrCta.textContent = hasPerm('hr_self_request_approve') ? '＋ New Loan' : '＋ Request Loan';
   // Permission scope: admin or hr_loans_edit sees all; view-only sees own
   const lnRole=appRoles.find(r=>String(r.id)===String(currentUser?.roleId));
   const lnPerms=lnRole?.perms||currentUser?.rolePerms||{};

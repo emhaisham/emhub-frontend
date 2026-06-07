@@ -1958,6 +1958,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                   <button class="btn btn-ghost btn-sm" id="prExportBtn" style="margin-top:20px" onclick="guardAction('hr_payroll',exportPayrollSheet)">Export Finance Sheet</button>
                 </div>
               </div>
+              <div id="prScopeBanner" style="display:none"></div>
               <div id="payrollList"></div>
             </div>
 
@@ -5446,6 +5447,12 @@ function renderEmpForm(empId){
       <div class="field"><label class="field-label">Payment Method</label><select id="ef_paymethod"><option value="bank" ${(!emp||emp.payMethod==='bank')?'selected':''}>Bank Transfer</option><option value="cash" ${emp?.payMethod==='cash'?'selected':''}>Cash</option></select></div>
       <div class="field"><label class="field-label">Pension Eligible</label><select id="ef_pension"><option value="yes" ${(!emp||emp.pensionEligible!=='no')?'selected':''}>Yes</option><option value="no" ${emp?.pensionEligible==='no'?'selected':''}>No</option></select></div>
     </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:8px;margin:6px 0 14px">
+      <input type="checkbox" id="ef_salconfidential" ${emp?.salaryConfidential?'checked':''} style="width:16px;height:16px;accent-color:var(--amber);margin:0;cursor:pointer">
+      <label for="ef_salconfidential" style="font-size:13px;color:var(--text2);cursor:pointer;margin:0;flex:1">
+        <strong>Confidential Salary</strong> &mdash; hide salary, allowances and bank details from users without the &ldquo;Salary &mdash; View Confidential&rdquo; permission.
+      </label>
+    </div>
 
     <div class="form-sub-hdr">Allowances</div>
     <div id="ef_allowances_list" style="margin-bottom:8px"></div>
@@ -5695,6 +5702,7 @@ function saveEmployee(){
     empId: document.getElementById('ef_empid')?.value.trim()||nextEmpId(),
     company: document.getElementById('ef_company')?.value.trim()||null,
     visaCompany: document.getElementById('ef_visacompany')?.value.trim()||null,
+    salaryConfidential: document.getElementById('ef_salconfidential')?.checked===true,
     dept: document.getElementById('ef_dept')?.value,
     title: document.getElementById('ef_title')?.value.trim(),
     type, joined: document.getElementById('ef_joined')?.value,
@@ -5788,7 +5796,8 @@ function saveEmployee(){
       .map(([k,v]) => ({type:k, name:v.name, key:v.key, mimeType:v.mimeType})),
     assetRecords: emp.assetRecords||[],
     linkedUserId: emp.linkedUserId||null,
-    company: emp.company||null, visaCompany: emp.visaCompany||null
+    company: emp.company||null, visaCompany: emp.visaCompany||null,
+    salaryConfidential: emp.salaryConfidential===true
   };
   (async()=>{
     let res;
@@ -7560,6 +7569,7 @@ function renderEmployees(){
             ${emp.empId?`<span class="emp-row-empcode">${emp.empId}</span>`:''}
             <span class="emp-type-chip ${emp.type==='expat'?'expat':'local'}">${emp.type==='expat'?'Expat':'Local'}</span>
             ${statusBadge}
+            ${emp.salaryConfidential?`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;background:var(--amber-bg);color:var(--amber);border-radius:4px;padding:1px 5px;font-weight:700" title="Salary is confidential — hidden from users without the permission"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Confidential</span>`:''}
           </div>
           <div class="emp-row-detail">${emp.title||emp.designation||'—'} <span style="color:var(--border2);margin:0 6px">·</span> ${emp.dept||'—'}${emp.joined?` <span style="color:var(--border2);margin:0 6px">·</span> joined ${fmtDate(emp.joined)}`:''}</div>
         </div>
@@ -7713,6 +7723,12 @@ function renderProfile(empId){
     </div>
     <div class="profile-panel ${profileActiveTab==='docs'?'active':''}" id="ptab-docs">${renderDocsList(emp)}</div>
     <div class="profile-panel ${profileActiveTab==='payroll'?'active':''}" id="ptab-payroll">
+      ${emp.salaryRestricted ? `
+        <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:8px;margin-bottom:16px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          <div style="font-size:13px;color:var(--text2)"><strong>Salary details are restricted.</strong> This employee's salary and bank information are not visible to you.</div>
+        </div>
+      ` : `
       <div class="info-grid" style="margin-bottom:16px">
         <div class="info-item"><div class="info-label">Basic Salary</div><div class="info-val" style="color:var(--green);font-weight:600">${emp.salaryCurrency==='USD'?'USD '+Number(emp.basicSalary||0).toLocaleString():fmtMVR(emp.basicSalary)}</div></div>
         ${(()=>{
@@ -7742,6 +7758,7 @@ function renderProfile(empId){
       </div>
       <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Payslips</div>
       ${empPRs.length?empPRs.map(pr=>renderPayslipCard(pr,emp,false)).join(''):'<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="empty-title">No payslips yet</div></div>'}
+      `}
     </div>
     <div class="profile-panel ${profileActiveTab==='salary-history'?'active':''}" id="ptab-salary-history">
       <div id="salaryHistoryBody"></div>
@@ -7760,12 +7777,19 @@ function renderProfile(empId){
       ${renderAssetsPanel(emp)}
     </div>
     <div class="profile-panel ${profileActiveTab==='bank'?'active':''}" id="ptab-bank">
+      ${emp.salaryRestricted ? `
+        <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:8px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          <div style="font-size:13px;color:var(--text2)"><strong>Bank details are restricted.</strong> This employee's banking information is not visible to you.</div>
+        </div>
+      ` : `
       <div class="info-grid">
         <div class="info-item"><div class="info-label">Payment Method</div><div class="info-val">${emp.payMethod==='cash'?'Cash':emp.payMethod==='cheque'?'Cheque':'Bank Transfer'}</div></div>
         <div class="info-item"><div class="info-label">Bank Name</div><div class="info-val">${emp.bankName||'—'}</div></div>
         <div class="info-item"><div class="info-label">Bank Account Name</div><div class="info-val">${emp.bankAcctName||'—'}</div></div>
         <div class="info-item"><div class="info-label">Bank Account No.</div><div class="info-val">${emp.bankAcct||'—'}</div></div>
       </div>
+      `}
     </div>
     <div class="profile-panel ${profileActiveTab==='emergency'?'active':''}" id="ptab-emergency">
       <div class="info-grid">
@@ -7898,11 +7922,27 @@ function renderPayroll(){
   const canEdit=isAdmin||prPerms['hr_payroll_edit']===true;
   const canView=isAdmin||canEdit||prPerms['hr_payroll_view']===true;
 
-  // View-only users see only their own payslips and own-only stats;
-  // admin and hr_payroll_edit see all
-  if(!isAdmin&&!canEdit){
+  // View-only users see only their own payslips. The backend ALSO enforces
+  // this filter (returns only own records unless user has hr_payroll_view_all
+  // or hr_payroll_edit) — the client-side filter is a defensive layer.
+  const canViewAll = isAdmin || canEdit || prPerms['hr_payroll_view_all']===true || prPerms['hr_payroll_view_all_view']===true;
+  if(!canViewAll){
     const myEmp=hrEmployees.find(e=>String(e.linkedUserId||'')===String(currentUser?.id||'')||(!e.linkedUserId&&e.name===currentUser?.name));
     prs=myEmp?prs.filter(p=>String(p.empId)===String(myEmp.id)):[];
+  }
+  // Surface the scope so the user knows why they're not seeing the whole company
+  const banner = document.getElementById('prScopeBanner');
+  if(banner){
+    if(!canViewAll){
+      banner.style.display='block';
+      banner.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:14px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div style="font-size:12.5px;color:var(--text2)">Showing only <strong>your own</strong> payroll. Ask your admin for <code style="background:var(--white);padding:1px 5px;border-radius:4px;font-size:11.5px">Payroll — View All Records</code> to see the full list.</div>
+      </div>`;
+    } else {
+      banner.style.display='none';
+      banner.innerHTML='';
+    }
   }
 
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
@@ -16675,6 +16715,8 @@ const PERM_TREE = [
     { label:'Disciplinary Records', key:'hr_disc', actions:['view','edit'] },
     { label:'Staff Assets', key:'hr_assets', actions:['view','edit'] },
     { label:'Monthly Payroll', key:'hr_payroll', actions:['view','edit'] },
+    { label:'Payroll — View All Records', key:'hr_payroll_view_all', actions:['view'] },
+    { label:'Salary — View Confidential', key:'hr_view_confidential_salary', actions:['view'] },
     { label:'Loans', key:'hr_loans', actions:['view','edit'] },
     { label:'Pension', key:'hr_pension', actions:['view','edit'] },
     { label:'Propose Salary Revision', key:'hr_salary_revise', actions:['edit'] },

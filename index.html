@@ -11802,7 +11802,8 @@ function wtFilterSearch(raw){
       const serialMatch = (u.serial||'').toLowerCase().includes(q) || (u.itemSerial||'').toLowerCase().includes(q);
       if(!serialMatch && !itemMatch) return;
       if(u.discarded) return;
-      const isOut = !!u.checkout;
+      // "Out" = has a checkout payload AND no checkedInAt marker on it.
+      const isOut = !!(u.checkout && !u.checkout.checkedInAt);
       const wrongSource = fromId && String(u.warehouseId||'')!==String(fromId);
       const already = stagedIds.has(String(u.id));
       const wh = (invWarehouses||[]).find(w=>String(w.id)===String(u.warehouseId));
@@ -11865,7 +11866,9 @@ function wtLookup(){
   let added = 0, skipped = [];
   matches.forEach(({item, unit})=>{
     if(unit.discarded){ skipped.push(unit.serial+' (discarded)'); return; }
-    if(unit.checkout){ skipped.push(unit.serial+' (checked out)'); return; }
+    // Event check-in sets checkout.checkedInAt instead of nulling the field,
+    // so "actively out" = has checkout AND no checkedInAt timestamp.
+    if(unit.checkout && !unit.checkout.checkedInAt){ skipped.push(unit.serial+' (checked out)'); return; }
     if(fromId && String(unit.warehouseId||'')!==String(fromId)){ skipped.push(unit.serial+' (not in source)'); return; }
     if(_wtStaged.some(s=>String(s.unitId)===String(unit.id))) return; // already staged
     _wtStaged.push({

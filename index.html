@@ -4913,6 +4913,43 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('confirmOkBtn').onclick=()=>{if(_confirmCallback)_confirmCallback();closeConfirm()};
 });
 
+// ══ GLOBAL DATE DEFAULT — today on any blank <input type="date"> ═════════════
+// Every empty date input the app renders gets today's ISO date as its starting
+// value. Already-filled inputs (editing an existing record) are left alone, and
+// the user can clear or change any field manually. A MutationObserver picks up
+// fields added later by innerHTML / append in form renders.
+(function setupDateDefaulter(){
+  const today = () => new Date().toISOString().slice(0,10);
+  function fillDates(scope){
+    if(!scope || !scope.querySelectorAll) return;
+    scope.querySelectorAll('input[type="date"]').forEach(inp => {
+      // Skip if already has a value or if explicitly opted out via data-no-default
+      if(inp.value) return;
+      if(inp.dataset.noDefault === 'true') return;
+      inp.value = today();
+    });
+  }
+  // Initial pass after DOM is ready
+  document.addEventListener('DOMContentLoaded', () => fillDates(document.body));
+  // Watch for nodes added by form re-renders
+  const obs = new MutationObserver(muts => {
+    muts.forEach(m => {
+      m.addedNodes.forEach(node => {
+        if(node.nodeType !== 1) return; // ELEMENT_NODE only
+        if(node.matches?.('input[type="date"]')) {
+          if(!node.value && node.dataset.noDefault !== 'true') node.value = today();
+        }
+        // Also walk children — innerHTML replacement adds a parent whose
+        // descendants we still need to cover.
+        if(node.querySelectorAll) fillDates(node);
+      });
+    });
+  });
+  // Defer attaching until body exists
+  if(document.body){ obs.observe(document.body, {childList:true, subtree:true}); }
+  else { document.addEventListener('DOMContentLoaded', () => obs.observe(document.body, {childList:true, subtree:true})); }
+})();
+
 // ══ MARK PAID DIALOG ═════════════════════════════════
 // Collects a Payment Date + Paid By (text) before recording payment.
 // Used by both Labor (groups) and Local Crew (per-staff or bulk).
@@ -5323,8 +5360,9 @@ function renderEmpForm(empId){
       </div>
       <div style="flex:1;min-width:240px">
         <div class="emp-form-grid">
-          <div class="field"><label class="field-label">Full Name *</label><input type="text" id="ef_name" value="${emp?.name||''}" placeholder="e.g. Aishath Niuma"></div>
+          <div class="field"><label class="field-label">Full Name *</label><input type="text" id="ef_name" value="${emp?.name||''}"></div>
           <div class="field"><label class="field-label">Employee ID</label><input type="text" id="ef_empid" value="${autoId}" placeholder="Auto-generated"></div>
+          <div class="field"><label class="field-label">Company *</label><input type="text" id="ef_company" value="${emp?.company||''}" placeholder="Which group company"></div>
           <div class="field"><label class="field-label">Department *</label><select id="ef_dept">${DEPTS.map(d=>`<option value="${d}" ${emp?.dept===d?'selected':''}>${d}</option>`).join('')}</select></div>
           <div class="field"><label class="field-label">Job Title</label><input type="text" id="ef_title" value="${emp?.title||''}" placeholder="e.g. Event Coordinator"></div>
         </div>
@@ -5370,7 +5408,7 @@ function renderEmpForm(empId){
             <option value="resignation" ${emp?.exitType==='resignation'?'selected':''}>Resignation</option>
             <option value="termination" ${emp?.exitType==='termination'?'selected':''}>Termination</option>
           </select></div>
-        <div class="field"><label class="field-label">Last Working Day</label><input type="date" id="ef_exitdate" value="${normalizeDate(emp?.exitDate)||''}"></div>
+        <div class="field"><label class="field-label">Last Working Day</label><input type="date" id="ef_exitdate" value="${normalizeDate(emp?.exitDate)||''}" data-no-default="true"></div>
         <div class="field emp-form-full"><label class="field-label">Reason / Notes</label><input type="text" id="ef_exitreason" value="${emp?.exitReason||''}" placeholder="e.g. Personal reasons / Contract breach"></div>
       </div>
     </div>
@@ -5433,9 +5471,10 @@ function renderEmpForm(empId){
       </div>
 
       <div class="form-sub-hdr">Work Permit</div>
-      <div class="emp-form-grid">
+      <div class="emp-form-grid-3">
         <div class="field"><label class="field-label">Work Permit Number *</label><input type="text" id="ef_wp" value="${emp?.workPermitNo||''}" placeholder="WP number"></div>
         <div class="field"><label class="field-label">Work Permit Expiry *</label><input type="date" id="ef_wpexp" value="${normalizeDate(emp?.workPermitExpiry)||''}"></div>
+        <div class="field"><label class="field-label">Visa Company</label><input type="text" id="ef_visacompany" value="${emp?.visaCompany||''}" placeholder="Sponsor on the work permit"></div>
       </div>
 
       <div class="form-sub-hdr">Insurance</div>
@@ -5461,7 +5500,7 @@ function renderEmpForm(empId){
       <div class="emp-form-grid-3">
         <div class="field"><label class="field-label">National ID Number *</label><input type="text" id="ef_nid" value="${emp?.nidNo||''}" placeholder="A-number"></div>
         <div class="field"><label class="field-label">NID Expiry</label><input type="date" id="ef_nidexp" value="${normalizeDate(emp?.nidExpiry)||''}"></div>
-        <div class="field"><label class="field-label">Date of Birth</label><input type="date" id="ef_dob" value="${normalizeDate(emp?.dob)||''}"></div>
+        <div class="field"><label class="field-label">Date of Birth</label><input type="date" id="ef_dob" value="${normalizeDate(emp?.dob)||''}" data-no-default="true"></div>
       </div>
     </div>`;
   const sec4 = sec(4, 'empSec-4',
@@ -5654,6 +5693,8 @@ function saveEmployee(){
   const emp = {
     id: editingEmpId||uid(), name,
     empId: document.getElementById('ef_empid')?.value.trim()||nextEmpId(),
+    company: document.getElementById('ef_company')?.value.trim()||null,
+    visaCompany: document.getElementById('ef_visacompany')?.value.trim()||null,
     dept: document.getElementById('ef_dept')?.value,
     title: document.getElementById('ef_title')?.value.trim(),
     type, joined: document.getElementById('ef_joined')?.value,
@@ -5746,7 +5787,8 @@ function saveEmployee(){
       .filter(([k,v]) => k !== 'photo' && v?.key)
       .map(([k,v]) => ({type:k, name:v.name, key:v.key, mimeType:v.mimeType})),
     assetRecords: emp.assetRecords||[],
-    linkedUserId: emp.linkedUserId||null
+    linkedUserId: emp.linkedUserId||null,
+    company: emp.company||null, visaCompany: emp.visaCompany||null
   };
   (async()=>{
     let res;
@@ -7641,6 +7683,7 @@ function renderProfile(empId){
       </div>` : ''}
       <div class="info-grid">
         <div class="info-item"><div class="info-label">Employee ID</div><div class="info-val">${emp.empId||'—'}</div></div>
+        <div class="info-item"><div class="info-label">Company</div><div class="info-val">${emp.company||'—'}</div></div>
         <div class="info-item"><div class="info-label">Date Joined</div><div class="info-val">${fmtDate(emp.joined)}</div></div>
         <div class="info-item"><div class="info-label">Employment Basis</div><div class="info-val">${emp.empBasis==='eventhire'?'Event Hire':emp.empBasis==='parttime'?'Part Time':emp.empBasis==='contract'?'Contract':'Full Time'}</div></div>
         <div class="info-item"><div class="info-label">Phone</div><div class="info-val">${emp.phone||'—'}</div></div>
@@ -7653,6 +7696,7 @@ function renderProfile(empId){
         <div class="info-item"><div class="info-label">Passport Expiry</div><div class="info-val">${fmtDate(emp.passportExpiry)||'—'}</div></div>
         <div class="info-item"><div class="info-label">Work Permit No.</div><div class="info-val">${emp.workPermitNo||'—'}</div></div>
         <div class="info-item"><div class="info-label">WP Expiry</div><div class="info-val" style="color:${days!==null&&days<=90?'var(--red)':'var(--text)'}">${fmtDate(emp.workPermitExpiry)}${days!==null?' ('+(days<0?'Expired':'In '+days+' days')+')':''}</div></div>
+        <div class="info-item"><div class="info-label">Visa Company</div><div class="info-val">${emp.visaCompany||'—'}</div></div>
         <div class="info-item"><div class="info-label">Insurance No.</div><div class="info-val">${emp.insuranceNo||'—'}</div></div>
         <div class="info-item"><div class="info-label">Insurance Agency</div><div class="info-val">${emp.insuranceAgency||'—'}</div></div>
         <div class="info-item"><div class="info-label">Insurance Expiry</div><div class="info-val" style="color:${(()=>{const d=daysUntil(emp.insuranceExpiry);return d!==null&&d<=90?'var(--red)':'var(--text)'})()}">${fmtDate(emp.insuranceExpiry)||'—'}</div></div>

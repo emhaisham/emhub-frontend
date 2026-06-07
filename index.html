@@ -12091,6 +12091,7 @@ function filterEquipItemSearch(itemId, q){
           results.push({
             itemName: item.name, model: item.model||'',
             serial: u.serial, itemSerial: u.itemSerial||'',
+            unitId: u.id, // captured inline so the click handler has it for sure
             location: fc ? fc.fcSerial+' — '+fc.name : wh ? wh.name : '',
             alreadyOut, availableQty: unitAvailQty, unitQty: u.qty||1, unitAvailQty,
             displayName: `${item.name} · ${u.serial}`
@@ -12098,14 +12099,6 @@ function filterEquipItemSearch(itemId, q){
         }
       });
     }
-  });
-  // Walk every result once, capture its unit id from the original units list so
-  // the row click can stamp _equipItems[i].unitId — the backend uses this to
-  // mark the inv_unit as out-on-loan.
-  results.forEach(r => {
-    const item = invItems.find(it => it.name === r.itemName);
-    const u = item?.units?.find(uu => uu.serial === r.serial);
-    r.unitId = u?.id || '';
   });
   const matches = results.slice(0,12);
   if(!matches.length){ dd.style.display='none'; return; }
@@ -12281,10 +12274,23 @@ async function saveEquipRequest(){
   _syncEquipItems(); // sync DOM values to _equipItems
   const validItems = _equipItems.filter(x=>x.name&&x.name.trim());
   if(!validItems.length) return toast('Add at least one item');
-  // Every row must be a real inventory unit so check-out state is tracked.
+  // Each row needs a unitId so checkout state can be tracked. If the click
+  // handler dropped the id (race with blur, manual edit, etc.), recover by
+  // pulling the serial out of the displayed name "Item · EM-####" and
+  // resolving against the inventory cache.
+  validItems.forEach(item => {
+    if(item.unitId) return;
+    const m = String(item.name||'').match(/\b(EM-\d+|FC-\d+|[A-Z]{2,}-\d+)\b/i);
+    if(!m) return;
+    const serial = m[1].toUpperCase();
+    for(const inv of (invItems||[])){
+      const u = (inv.units||[]).find(x => (x.serial||'').toUpperCase() === serial);
+      if(u){ item.unitId = u.id; break; }
+    }
+  });
   const untracked = validItems.filter(x => !x.unitId);
   if(untracked.length){
-    return toast('Pick each item from the dropdown so the unit can be tracked');
+    return toast('Pick each item from the dropdown — "'+untracked[0].name+'" needs to be selected as an inventory unit');
   }
 
   const itemSummary = validItems.length===1

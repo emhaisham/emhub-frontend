@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://fcm.googleapis.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.gstatic.com https://cdn.jsdelivr.net; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://api.emhub.eventmaldives.com.mv https://fcm.googleapis.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.gstatic.com https://cdn.jsdelivr.net; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -3366,8 +3366,9 @@ function timeDiff(sd,st,ed,et){
 function uid(){return Date.now()+Math.floor(Math.random()*9999)}
 
 // ══ API CONFIG ════════════════════════════════════════
-// Same-origin: served by nginx alongside the frontend, no CORS round-trips.
-const API_BASE = '/api';
+// Backend runs on its own DO droplet at api.* — different origin than the
+// App-Platform-hosted frontend, so CORS is enforced (configured in backend).
+const API_BASE = 'https://api.emhub.eventmaldives.com.mv/api';
 let _authToken = localStorage.getItem('em_auth_token') || null;
 
 // Register service worker early for asset caching (idempotent — initFirebase

@@ -2588,6 +2588,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="nav-item active" onclick="loanEquipNav('inventory')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></span>Inventory List</div>
               <div class="nav-item" onclick="loanEquipNav('categories')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>Categories</div>
               <div class="nav-item" onclick="loanEquipNav('warehouses')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></span>Warehouses</div>
+              <div class="nav-item" onclick="loanEquipNav('whtransfer')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></span>Warehouse Transfer</div>
               <div class="nav-item" onclick="loanEquipNav('flightcases')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/></svg></span>Flight Cases</div>
               <div class="nav-item" onclick="loanEquipNav('faultreports')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></span>Fault Reports</div>
               <div class="nav-lbl" style="margin-top:12px">Events</div>
@@ -2705,6 +2706,41 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                   <button class="btn btn-primary btn-sm" onclick="openAddWarehouse()">＋ Add Location</button>
                 </div>
                 <div class="card-body" id="invWhList"></div>
+              </div>
+            </div>
+
+            <!-- Warehouse Transfer -->
+            <div class="page" id="eq-page-whtransfer">
+              <div class="page-hdr">
+                <div class="page-title">Warehouse Transfer</div>
+                <div class="page-sub">Move units between storage locations. Scan or pick by EM-####, then send to the destination.</div>
+              </div>
+              <div class="card" style="margin-bottom:16px">
+                <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end">
+                  <div class="field" style="margin-bottom:0">
+                    <label class="field-label">From Warehouse</label>
+                    <select id="wtFromWh" onchange="wtRefreshStaged()"><option value="">All warehouses</option></select>
+                  </div>
+                  <div class="field" style="margin-bottom:0">
+                    <label class="field-label">To Warehouse *</label>
+                    <select id="wtToWh"><option value="">Pick destination…</option></select>
+                  </div>
+                  <div style="grid-column:1 / -1;display:flex;gap:8px;align-items:center;padding-top:4px">
+                    <input type="text" id="wtSearch" placeholder="EM-00001 or FC-00001" style="flex:1" onkeydown="if(event.key==='Enter')wtLookup()">
+                    <button class="btn btn-ghost btn-sm" onclick="_openQRScanner(wtHandleQR)">Scan</button>
+                    <button class="btn btn-primary btn-sm" onclick="wtLookup()">Add</button>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between">
+                  <div><div class="card-title">Staged units</div><div class="card-sub" id="wtStagedCount">0 units</div></div>
+                  <div style="display:flex;gap:8px">
+                    <button class="btn btn-ghost btn-sm" onclick="wtClearStaged()">Clear all</button>
+                    <button class="btn btn-primary btn-sm" onclick="wtConfirm()">Confirm Transfer</button>
+                  </div>
+                </div>
+                <div class="card-body" id="wtStagedList"><div style="color:var(--text3);font-size:13px">Add units above to stage a transfer.</div></div>
               </div>
             </div>
 
@@ -3599,7 +3635,7 @@ async function _loadAllData(){
   const perms = role?.perms || currentUser?.rolePerms || {};
   const has = key => isAdmin || perms[key+'_view']===true || perms[key+'_edit']===true || perms[key]===true;
   const anyHR  = isAdmin || has('hr_view_all')||has('hr_view_own')||has('hr_add_emp')||has('hr_edit_emp')||has('hr_payroll')||has('hr_leave')||has('hr_loans')||has('hr_pension')||has('hr_disc')||has('hr_assets')||has('hr_letters');
-  const anyInv = isAdmin || has('inv_list')||has('cat_page')||has('wh_page')||has('fc_page')||has('fault_page')||has('eel_page')||has('checkout_page')||has('checkin_page')||has('loan_dash')||has('loan_all');
+  const anyInv = isAdmin || has('inv_list')||has('cat_page')||has('wh_page')||has('wh_transfer')||has('fc_page')||has('fault_page')||has('eel_page')||has('checkout_page')||has('checkin_page')||has('loan_dash')||has('loan_all')||has('loan_transfer');
   const anyCal = isAdmin || has('events_view');
   const anyCrew= isAdmin || has('crewpay_view')||has('crewpay_edit')||has('crewpay_export');
   const needsUsers = isAdmin || has('hr_add_emp') || has('hr_edit_emp') || has('users_manage') || has('roles_manage');
@@ -3758,8 +3794,8 @@ function applyPerms(){
 
   // ── EQUIPMENT SIDEBAR nav items (by position) ─────────
   const eqNavItems=document.querySelectorAll('#mod-loans .nav-wrap .nav-item');
-  // positions: 0=Inventory, 1=Categories, 2=Warehouses, 3=FlightCases, 4=FaultReports, 5=EventLists, 6=ListTemplates, 7=Checkout, 8=Checkin, 9=Dashboard, 10=Requests, 11=Overdue
-  const eqMap=['inv_list','cat_page','wh_page','fc_page','fault_page','eel_page','eel_templates','checkout_page','checkin_page','loan_dash','loan_all','loan_overdue'];
+  // positions: 0=Inventory, 1=Categories, 2=Warehouses, 3=WhTransfer, 4=FlightCases, 5=FaultReports, 6=EventLists, 7=ListTemplates, 8=Checkout, 9=Checkin, 10=Transfer, 11=Dashboard, 12=Requests, 13=Overdue
+  const eqMap=['inv_list','cat_page','wh_page','wh_transfer','fc_page','fault_page','eel_page','eel_templates','checkout_page','checkin_page','loan_transfer','loan_dash','loan_all','loan_overdue'];
   eqMap.forEach((k,i)=>{ if(eqNavItems[i]) eqNavItems[i].style.display=p(k)?'':'none'; });
 
   // ── EQUIPMENT PAGE BUTTONS ────────────────────────────
@@ -11631,9 +11667,10 @@ function loanEquipNav(page){
   if(currentUser && currentUser.role!=='admin'){
     const pagePermMap={
       inventory:'inv_list', categories:'cat_page', warehouses:'wh_page',
+      whtransfer:'wh_transfer',
       flightcases:'fc_page', faultreports:'fault_page', eventlists:'eel_page',
       listtemplates:'eel_templates',
-      checkout:'checkout_page', checkin:'checkin_page',
+      checkout:'checkout_page', checkin:'checkin_page', transfer:'loan_transfer',
       dashboard:'loan_dash', requests:'loan_all', overdue:'loan_overdue'
     };
     const permKey=pagePermMap[page];
@@ -11647,8 +11684,8 @@ function loanEquipNav(page){
   document.querySelectorAll('#mod-loans .page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('#mod-loans .nav-item').forEach(n=>n.classList.remove('active'));
   const pg = document.getElementById('eq-page-'+page); if(pg) pg.classList.add('active');
-  // nav order: inventory(0), categories(1), warehouses(2), flightcases(3), faultreports(4), eventlists(5), listtemplates(6), checkout(7), checkin(8), dashboard(9), requests(10), overdue(11)
-  const navMap = {inventory:0, categories:1, warehouses:2, flightcases:3, faultreports:4, eventlists:5, listtemplates:6, checkout:7, checkin:8, transfer:9, dashboard:10, requests:11, overdue:12};
+  // nav order: inventory(0), categories(1), warehouses(2), whtransfer(3), flightcases(4), faultreports(5), eventlists(6), listtemplates(7), checkout(8), checkin(9), transfer(10), dashboard(11), requests(12), overdue(13)
+  const navMap = {inventory:0, categories:1, warehouses:2, whtransfer:3, flightcases:4, faultreports:5, eventlists:6, listtemplates:7, checkout:8, checkin:9, transfer:10, dashboard:11, requests:12, overdue:13};
   const items = document.querySelectorAll('#mod-loans .nav-item');
   if(items[navMap[page]] !== undefined) items[navMap[page]].classList.add('active');
   if(page==='dashboard'){
@@ -11666,6 +11703,7 @@ function loanEquipNav(page){
   else if(page==='inventory'){ populateInvCatFilter(); populateInvWhFilter(); renderInventory(); }
   else if(page==='categories'){ renderInvCats(); renderInvSubCats(); }
   else if(page==='warehouses'){ renderWarehouses(); }
+  else if(page==='whtransfer'){ renderWhTransferPage(); }
   else if(page==='flightcases'){
     api('GET','/inventory/flightcases').then(fc=>{ if(fc) invFlightCases=fc; renderFlightCases(); });
   }
@@ -11680,6 +11718,136 @@ function loanEquipNav(page){
   else if(page==='checkout'){ renderCheckOutPage(); }
   else if(page==='checkin'){ renderCheckInPage(); }
   else if(page==='transfer'){ renderTransferPage(); }
+}
+
+// ── WAREHOUSE TRANSFER ────────────────────────────────────────────────
+// Staged set persists for the session (lost on reload). Each entry holds the
+// unit reference plus a snapshot of its current warehouse so the user sees
+// what they're moving without re-querying.
+let _wtStaged = [];
+
+function renderWhTransferPage(){
+  const fromSel = document.getElementById('wtFromWh');
+  const toSel   = document.getElementById('wtToWh');
+  if(fromSel){
+    fromSel.innerHTML = '<option value="">All warehouses</option>' +
+      (invWarehouses||[]).map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+  }
+  if(toSel){
+    toSel.innerHTML = '<option value="">Pick destination…</option>' +
+      (invWarehouses||[]).map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+  }
+  _wtRenderStaged();
+}
+
+// Find the inventory unit a typed/scanned token refers to. Accepts a unit
+// serial (EM-####) or a flightcase serial (FC-####, expands to all its units).
+function _wtResolveToken(raw){
+  const token = String(raw||'').trim().toUpperCase();
+  if(!token) return [];
+  // Flight case → return all units inside
+  if(token.startsWith('FC')){
+    const fc = (invFlightCases||[]).find(f => (f.fcSerial||'').toUpperCase()===token);
+    if(!fc) return [];
+    const out = [];
+    (invItems||[]).forEach(item=>{
+      (item.units||[]).forEach(u=>{
+        if(String(u.fcId||u.flightCaseId||'')===String(fc.id)) out.push({item, unit:u});
+      });
+    });
+    return out;
+  }
+  // Plain unit serial
+  for(const item of (invItems||[])){
+    const u = (item.units||[]).find(x => (x.serial||'').toUpperCase()===token);
+    if(u) return [{item, unit:u}];
+  }
+  return [];
+}
+
+function wtLookup(){
+  const inp = document.getElementById('wtSearch'); if(!inp) return;
+  const matches = _wtResolveToken(inp.value);
+  if(!matches.length){ toast('No unit matched "'+inp.value+'"'); return; }
+  const fromId = document.getElementById('wtFromWh')?.value || '';
+  let added = 0, skipped = [];
+  matches.forEach(({item, unit})=>{
+    if(unit.discarded){ skipped.push(unit.serial+' (discarded)'); return; }
+    if(unit.checkout){ skipped.push(unit.serial+' (checked out)'); return; }
+    if(fromId && String(unit.warehouseId||'')!==String(fromId)){ skipped.push(unit.serial+' (not in source)'); return; }
+    if(_wtStaged.some(s=>String(s.unitId)===String(unit.id))) return; // already staged
+    _wtStaged.push({
+      unitId: unit.id, serial: unit.serial, itemName: item.name,
+      itemSerial: unit.itemSerial||'', currentWhId: unit.warehouseId||null
+    });
+    added++;
+  });
+  inp.value=''; inp.focus();
+  _wtRenderStaged();
+  if(added) toast(added+' unit'+(added>1?'s':'')+' staged');
+  if(skipped.length) toast('Skipped: '+skipped.join(', '));
+}
+function wtHandleQR(code){
+  const inp = document.getElementById('wtSearch'); if(inp){ inp.value = code; wtLookup(); }
+}
+function wtRemoveStaged(unitId){
+  _wtStaged = _wtStaged.filter(s=>String(s.unitId)!==String(unitId));
+  _wtRenderStaged();
+}
+function wtClearStaged(){ _wtStaged=[]; _wtRenderStaged(); }
+function wtRefreshStaged(){ /* keeps list but re-checks source filter on next add */ }
+
+function _wtRenderStaged(){
+  const list = document.getElementById('wtStagedList');
+  const cnt = document.getElementById('wtStagedCount');
+  if(cnt) cnt.textContent = _wtStaged.length+' unit'+(_wtStaged.length===1?'':'s');
+  if(!list) return;
+  if(!_wtStaged.length){
+    list.innerHTML = '<div style="color:var(--text3);font-size:13px">Add units above to stage a transfer.</div>';
+    return;
+  }
+  list.innerHTML = _wtStaged.map(s=>{
+    const wh = (invWarehouses||[]).find(w=>String(w.id)===String(s.currentWhId));
+    return `<div class="pay-group-row" style="cursor:default">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700;font-size:12.5px">${s.serial}</span>
+          <span class="pg-name">${s.itemName}</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--text3);margin-top:2px">${s.itemSerial?'S/N: '+s.itemSerial+' · ':''}Currently in: <strong>${wh?wh.name:'— unassigned —'}</strong></div>
+      </div>
+      <div class="pg-right">
+        <button class="btn btn-ghost btn-xs" onclick="wtRemoveStaged('${s.unitId}')">Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function wtConfirm(){
+  if(!_wtStaged.length) return toast('Add at least one unit');
+  const toWh = document.getElementById('wtToWh')?.value;
+  if(!toWh) return toast('Pick a destination warehouse');
+  const fromWh = document.getElementById('wtFromWh')?.value || null;
+  // If source is "All" but staged units span multiple warehouses, the backend
+  // still validates per-unit; we just need to not constrain fromWarehouseId.
+  openConfirm(
+    'Confirm transfer?',
+    `Move ${_wtStaged.length} unit${_wtStaged.length>1?'s':''} to ${(invWarehouses.find(w=>String(w.id)===String(toWh))||{}).name||'destination'}.`,
+    'Transfer',
+    async ()=>{
+      const res = await api('POST','/inventory/transfer', {
+        fromWarehouseId: fromWh || undefined,
+        toWarehouseId: toWh,
+        unitIds: _wtStaged.map(s=>s.unitId)
+      });
+      if(!res || res.error){ toast(res?.error || 'Transfer failed'); return; }
+      // Refresh inventory cache so godown/location displays catch up
+      const items = await api('GET','/inventory/items');
+      if(items){ invItems=items; markFresh('invItems'); }
+      toast(`Moved ${res.moved} unit${res.moved!==1?'s':''} ✓`);
+      _wtStaged=[]; _wtRenderStaged();
+    }
+  );
 }
 
 function equipIsOverdue(req){
@@ -11836,28 +12004,36 @@ function filterEquipItemSearch(itemId, q){
       });
     }
   });
+  // Walk every result once, capture its unit id from the original units list so
+  // the row click can stamp _equipItems[i].unitId — the backend uses this to
+  // mark the inv_unit as out-on-loan.
+  results.forEach(r => {
+    const item = invItems.find(it => it.name === r.itemName);
+    const u = item?.units?.find(uu => uu.serial === r.serial);
+    r.unitId = u?.id || '';
+  });
   const matches = results.slice(0,12);
   if(!matches.length){ dd.style.display='none'; return; }
   dd.style.display='block';
   dd.innerHTML = matches.map(x=>`
-    <div onclick="${x.alreadyOut||x.unitAvailQty<=0?'':("selectEquipItem('"+itemId+"','"+x.displayName.replace(/'/g,"\\'")+"',"+x.unitAvailQty+",event)")}"
+    <div onclick="${x.alreadyOut||x.unitAvailQty<=0?'':("selectEquipItem('"+itemId+"','"+x.displayName.replace(/'/g,"\\'")+"','"+x.unitId+"',"+x.unitAvailQty+",event)")}"
       style="padding:7px 12px;cursor:${x.alreadyOut?'not-allowed':'pointer'};font-size:12px;border-bottom:1px solid var(--border);opacity:${x.alreadyOut?'0.5':'1'}"
       onmouseover="this.style.background='${x.alreadyOut?'':'var(--surface)'}'" onmouseout="this.style.background=''">
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-weight:600">${x.itemName}</span>
         <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent);font-size:11px;font-weight:700">${x.serial}</span>
         ${x.alreadyOut
-          ?'<span style="font-size:10px;background:var(--red-bg);color:var(--red);border-radius:4px;padding:1px 5px;font-weight:600">Checked Out</span>'
-          :`<span style="font-size:10px;background:${x.unitAvailQty>0?'var(--green-bg)':'var(--amber-bg)'};color:${x.unitAvailQty>0?'var(--green)':'var(--amber)'};border-radius:4px;padding:1px 5px;font-weight:600">Avail: ${x.unitAvailQty}/${x.unitQty}</span>`}
+          ?'<span style="font-size:10px;background:var(--red-bg);color:var(--red);border-radius:4px;padding:1px 5px;font-weight:600">Not in godown</span>'
+          :`<span style="font-size:10px;background:${x.unitAvailQty>0?'var(--green-bg)':'var(--amber-bg)'};color:${x.unitAvailQty>0?'var(--green)':'var(--amber)'};border-radius:4px;padding:1px 5px;font-weight:600">In godown · ${x.unitAvailQty}/${x.unitQty}</span>`}
       </div>
       <div style="font-size:11px;color:var(--text3)">${[x.model,x.itemSerial?'S/N: '+x.itemSerial:'',x.location].filter(Boolean).join(' · ')}</div>
     </div>`).join('');
 }
 
-function selectEquipItem(itemId, name, availableQty, e){
+function selectEquipItem(itemId, name, unitId, availableQty, e){
   if(e&&e.preventDefault) e.preventDefault();
   const item = _equipItems.find(x=>x.id===itemId);
-  if(item){ item.name=name; item.qty=1; item.maxQty=availableQty||1; }
+  if(item){ item.name=name; item.qty=1; item.maxQty=availableQty||1; item.unitId=unitId||''; }
   const wrap = document.getElementById('eqitem_'+itemId);
   if(wrap){
     const input = wrap.querySelector('input[type="text"]');
@@ -12010,6 +12186,11 @@ async function saveEquipRequest(){
   _syncEquipItems(); // sync DOM values to _equipItems
   const validItems = _equipItems.filter(x=>x.name&&x.name.trim());
   if(!validItems.length) return toast('Add at least one item');
+  // Every row must be a real inventory unit so check-out state is tracked.
+  const untracked = validItems.filter(x => !x.unitId);
+  if(untracked.length){
+    return toast('Pick each item from the dropdown so the unit can be tracked');
+  }
 
   const itemSummary = validItems.length===1
     ? `${validItems[0].name} ×${validItems[0].qty}`
@@ -12017,7 +12198,13 @@ async function saveEquipRequest(){
 
   const data = {
     requestedBy, requestDate, handedTo, contact, returnDate, approvedBy, notes,
-    items: validItems.map(x=>({id:x.id,name:x.name.trim(),qty:x.qty})),
+    items: validItems.map(x=>({
+      id: x.id, name: x.name.trim(), qty: x.qty,
+      // unitIds — backend uses this to mark inv_units as out-on-loan so the
+      // unit shows "Not in godown" everywhere it's displayed.
+      unitIds: x.unitId ? [x.unitId] : [],
+      unitId: x.unitId || null
+    })),
     itemName: itemSummary,
     quantity: validItems.reduce((s,x)=>s+x.qty,0),
     status: 'out'
@@ -16365,6 +16552,7 @@ const PERM_TREE = [
     { label:'Add Storage Location', key:'wh_add', actions:['edit'] },
     { label:'Edit Storage Location', key:'wh_edit', actions:['edit'] },
     { label:'Delete Storage Location', key:'wh_delete', actions:['edit'] },
+    { label:'Warehouse Transfer Page', key:'wh_transfer', actions:['view','edit'] },
     { label:'Flight Cases Page', key:'fc_page', actions:['view'] },
     { label:'Add Flight Case', key:'fc_add', actions:['edit'] },
     { label:'Edit Flight Case', key:'fc_edit', actions:['edit'] },
@@ -16384,6 +16572,7 @@ const PERM_TREE = [
     { label:'Manage List Templates', key:'eel_templates', actions:['view','edit'] },
     { label:'Check-Out Page', key:'checkout_page', actions:['view','edit'] },
     { label:'Check-In Page', key:'checkin_page', actions:['view','edit'] },
+    { label:'Event Transfer Page', key:'loan_transfer', actions:['view','edit'] },
     { label:'Loan Tracking Dashboard', key:'loan_dash', actions:['view'] },
     { label:'All Requests Page', key:'loan_all', actions:['view'] },
     { label:'Overdue Page', key:'loan_overdue', actions:['view'] },

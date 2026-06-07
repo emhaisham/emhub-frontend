@@ -142,7 +142,7 @@ input,select,textarea{font-size:16px !important}
 .launcher-inner{width:100%;max-width:1180px;margin:0 auto}
 
 /* Top-level two-zone grid */
-.launcher-grid{display:grid;grid-template-columns:1fr 320px;gap:32px;align-items:start}
+.launcher-grid{display:grid;grid-template-columns:1fr;gap:32px;align-items:start;max-width:980px;margin:0 auto}
 
 /* ── Greeting header ── */
 .launcher-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px}
@@ -1677,13 +1677,6 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               </div>
 
             </div>
-
-            <!-- Aside: Today panel -->
-            <aside class="launcher-aside">
-              <div class="launcher-today" id="launcherToday">
-                <!-- Populated by renderLauncher() -->
-              </div>
-            </aside>
 
           </div>
         </div>
@@ -10523,80 +10516,7 @@ function _moduleBadges(){
   return out;
 }
 
-// Today aside panel content
-function _todayPanel(){
-  const today = new Date(); today.setHours(0,0,0,0);
-  const cal = _safeArr(typeof calEvents!=='undefined' ? calEvents : []);
-  // Next upcoming event
-  const upcoming = cal.filter(e => {
-    const to = e.eventDateTo ? new Date(String(e.eventDateTo).slice(0,10)) : null;
-    return !e.completed && to && to >= today;
-  }).sort((a,b) => String(a.eventDateFrom||'').slice(0,10).localeCompare(String(b.eventDateFrom||'').slice(0,10)));
-  const next = upcoming[0];
-  // This-week mini grid (Mon → Sun starting today's week)
-  const dow = today.getDay(); // 0=Sun
-  const mondayOffset = dow === 0 ? -6 : 1 - dow;
-  const weekStart = new Date(today); weekStart.setDate(today.getDate() + mondayOffset);
-  const days = Array.from({length:7}).map((_, i) => {
-    const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
-    // Count events ON this day (overlap)
-    const dStr = d.toISOString().slice(0,10);
-    const count = cal.filter(e => {
-      const f = String(e.eventDateFrom||'').slice(0,10);
-      const t = String(e.eventDateTo||e.eventDateFrom||'').slice(0,10);
-      return f <= dStr && dStr <= t && !e.completed;
-    }).length;
-    return { date: d, count, isToday: d.getTime()===today.getTime() };
-  });
-  // Staff on approved leave today
-  const leave = _safeArr(typeof hrLeave!=='undefined' ? hrLeave : []);
-  const todayStr = today.toISOString().slice(0,10);
-  const onLeaveToday = leave.filter(l => {
-    if (l.status !== 'approved') return false;
-    const f = String(l.fromDate||l.from_date||'').slice(0,10);
-    const t = String(l.toDate||l.to_date||l.fromDate||'').slice(0,10);
-    return f <= todayStr && todayStr <= t;
-  }).length;
-
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const todayBig = `${today.getDate()}`;
-  const todaySub = `${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][today.getDay()]} · ${monthNames[today.getMonth()]} ${today.getFullYear()}`;
-  const dowShort = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-
-  const weekHtml = days.map((d, i) => {
-    const dotCls = d.count === 0 ? 'dot-empty' : (d.count >= 2 ? 'dot-double' : '');
-    return `<div class="week-day ${d.isToday?'is-today':''}" title="${d.date.toDateString()} — ${d.count} event${d.count===1?'':'s'}">
-      <div class="week-day-dow">${dowShort[i]}</div>
-      <div class="week-day-num">${d.date.getDate()}</div>
-      <div class="week-day-dot ${dotCls}"></div>
-    </div>`;
-  }).join('');
-
-  const nextHtml = next
-    ? `<div class="today-event-name">${next.name||'(untitled event)'}</div>
-       <div class="today-event-date">${fmtDate(next.eventDateFrom)}${next.eventDateTo && next.eventDateTo!==next.eventDateFrom?' → '+fmtDate(next.eventDateTo):''}</div>`
-    : `<div class="today-event-none">No upcoming events</div>`;
-
-  return `
-    <div class="today-date-big">${todayBig}</div>
-    <div class="today-date-sub">${todaySub}</div>
-    <div class="today-divider"></div>
-    <div class="today-section">
-      <div class="today-section-lbl">Next Event</div>
-      ${nextHtml}
-    </div>
-    <div class="today-section today-section-week">
-      <div class="today-section-lbl">This Week</div>
-      <div class="week-strip">${weekHtml}</div>
-    </div>
-    <div class="today-section">
-      <div class="today-section-lbl">On Leave Today</div>
-      <div class="today-count-row">
-        <div class="today-count ${onLeaveToday===0?'muted':''}">${onLeaveToday}</div>
-        <div class="today-count-lbl">staff member${onLeaveToday===1?'':'s'}</div>
-      </div>
-    </div>`;
-}
+// Today panel removed from home page per request — both DOM and helper deleted.
 
 // Modules registry — id + icon + name + description + tint
 const LAUNCHER_MODULES = [
@@ -10677,8 +10597,7 @@ function renderLauncher(){
     </div>`;
   }).join('');
 
-  // Today panel
-  document.getElementById('launcherToday').innerHTML = _todayPanel();
+  // Today panel removed from home page per request — function and DOM gone
 }
 
 function renderAll(){

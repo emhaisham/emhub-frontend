@@ -2713,7 +2713,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
             <div class="page" id="eq-page-whtransfer">
               <div class="page-hdr">
                 <div class="page-title">Warehouse Transfer</div>
-                <div class="page-sub">Move units between storage locations. Scan or pick by EM-####, then send to the destination.</div>
+                <div class="page-sub">Move units between storage locations. Search by item name, scan, or type EM-#### / FC-#### to stage.</div>
               </div>
               <div class="card" style="margin-bottom:16px">
                 <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end">
@@ -2725,10 +2725,19 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                     <label class="field-label">To Warehouse *</label>
                     <select id="wtToWh"><option value="">Pick destination…</option></select>
                   </div>
-                  <div style="grid-column:1 / -1;display:flex;gap:8px;align-items:center;padding-top:4px">
-                    <input type="text" id="wtSearch" placeholder="EM-00001 or FC-00001" style="flex:1" onkeydown="if(event.key==='Enter')wtLookup()">
-                    <button class="btn btn-ghost btn-sm" onclick="_openQRScanner(wtHandleQR)">Scan</button>
-                    <button class="btn btn-primary btn-sm" onclick="wtLookup()">Add</button>
+                  <div style="grid-column:1 / -1;padding-top:4px">
+                    <div style="display:flex;gap:8px;align-items:center;position:relative">
+                      <div style="flex:1;position:relative">
+                        <input type="text" id="wtSearch" placeholder="Item name, EM-00001 or FC-00001"
+                          oninput="wtFilterSearch(this.value)"
+                          onfocus="if(this.value.length>0)wtFilterSearch(this.value)"
+                          onblur="setTimeout(()=>{const dd=document.getElementById('wtSearchDd');if(dd)dd.style.display='none'},200)"
+                          onkeydown="if(event.key==='Enter')wtLookup()" style="width:100%">
+                        <div id="wtSearchDd" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--white);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);max-height:240px;overflow-y:auto;z-index:100;margin-top:2px"></div>
+                      </div>
+                      <button class="btn btn-ghost btn-sm" onclick="_openQRScanner(wtHandleQR)">Scan</button>
+                      <button class="btn btn-primary btn-sm" onclick="wtLookup()">Add</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -11763,6 +11772,89 @@ function _wtResolveToken(raw){
     if(u) return [{item, unit:u}];
   }
   return [];
+}
+
+// Live dropdown: matches by unit serial, flight-case serial, OR item name/model.
+// Each hit is one unit row that the user clicks to stage instantly.
+function wtFilterSearch(raw){
+  const dd = document.getElementById('wtSearchDd'); if(!dd) return;
+  const q = String(raw||'').trim().toLowerCase();
+  if(!q){ dd.style.display='none'; return; }
+  const fromId = document.getElementById('wtFromWh')?.value || '';
+  const stagedIds = new Set(_wtStaged.map(s=>String(s.unitId)));
+  const results = [];
+  // Flight-case prefix match collapses to a single hit covering N units
+  (invFlightCases||[]).forEach(fc=>{
+    if((fc.fcSerial||'').toLowerCase().includes(q)){
+      const units = [];
+      (invItems||[]).forEach(item=>{
+        (item.units||[]).forEach(u=>{
+          if(String(u.fcId||u.flightCaseId||'')===String(fc.id)) units.push({item,unit:u});
+        });
+      });
+      results.push({ kind:'fc', label:fc.fcSerial+' — '+fc.name, sub:units.length+' unit'+(units.length===1?'':'s'), token: fc.fcSerial });
+    }
+  });
+  // Unit-level matches by serial OR item name OR model
+  (invItems||[]).forEach(item=>{
+    const itemMatch = item.name.toLowerCase().includes(q) || (item.model||'').toLowerCase().includes(q);
+    (item.units||[]).forEach(u=>{
+      const serialMatch = (u.serial||'').toLowerCase().includes(q) || (u.itemSerial||'').toLowerCase().includes(q);
+      if(!serialMatch && !itemMatch) return;
+      if(u.discarded) return;
+      const isOut = !!u.checkout;
+      const wrongSource = fromId && String(u.warehouseId||'')!==String(fromId);
+      const already = stagedIds.has(String(u.id));
+      const wh = (invWarehouses||[]).find(w=>String(w.id)===String(u.warehouseId));
+      results.push({
+        kind:'unit', unitId:u.id, label:u.serial, itemName:item.name, model:item.model||'',
+        itemSerial:u.itemSerial||'', wh: wh?wh.name:'— unassigned —',
+        disabled: isOut || wrongSource || already,
+        reason: already?'already staged':isOut?'checked out':wrongSource?'not in source':''
+      });
+    });
+  });
+  if(!results.length){ dd.style.display='none'; return; }
+  const shown = results.slice(0,15);
+  dd.style.display='block';
+  dd.innerHTML = shown.map(r=>{
+    if(r.kind==='fc'){
+      return `<div onclick="wtStageByToken('${r.token}')" style="padding:8px 12px;cursor:pointer;font-size:12.5px;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;color:var(--accent)">${r.label}</span><span style="font-size:10px;background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:1px 5px;font-weight:600">Flight case</span></div>
+        <div style="font-size:11px;color:var(--text3)">${r.sub} — adds all</div>
+      </div>`;
+    }
+    return `<div ${r.disabled?'':`onclick="wtStageUnit('${r.unitId}')"`} style="padding:8px 12px;cursor:${r.disabled?'not-allowed':'pointer'};font-size:12.5px;border-bottom:1px solid var(--border);opacity:${r.disabled?'0.5':'1'}" ${r.disabled?'':`onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''"`}>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="font-weight:600">${r.itemName}</span>
+        <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent);font-size:11px;font-weight:700">${r.label}</span>
+        ${r.disabled?`<span style="font-size:10px;background:var(--red-bg);color:var(--red);border-radius:4px;padding:1px 5px;font-weight:600">${r.reason}</span>`:''}
+      </div>
+      <div style="font-size:11px;color:var(--text3)">${[r.model, r.itemSerial?'S/N: '+r.itemSerial:'', 'In: '+r.wh].filter(Boolean).join(' · ')}</div>
+    </div>`;
+  }).join('');
+}
+
+function wtStageUnit(unitId){
+  // Resolve the unit, then route through the same lookup path so source/state
+  // checks all apply identically.
+  let found = null;
+  for(const item of (invItems||[])){
+    const u = (item.units||[]).find(x=>String(x.id)===String(unitId));
+    if(u){ found = {item, unit:u}; break; }
+  }
+  if(!found) return toast('Unit not found');
+  const inp = document.getElementById('wtSearch');
+  if(inp){ inp.value = found.unit.serial; }
+  wtLookup();
+  const dd = document.getElementById('wtSearchDd'); if(dd) dd.style.display='none';
+}
+
+function wtStageByToken(token){
+  const inp = document.getElementById('wtSearch');
+  if(inp) inp.value = token;
+  wtLookup();
+  const dd = document.getElementById('wtSearchDd'); if(dd) dd.style.display='none';
 }
 
 function wtLookup(){

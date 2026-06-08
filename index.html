@@ -1758,6 +1758,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <input type="text" id="lcSearch" placeholder="Search events…" oninput="renderLocalCrew()">
                 <span class="toolbar-count" id="lcCount"></span>
               </div>
+              <div id="lcTagFilterBar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
               <div id="localCrewList"></div>
             </div>
             <!-- Payments -->
@@ -10856,6 +10857,22 @@ function renderAudit(){
 let localCrewEvents = [];
 let _lcEditing = null;       // event being edited (null = new)
 let _lcStaffRows = [];       // working staff array in the modal
+let _lcFilterTags = [];      // tags the list is currently filtered by
+
+// Editable tag vocabulary. Add more as needed — they're plain text on the
+// backend so no migration is required.
+const LC_TAG_OPTIONS = ["Male'", "Out of Male'", "Festive"];
+
+function toggleLocalCrewTagFilter(tag){
+  const i = _lcFilterTags.indexOf(tag);
+  if(i >= 0) _lcFilterTags.splice(i, 1);
+  else _lcFilterTags.push(tag);
+  renderLocalCrew();
+}
+function clearLocalCrewTagFilter(){
+  _lcFilterTags = [];
+  renderLocalCrew();
+}
 
 async function loadLocalCrew(){
   const r = await api('GET','/crewpay/local-crew');
@@ -10867,9 +10884,28 @@ async function loadLocalCrew(){
 
 function renderLocalCrew(){
   const search=(document.getElementById('lcSearch')?.value||'').toLowerCase();
-  const list=localCrewEvents.filter(e=>!search||(e.name||'').toLowerCase().includes(search));
+  // Filter: search by name AND require every active tag chip
+  const list=localCrewEvents.filter(e => {
+    if(search && !(e.name||'').toLowerCase().includes(search)) return false;
+    if(_lcFilterTags.length){
+      const t = Array.isArray(e.tags) ? e.tags : [];
+      if(!_lcFilterTags.every(tag => t.includes(tag))) return false;
+    }
+    return true;
+  });
   const cnt=document.getElementById('lcCount');
   if(cnt) cnt.textContent=`${list.length} event${list.length!==1?'s':''}`;
+  // Tag filter bar — union of LC_TAG_OPTIONS and any other tags already on
+  // existing events (so legacy values stay clickable)
+  const bar=document.getElementById('lcTagFilterBar');
+  if(bar){
+    const seen = new Set(LC_TAG_OPTIONS);
+    localCrewEvents.forEach(e => (e.tags||[]).forEach(t => seen.add(t)));
+    bar.innerHTML = [...seen].map(tag => {
+      const active = _lcFilterTags.includes(tag);
+      return `<button onclick="toggleLocalCrewTagFilter('${tag.replace(/'/g, "\\'")}')" style="border:1px solid ${active?'var(--accent)':'var(--border)'};background:${active?'var(--accent-bg)':'var(--white)'};color:${active?'var(--accent)':'var(--text2)'};border-radius:20px;padding:5px 12px;font-size:12px;font-weight:${active?'600':'500'};cursor:pointer;font-family:inherit">${tag}${active?' ×':''}</button>`;
+    }).join('') + (_lcFilterTags.length ? `<button onclick="clearLocalCrewTagFilter()" style="border:none;background:none;color:var(--text3);font-size:11.5px;padding:5px 8px;cursor:pointer;text-decoration:underline;font-family:inherit">Clear</button>` : '');
+  }
   const el=document.getElementById('localCrewList'); if(!el) return;
   if(!list.length){
     el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="empty-title">No Local Crew events yet</div><div class="empty-sub">Click "＋ New Event" to record a payout sheet</div></div>';
@@ -10878,11 +10914,20 @@ function renderLocalCrew(){
   el.innerHTML=list.map(ev=>{
     const totalMap=_lcGroupByCurrency(ev.staff);
     const staffCount=(ev.staff||[]).length;
+    const evTags = Array.isArray(ev.tags) ? ev.tags : [];
+    const tagChips = evTags.length
+      ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${evTags.map(t => `<span style="font-size:10.5px;background:var(--accent-bg);color:var(--accent);border-radius:10px;padding:2px 8px;font-weight:600">${t}</span>`).join('')}</div>`
+      : '';
+    const casualCount = (ev.staff||[]).filter(s => s.casual).length;
+    const casualBadge = casualCount > 0
+      ? ` <span style="font-size:10px;background:var(--amber-bg);color:var(--amber);border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px">${casualCount} casual</span>`
+      : '';
     return `<div class="card" style="margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap">
         <div style="flex:1;min-width:200px">
           <div style="font-size:14px;font-weight:700;color:var(--text)">${ev.name||'(unnamed)'}</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:2px">${ev.date?fmtDate(ev.date):'No date'} · ${staffCount} staff</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">${ev.date?fmtDate(ev.date):'No date'} · ${staffCount} staff${casualBadge}</div>
+          ${tagChips}
         </div>
         <div style="text-align:right">
           <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Total Payout</div>
@@ -10945,14 +10990,30 @@ function openLocalCrew(id){
   const inner=document.getElementById('userModalInner');
   if(inner){ inner.classList.remove('modal-sm'); inner.classList.add('modal-wide'); }
   document.getElementById('userModalTitle').textContent = _lcEditing ? 'Edit Local Crew Event' : 'New Local Crew Event';
+  const _lcTagOpts = LC_TAG_OPTIONS;
+  const _lcCurTags = Array.isArray(_lcEditing?.tags) ? _lcEditing.tags : [];
   document.getElementById('userModalForm').innerHTML = `
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:14px">
       <div class="field"><label class="field-label">Event Name *</label><input type="text" id="lc_name" value="${_lcEditing?.name||''}" placeholder="e.g. Easter Pool Party"></div>
       <div class="field"><label class="field-label">Date</label><input type="date" id="lc_date" value="${normalizeDate(_lcEditing?.date)||''}"></div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div style="margin-bottom:14px">
+      <label class="field-label">Tags</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px" id="lcTagsBox">
+        ${_lcTagOpts.map(t => `
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:20px;cursor:pointer;background:${_lcCurTags.includes(t)?'var(--accent-bg)':'var(--white)'};color:${_lcCurTags.includes(t)?'var(--accent)':'var(--text2)'};font-weight:${_lcCurTags.includes(t)?'600':'500'}">
+            <input type="checkbox" value="${t}" ${_lcCurTags.includes(t)?'checked':''} style="margin:0;accent-color:var(--accent)"
+              onchange="this.parentElement.style.background=this.checked?'var(--accent-bg)':'var(--white)';this.parentElement.style.color=this.checked?'var(--accent)':'var(--text2)';this.parentElement.style.fontWeight=this.checked?'600':'500'">
+            ${t}
+          </label>`).join('')}
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap">
       <div style="font-size:13px;font-weight:700;color:var(--text)">Staff</div>
-      <button class="btn btn-ghost btn-sm" onclick="addLocalCrewStaff()">＋ Add Staff</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="addLocalCrewStaff()">＋ Add Staff</button>
+        <button class="btn btn-ghost btn-sm" onclick="addLocalCrewCasual()" title="Pay someone without creating an HR record">＋ Add Casual</button>
+      </div>
     </div>
     <div id="lcStaffRows"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-top:10px;gap:12px;flex-wrap:wrap">
@@ -10972,6 +11033,15 @@ function addLocalCrewStaff(){
   renderLocalCrewStaffRows();
 }
 
+// Casual = paid for this single event, no HR record. Carries free-text
+// name + optional phone instead of an HR empId. The casual:true flag is
+// what tells the renderer + save which shape to use.
+function addLocalCrewCasual(){
+  _lcStaffRows.push({casual:true, empId:null, casualName:'', casualPhone:'', currency:'MVR',
+    setupDays:0,setupRate:0,eventDays:0,eventRate:0,adjustment:0});
+  renderLocalCrewStaffRows();
+}
+
 function removeLocalCrewStaff(idx){
   _lcStaffRows.splice(idx,1);
   renderLocalCrewStaffRows();
@@ -10983,6 +11053,9 @@ function onLocalCrewFieldChange(idx, field, val){
     const emp = hrEmployees.find(e=>String(e.id)===String(val));
     s.empId = val;
     s.empName = emp?.name || '';
+  } else if(field==='casualName'){
+    s.casualName = val;
+    s.empName = val;
   } else {
     s[field] = val;
   }
@@ -11010,10 +11083,25 @@ function renderLocalCrewStaffRows(){
       .concat(activeEmps.map(e=>`<option value="${e.id}"${String(e.id)===String(s.empId)?' selected':''}>${e.name}</option>`))
       .join('');
     const cur = s.currency || 'MVR';
-    return `<div id="lc-row-${i}" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:var(--white)">
-      <div style="display:grid;grid-template-columns:2fr 100px 1fr;gap:8px;margin-bottom:8px">
-        <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Staff Name *</label><select onchange="onLocalCrewFieldChange(${i},'empId',this.value)">${empOpts}</select></div>
-        <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Currency</label><select onchange="onLocalCrewFieldChange(${i},'currency',this.value)"><option value="MVR"${cur==='MVR'?' selected':''}>MVR</option><option value="USD"${cur==='USD'?' selected':''}>USD</option></select></div>
+    // Casual row: free-text name + optional phone instead of HR dropdown.
+    // Shows an amber "Casual" chip so the row type is unambiguous.
+    const nameBlock = s.casual ? `
+      <div class="field" style="margin:0"><label class="field-label" style="font-size:10px;display:flex;align-items:center;gap:6px">Casual Staff Name *
+        <span style="font-size:9px;background:var(--amber-bg);color:var(--amber);border-radius:4px;padding:1px 5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">Casual</span></label>
+        <input type="text" value="${(s.casualName||s.empName||'').replace(/"/g,'&quot;')}" placeholder="Full name" oninput="onLocalCrewFieldChange(${i},'casualName',this.value)"></div>
+      <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Phone</label>
+        <input type="text" value="${(s.casualPhone||'').replace(/"/g,'&quot;')}" placeholder="+960 7xx xxxx" oninput="onLocalCrewFieldChange(${i},'casualPhone',this.value)"></div>
+    ` : `
+      <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Staff Name *</label><select onchange="onLocalCrewFieldChange(${i},'empId',this.value)">${empOpts}</select></div>
+      <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Currency</label><select onchange="onLocalCrewFieldChange(${i},'currency',this.value)"><option value="MVR"${cur==='MVR'?' selected':''}>MVR</option><option value="USD"${cur==='USD'?' selected':''}>USD</option></select></div>
+    `;
+    const currencyBlockForCasual = s.casual ? `
+      <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Currency</label><select onchange="onLocalCrewFieldChange(${i},'currency',this.value)"><option value="MVR"${cur==='MVR'?' selected':''}>MVR</option><option value="USD"${cur==='USD'?' selected':''}>USD</option></select></div>
+    ` : '';
+    return `<div id="lc-row-${i}" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:${s.casual?'var(--amber-bg)':'var(--white)'}">
+      <div style="display:grid;grid-template-columns:${s.casual?'2fr 1fr 100px 1fr':'2fr 100px 1fr'};gap:8px;margin-bottom:8px">
+        ${nameBlock}
+        ${currencyBlockForCasual}
         <div class="field" style="margin:0"><label class="field-label" style="font-size:10px">Adjustment (+/-)</label><input type="number" step="0.01" value="${s.adjustment||0}" oninput="onLocalCrewFieldChange(${i},'adjustment',this.value)"></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px">
@@ -11036,17 +11124,34 @@ async function saveLocalCrew(){
   const name=document.getElementById('lc_name')?.value.trim();
   const date=document.getElementById('lc_date')?.value;
   if(!name) return toast('Enter event name');
-  // Drop empty/incomplete rows
-  const staff = _lcStaffRows.filter(s=>s.empId).map(s=>({
-    empId:s.empId, empName:s.empName||'',
-    currency: s.currency==='USD' ? 'USD' : 'MVR',
-    setupDays:parseFloat(s.setupDays)||0, setupRate:parseFloat(s.setupRate)||0,
-    eventDays:parseFloat(s.eventDays)||0, eventRate:parseFloat(s.eventRate)||0,
-    adjustment:parseFloat(s.adjustment)||0,
-    // preserve paid status if present
-    paid: !!s.paid, paidAt: s.paidAt||null
-  }));
-  const body = { name, date: date||null, staff };
+  // Drop empty/incomplete rows. Each row is either:
+  //   - registered staff:  has empId
+  //   - casual:            has casual:true + casualName
+  const staff = _lcStaffRows
+    .filter(s => s.casual ? (s.casualName||'').trim() : s.empId)
+    .map(s => s.casual ? ({
+      casual: true,
+      empId: null,
+      empName: (s.casualName||'').trim(),
+      casualName: (s.casualName||'').trim(),
+      casualPhone: (s.casualPhone||'').trim() || null,
+      currency: s.currency==='USD' ? 'USD' : 'MVR',
+      setupDays:parseFloat(s.setupDays)||0, setupRate:parseFloat(s.setupRate)||0,
+      eventDays:parseFloat(s.eventDays)||0, eventRate:parseFloat(s.eventRate)||0,
+      adjustment:parseFloat(s.adjustment)||0,
+      paid: !!s.paid, paidAt: s.paidAt||null, paidBy: s.paidBy||null
+    }) : ({
+      empId:s.empId, empName:s.empName||'',
+      currency: s.currency==='USD' ? 'USD' : 'MVR',
+      setupDays:parseFloat(s.setupDays)||0, setupRate:parseFloat(s.setupRate)||0,
+      eventDays:parseFloat(s.eventDays)||0, eventRate:parseFloat(s.eventRate)||0,
+      adjustment:parseFloat(s.adjustment)||0,
+      paid: !!s.paid, paidAt: s.paidAt||null
+    }));
+  // Collect ticked tags from the checkbox group
+  const tags = Array.from(document.querySelectorAll('#lcTagsBox input[type=checkbox]:checked'))
+    .map(cb => cb.value);
+  const body = { name, date: date||null, staff, tags };
   const res = _lcEditing
     ? await api('PUT', '/crewpay/local-crew/'+_lcEditing.id, body)
     : await api('POST','/crewpay/local-crew', body);

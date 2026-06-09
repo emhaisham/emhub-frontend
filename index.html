@@ -177,6 +177,14 @@ input,select,textarea{font-size:16px !important}
 .launcher-inbox-empty-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px}
 .launcher-inbox-empty-sub{font-size:12px;color:var(--text3)}
 
+/* Self-Service quick-action tiles on the launcher */
+.self-srv-tile{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--white);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-sm);cursor:pointer;text-align:left;font-family:inherit;transition:border-color .12s,transform .12s}
+.self-srv-tile:hover{border-color:var(--accent);transform:translateY(-1px)}
+.self-srv-icon{width:36px;height:36px;border-radius:8px;background:var(--accent-bg);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.self-srv-text{flex:1;min-width:0}
+.self-srv-title{font-size:13px;font-weight:700;color:var(--text);letter-spacing:-.005em}
+.self-srv-sub{font-size:11.5px;color:var(--text3);margin-top:2px;line-height:1.3}
+
 /* ── Module grid (re-shaped — adds a state badge slot) ── */
 .module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 .mod-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:18px;cursor:pointer;transition:transform .15s cubic-bezier(.16,1,.3,1),box-shadow .15s,border-color .15s;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;min-height:140px;position:relative}
@@ -1690,6 +1698,25 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <div class="launcher-section-label">Your Inbox <span class="lbl-count" id="launcherInboxCount"></span></div>
                 <div class="launcher-inbox" id="launcherInbox">
                   <!-- Populated by renderLauncher() -->
+                </div>
+              </div>
+
+              <!-- Self-Service: visible only if user has a linked HR record -->
+              <div class="launcher-section" id="launcherSelfService" style="display:none">
+                <div class="launcher-section-label">Self-Service</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px">
+                  <button class="self-srv-tile" onclick="openMakeRequest();setTimeout(()=>_mkSwitch('profile'),30)">
+                    <div class="self-srv-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+                    <div class="self-srv-text"><div class="self-srv-title">Profile Update</div><div class="self-srv-sub">Change phone, email, NID, address…</div></div>
+                  </button>
+                  <button class="self-srv-tile" onclick="openMakeRequest();setTimeout(()=>_mkSwitch('letter'),30)">
+                    <div class="self-srv-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+                    <div class="self-srv-text"><div class="self-srv-title">Request a Letter</div><div class="self-srv-sub">Employment, NOC, salary cert…</div></div>
+                  </button>
+                  <button class="self-srv-tile" onclick="openMakeRequest();setTimeout(()=>_mkSwitch('loan'),30)">
+                    <div class="self-srv-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+                    <div class="self-srv-text"><div class="self-srv-title">Loan / Advance</div><div class="self-srv-sub">Request a salary advance</div></div>
+                  </button>
                 </div>
               </div>
 
@@ -10649,6 +10676,17 @@ function _launcherActivate(key){
 function renderLauncher(){
   // Guard: only render if the launcher DOM is mounted (i.e. user is past login)
   const wrap = document.getElementById('launcherInbox'); if (!wrap) return;
+
+  // Self-Service section visibility: only show if the current user has a
+  // linked HR employee record (otherwise the request endpoints would 403).
+  const selfSrv = document.getElementById('launcherSelfService');
+  if (selfSrv) {
+    const me = (hrEmployees||[]).find(e =>
+      String(e.linkedUserId||'') === String(currentUser?.id||'') ||
+      (!e.linkedUserId && e.name && currentUser?.name && e.name.toLowerCase() === String(currentUser.name).toLowerCase())
+    );
+    selfSrv.style.display = me ? '' : 'none';
+  }
 
   // Greeting + date
   const today = new Date();

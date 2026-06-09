@@ -406,6 +406,31 @@ input,select,textarea{font-size:16px !important}
   .cp-foot{display:none}
 }
 
+/* Calendar Event modal — collapses dense desktop grids to single-column on
+   mobile so date inputs don't wrap, the right column stacks below, loading
+   and phase rows become readable, and assignment labels don't eat half
+   the row. */
+.cef-grid-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
+.cef-grid-dates{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cef-grid-loading{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px}
+.cef-grid-phase{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end}
+.cef-assign-row{display:flex;align-items:center;gap:10px}
+.cef-assign-row > label{font-size:12px;font-weight:600;color:var(--text2);min-width:140px;flex-shrink:0}
+
+@media(max-width:640px){
+  .cef-grid-2col{grid-template-columns:1fr;gap:14px}
+  .cef-grid-dates{grid-template-columns:1fr;gap:10px}
+  /* Loading: 2-up so it's still scannable, plus the X button drops below */
+  .cef-grid-loading{grid-template-columns:1fr 1fr;gap:10px}
+  .cef-grid-loading > button{grid-column:1 / -1;justify-self:end}
+  /* Phase: stack vertically — too many fields to cram into 2 cols */
+  .cef-grid-phase{grid-template-columns:1fr;gap:10px}
+  /* Assignment rows: label stacks above select, takes full width */
+  .cef-assign-row{flex-direction:column;align-items:stretch;gap:4px}
+  .cef-assign-row > label{min-width:0;font-size:11.5px}
+  .cef-assign-row > select{width:100%}
+}
+
 /* Breadcrumbs — populated via setBreadcrumbs([{label, onClick?}]). Sit
    above the page-title on pages that are 2+ levels deep. Last item
    gets the "current" treatment (no underline, slightly bolder). */
@@ -9133,10 +9158,10 @@ function _renderCalModal(ev, defaultDate){
   calEventDocs = ev?.eventDocs ? [...ev.eventDocs] : [];
   document.getElementById('userModalTitle').textContent=ev?'Edit Calendar Event':'New Calendar Event';
   document.getElementById('userModalForm').innerHTML=`<div style="max-height:80vh;overflow-y:auto;padding:0 2px">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px">
+    <div class="cef-grid-2col">
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="field"><label class="field-label">Event Name *</label><input type="text" id="cef_name" value="${ev?.name||''}" placeholder="e.g. Grand Wedding Reception"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="cef-grid-dates">
           <div class="field"><label class="field-label">Start Date *</label><input type="date" id="cef_dateFrom" value="${normalizeDate(ev?.eventDateFrom)||defaultDate||''}"></div>
           <div class="field"><label class="field-label">End Date *</label><input type="date" id="cef_dateTo" value="${normalizeDate(ev?.eventDateTo)||defaultDate||''}"></div>
         </div>
@@ -9159,8 +9184,8 @@ function _renderCalModal(ev, defaultDate){
         <div>
           <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Staff Assignments</div>
           <div style="display:flex;flex-direction:column;gap:8px" id="cef_assignments">
-            ${ASSIGN_ROLES.map(r=>`<div style="display:flex;align-items:center;gap:10px">
-              <label style="font-size:12px;font-weight:600;color:var(--text2);min-width:140px;flex-shrink:0">${r}</label>
+            ${ASSIGN_ROLES.map(r=>`<div class="cef-assign-row">
+              <label>${r}</label>
               <select id="asgn_${r.replace(/\s+/g,'_')}" style="flex:1;font-size:12.5px;padding:6px 8px">
                 <option value="">— Unassigned —</option>
                 ${hrEmployees.filter(e=>e.status!=='inactive').map(e=>`<option value="${e.name}" ${ev?.assignments?.[r]===e.name?'selected':''}>${e.name}</option>`).join('')}
@@ -9218,7 +9243,7 @@ function onCalLoading(id,f,v){ const l=calLoadings.find(x=>x.id===id);if(l)l[f]=
 function renderCalLoadings(){
   const el=document.getElementById('cef_loadings');if(!el)return;
   el.innerHTML=calLoadings.map(l=>`<div style="background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:7px;padding:10px 12px;margin-bottom:8px">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px">
+    <div class="cef-grid-loading">
       <div class="field"><label class="field-label" style="font-size:10px">Date From</label><input type="date" value="${l.dateFrom}" oninput="onCalLoading(${l.id},'dateFrom',this.value)" style="font-size:12px;padding:6px 8px"></div>
       <div class="field"><label class="field-label" style="font-size:10px">Time From</label><input type="time" value="${l.timeFrom}" oninput="onCalLoading(${l.id},'timeFrom',this.value)" style="font-size:12px;padding:6px 8px"></div>
       <div class="field"><label class="field-label" style="font-size:10px">Date To</label><input type="date" value="${l.dateTo}" oninput="onCalLoading(${l.id},'dateTo',this.value)" style="font-size:12px;padding:6px 8px"></div>
@@ -9235,7 +9260,7 @@ function onCalPhase(id,f,v){ const p=calPhases.find(x=>x.id===id);if(p)p[f]=v; }
 function renderCalPhases(){
   const el=document.getElementById('cef_phases');if(!el)return;
   el.innerHTML=calPhases.map(p=>`<div style="background:var(--accent-bg);border:1px solid var(--accent-bd);border-radius:7px;padding:10px 12px;margin-bottom:8px">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end">
+    <div class="cef-grid-phase">
       <div class="field"><label class="field-label" style="font-size:10px">Phase Type</label>
         <select oninput="onCalPhase(${p.id},'type',this.value)" style="font-size:12px;padding:6px 8px">
           ${PHASE_TYPES.map(t=>`<option value="${t}" ${p.type===t?'selected':''}>${t.charAt(0).toUpperCase()+t.slice(1)}</option>`).join('')}

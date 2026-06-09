@@ -463,7 +463,55 @@ input,select,textarea{font-size:16px !important}
   /* Buttons inside forms: minimum tap target without bloating them */
   .btn.btn-xs { min-height: 36px; padding: 6px 12px; }
   .btn.btn-sm { min-height: 40px; padding: 8px 14px; }
+
+  /* === MOBILE TABLE BASELINE ===
+     Lets wide tables scroll horizontally instead of overflowing or
+     squishing. Headers and rows stay perfectly column-aligned because
+     thead/tbody preserve table layout — only the outer table becomes
+     a horizontally-scrollable block. Works whether or not the page
+     wrapped the table in an overflow-x container. */
+  .data-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  .data-table > thead,
+  .data-table > tbody,
+  .data-table > tfoot {
+    display: table;
+    width: 100%;
+    table-layout: auto;
+  }
+  /* Cells: a touch more breathing room so columns don't crash into each other */
+  .data-table th, .data-table td { padding: 10px 12px; }
+  /* Numeric columns (use class="num") always right-align — many tables had
+     th class="num" but the td was missing it, causing misalignment. */
+  .data-table .num, .data-table th.num, .data-table td.num,
+  .data-table th[class*="num"], .data-table td[class*="num"] { text-align: right }
+
+  /* === MOBILE ROW PATTERN ===
+     Flex-based rows (.pay-group-row, .emp-row) shouldn't keep action
+     buttons jammed on the right when there's no room. Wrap them below
+     so the name area gets full width and buttons get full tap target. */
+  .pay-group-row, .emp-row { flex-wrap: wrap; row-gap: 8px }
+  .pay-group-row > .pg-right,
+  .emp-row > .pg-right {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  /* Compact action icon buttons stay tappable */
+  .emp-row-iconbtn { width: 36px; height: 36px }
 }
+
+/* Desktop: also right-align .num cells inside data-table by default —
+   the user reported numeric columns drifting left because some tds
+   were missing the explicit class. This belts-and-braces the rule. */
+.data-table .num,
+.data-table th.num,
+.data-table td.num { text-align: right }
 
 /* Breadcrumbs — populated via setBreadcrumbs([{label, onClick?}]). Sit
    above the page-title on pages that are 2+ levels deep. Last item

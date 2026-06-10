@@ -5532,7 +5532,10 @@ function hrNav(page, extra){
   const pageEl = document.getElementById('hr-page-'+page);
   if(pageEl) pageEl.classList.add('active');
   const items = document.querySelectorAll('#mod-hr .nav-item');
-  const map = {employees:0,'add-employee':1,'org-chart':2,disciplinary:3,'staff-assets':4,reports:5,requests:6,'expiring-docs':7,'probation-contracts':8,training:9,payroll:10,'salary-revisions':11,loans:12,pension:13,bonus:14,'dept-leave':15,leave:16,letters:17};
+  // Index of each page in the HR sidebar. Must match the DOM order of
+  // .nav-item children. Departments now sits at slot 2 (between Add Employee
+  // and Org Chart), pushing every later page down by one.
+  const map = {employees:0,'add-employee':1,departments:2,'org-chart':3,disciplinary:4,'staff-assets':5,reports:6,requests:7,'expiring-docs':8,'probation-contracts':9,training:10,payroll:11,'salary-revisions':12,loans:13,pension:14,bonus:15,'dept-leave':16,leave:17,letters:18};
   if(items[map[page]]) items[map[page]].classList.add('active');
   hrActivePage = page;
   if(page==='employees')     { populateHRFilters(); renderEmployees(); }

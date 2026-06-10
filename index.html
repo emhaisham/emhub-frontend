@@ -1999,6 +1999,8 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="nav-item" onclick="hrNav('dept-leave')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Department Leave</div>
               <div class="nav-item" onclick="hrNav('leave')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></span>Leave</div>
               <div class="nav-item" onclick="hrNav('letters')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>Staff Letters</div>
+              <div class="nav-lbl">Setup</div>
+              <div class="nav-item" onclick="hrNav('departments')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Departments</div>
             </div>
           </aside>
           <div class="main-area">
@@ -2292,6 +2294,17 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 </div><!-- /card-body -->
               </div><!-- /card -->
             </div><!-- /hr-page-letters -->
+
+            <!-- ── DEPARTMENTS ── -->
+            <div class="page" id="hr-page-departments">
+              <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                <div><div class="page-title">Departments</div><div class="page-sub">Manage the department list used when adding or editing employees</div></div>
+                <button class="btn btn-primary btn-sm" id="hrDeptAddBtn" onclick="openAddDepartment()">＋ Add Department</button>
+              </div>
+              <div class="card" style="max-width:680px">
+                <div class="card-body" id="hrDeptList"></div>
+              </div>
+            </div>
 
             <!-- Disciplinary Page -->
             <div class="page" id="hr-page-disciplinary">
@@ -3777,7 +3790,7 @@ async function _loadAllData(){
   const anyCal = isAdmin || has('events_view');
   const anyCrew= isAdmin || has('crewpay_view')||has('crewpay_edit')||has('crewpay_export');
   const needsUsers = isAdmin || has('hr_add_emp') || has('hr_edit_emp') || has('users_manage') || has('roles_manage');
-  const [evts, emps, loans, payrolls, pensions, leave, inv, cats, subcats, wh, fc, usrs, lvTypes, crewEvts] = await Promise.all([
+  const [evts, emps, loans, payrolls, pensions, leave, inv, cats, subcats, wh, fc, usrs, lvTypes, crewEvts, depts] = await Promise.all([
     (anyCal||anyInv)             ? api('GET', '/events')                : Promise.resolve([]),
     anyHR                        ? api('GET', '/hr/employees')          : Promise.resolve([]),
     has('hr_loans')              ? api('GET', '/hr/loans')              : Promise.resolve([]),
@@ -3792,6 +3805,7 @@ async function _loadAllData(){
     needsUsers                   ? api('GET', '/users')                 : Promise.resolve([]),
     has('hr_leave')              ? api('GET', '/hr/leave-types')        : Promise.resolve([]),
     anyCrew                      ? api('GET', '/crewpay/events')        : Promise.resolve([]),
+    anyHR                        ? api('GET', '/hr/departments')        : Promise.resolve([]),
   ]);
   calEvents = (evts||[]).map(e=>({
     ...e,
@@ -3831,6 +3845,7 @@ async function _loadAllData(){
   users = usrs || [];
   hrLeaveTypes = (lvTypes||[]).map(lt=>({...lt, days: lt.days_allowed||lt.days||0}));
   if(lvTypes) _cacheLeaveTypes(hrLeaveTypes);
+  if(Array.isArray(depts) && depts.length){ hrDepartments = depts; _cacheDepartments(hrDepartments); }
   crewEvents = crewEvts || [];
   // Restore payments from API events + localStorage fallback
   const localPays = JSON.parse(localStorage.getItem('em_pays')||'{}');
@@ -5268,7 +5283,33 @@ let hrLeave     = [];
 async function hrSave(){ hrEmployees = await api('GET','/hr/employees') || hrEmployees; }
 async function leaveSave(){ hrLeave = await api('GET','/hr/leave') || hrLeave; }
 
-const DEPTS = ['Management','Admin','Technical','Logistics','Production','Studio'];
+// Department catalog — loaded from /api/hr/departments. The literal fallback
+// is the legacy seeded list so the very first form render before the API
+// response still shows sensible options. _cacheDepartments / loadDepartments
+// keep the cache fresh in localStorage so reloads are instant.
+let hrDepartments = (function(){
+  try {
+    const cached = JSON.parse(localStorage.getItem('em_departments')||'null');
+    if(Array.isArray(cached) && cached.length) return cached;
+  } catch(e){}
+  return [
+    {id:'_seed_management', name:'Management',  sortOrder:10},
+    {id:'_seed_admin',      name:'Admin',       sortOrder:20},
+    {id:'_seed_technical',  name:'Technical',   sortOrder:30},
+    {id:'_seed_logistics',  name:'Logistics',   sortOrder:40},
+    {id:'_seed_production', name:'Production',  sortOrder:50},
+    {id:'_seed_studio',     name:'Studio',      sortOrder:60},
+  ];
+})();
+function _cacheDepartments(v){ try { localStorage.setItem('em_departments', JSON.stringify(v||[])); } catch(e){} }
+async function loadDepartments(){
+  const r = await api('GET','/hr/departments');
+  if(Array.isArray(r)){ hrDepartments = r; _cacheDepartments(hrDepartments); }
+  return hrDepartments;
+}
+// Compat shim: legacy code paths reference DEPTS expecting a string[].
+// Make it a live getter so any existing call gets the latest names.
+Object.defineProperty(window, 'DEPTS', { get(){ return hrDepartments.map(d => d.name); } });
 const NATIONALITIES = ['Afghan','Albanian','Algerian','American','Andorran','Angolan','Argentine','Armenian','Australian','Austrian','Azerbaijani','Bahraini','Bangladeshi','Belarusian','Belgian','Belizean','Beninese','Bhutanese','Bolivian','Bosnian','Brazilian','British','Bruneian','Bulgarian','Burkinabe','Burundian','Cambodian','Cameroonian','Canadian','Chilean','Chinese','Colombian','Congolese','Croatian','Cuban','Cypriot','Czech','Danish','Djiboutian','Dominican','Dutch','Ecuadorean','Egyptian','Emirati','Estonian','Ethiopian','Fijian','Finnish','French','Gabonese','Gambian','Georgian','German','Ghanaian','Greek','Guatemalan','Guinean','Haitian','Honduran','Hungarian','Icelandic','Indian','Indonesian','Iranian','Iraqi','Irish','Israeli','Italian','Ivorian','Jamaican','Japanese','Jordanian','Kazakhstani','Kenyan','Korean','Kuwaiti','Kyrgyzstani','Lao','Latvian','Lebanese','Liberian','Libyan','Lithuanian','Luxembourgish','Macedonian','Malagasy','Malawian','Malaysian','Maldivian','Malian','Maltese','Mauritanian','Mauritian','Mexican','Moldovan','Mongolian','Montenegrin','Moroccan','Mozambican','Namibian','Nepalese','New Zealander','Nicaraguan','Nigerien','Nigerian','Norwegian','Omani','Pakistani','Panamanian','Paraguayan','Peruvian','Filipino','Polish','Portuguese','Qatari','Romanian','Russian','Rwandan','Saudi','Senegalese','Serbian','Sierra Leonean','Singaporean','Slovak','Slovenian','Somali','South African','Spanish','Sri Lankan','Sudanese','Swedish','Swiss','Syrian','Tajikistani','Tanzanian','Thai','Togolese','Trinidadian','Tunisian','Turkish','Ugandan','Ukrainian','Uruguayan','Uzbekistani','Venezuelan','Vietnamese','Yemeni','Zambian','Zimbabwean'];
 const AVATAR_HR = ['#13476f','#0a7c4e','#b45309','#6d28d9','#b91c1c','#1f5d8c','#7c3aed','#065f46'];
 function hrAvColor(name){ return AVATAR_HR[(name||'?').charCodeAt(0) % AVATAR_HR.length]; }
@@ -5300,6 +5341,7 @@ function hrNav(page, extra){
       'training':'hr_training',
       'reports':'hr_reports_view',
       'requests':'hr_self_request_approve',
+      'departments':'hr_departments',
     };
     const permKey=pagePermMap[page];
     const role=currentUser.roleId?appRoles.find(r=>String(r.id)===String(currentUser.roleId)):null;
@@ -5369,6 +5411,7 @@ function hrNav(page, extra){
   if(page==='training')            { renderTrainingPage(); }
   if(page==='reports')             { renderReportsPage(); }
   if(page==='requests')            { renderRequestsPage(); }
+  if(page==='departments')         { loadDepartments().then(renderDepartments); }
   updateHRSidebar();
 }
 
@@ -9762,6 +9805,90 @@ function hrLeaveSubNav(tab){
   if(tab==='types') renderLeaveTypes();
   if(tab==='balances') renderLeaveBalances();
   if(tab==='requests'){ renderLeave(); populateLeaveTypeFilter(); }
+}
+
+// ── DEPARTMENTS UI ────────────────────────────────────────────
+function renderDepartments(){
+  const el = document.getElementById('hrDeptList'); if(!el) return;
+  // Hide the "+ Add" button if the user lacks the perm
+  const addBtn = document.getElementById('hrDeptAddBtn');
+  if(addBtn) addBtn.style.display = hasPerm('hr_departments') ? '' : 'none';
+  if(!hrDepartments.length){
+    el.innerHTML = '<div class="empty"><div class="empty-title">No departments yet</div><div class="empty-sub">Click "＋ Add Department" to create the first one.</div></div>';
+    return;
+  }
+  const canEdit = hasPerm('hr_departments');
+  // Count employees per dept name for the "in use" badge
+  const counts = {};
+  (hrEmployees||[]).forEach(e => { if(e.dept){ counts[e.dept] = (counts[e.dept]||0)+1; } });
+  el.innerHTML = hrDepartments.map(d => `
+    <div class="pay-group-row" style="cursor:default">
+      <div>
+        <div class="pg-name">${d.name}</div>
+        <div style="font-size:11.5px;color:var(--text3);margin-top:2px">
+          ${counts[d.name]?counts[d.name]+' employee'+(counts[d.name]===1?'':'s'):'No employees'}
+          · sort order ${d.sortOrder||100}
+        </div>
+      </div>
+      <div class="pg-right">
+        ${canEdit?`<button class="btn btn-ghost btn-xs" onclick="openEditDepartment('${d.id}')">Edit</button>
+        <button class="btn btn-red btn-xs" onclick="deleteDepartment('${d.id}')" title="${counts[d.name]?'Has employees — cannot delete':'Delete'}" ${counts[d.name]?'disabled style="opacity:.4;cursor:not-allowed"':''}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>`:''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function openAddDepartment(){ if(!hasPerm('hr_departments')) return toast("You don't have permission"); _openDepartmentModal(null); }
+function openEditDepartment(id){
+  if(!hasPerm('hr_departments')) return toast("You don't have permission");
+  const d = hrDepartments.find(x => String(x.id)===String(id)); if(!d) return;
+  _openDepartmentModal(d);
+}
+function _openDepartmentModal(d){
+  const inner=document.getElementById('userModalInner');
+  if(inner){inner.classList.remove('modal-wide');inner.classList.add('modal-sm');}
+  document.getElementById('userModalTitle').textContent = d ? 'Edit Department' : 'New Department';
+  document.getElementById('userModalForm').innerHTML = `
+    <div class="field"><label class="field-label">Department Name *</label><input type="text" id="dept_name" value="${d?.name||''}" placeholder="e.g. Operations"></div>
+    <div class="field"><label class="field-label">Sort Order</label><input type="number" id="dept_sort" value="${d?.sortOrder||100}" min="1">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Lower numbers appear first in the dropdown.</div></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:12px;border-top:1px solid var(--border)">
+      <button class="btn btn-ghost btn-sm" onclick="closeUserModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveDepartment('${d?.id||''}')">Save</button>
+    </div>`;
+  document.getElementById('userModal').classList.add('open');
+}
+async function saveDepartment(existingId){
+  const name = document.getElementById('dept_name')?.value.trim();
+  const sortOrder = parseInt(document.getElementById('dept_sort')?.value,10) || 100;
+  if(!name) return toast('Enter a department name');
+  const payload = { name, sortOrder };
+  const res = existingId
+    ? await api('PUT','/hr/departments/'+existingId, payload)
+    : await api('POST','/hr/departments', payload);
+  if(!res) return;
+  // Reload the canonical list — names may have been propagated to employees
+  // on rename, so we also refresh hrEmployees to keep dept text consistent.
+  await loadDepartments();
+  if(existingId){
+    const fresh = await api('GET','/hr/employees');
+    if(Array.isArray(fresh)){ hrEmployees = fresh.map(_mapEmployeeFromApi); markFresh('hrEmployees'); }
+  }
+  closeUserModal();
+  renderDepartments();
+  toast(existingId?'Department updated ✓':'Department added ✓');
+}
+async function deleteDepartment(id){
+  const d = hrDepartments.find(x => String(x.id)===String(id)); if(!d) return;
+  openConfirm('Delete this department?', `Remove "${d.name}" from the list. Employees currently in it must be moved first.`, 'Delete', async ()=>{
+    const r = await api('DELETE','/hr/departments/'+id);
+    if(!r) return;
+    await loadDepartments();
+    renderDepartments();
+    toast('Department deleted');
+  });
 }
 
 function renderLeaveTypes(){
@@ -16991,6 +17118,7 @@ const PERM_TREE = [
     { label:'Leave Types', key:'hr_leave_types', actions:['view','edit'] },
     { label:'Staff Letters', key:'hr_letters', actions:['view','edit'] },
     { label:'HR Settings', key:'hr_settings_edit', actions:['edit'] },
+    { label:'Manage Departments', key:'hr_departments', actions:['view','edit'] },
   ]},
   { module:'Push Notification', key:'msging', pages:[
     { label:'Send Notification', key:'msg_send', actions:['edit'] },

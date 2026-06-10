@@ -5807,15 +5807,10 @@ function renderEmpForm(empId){
         <div class="field"><label class="field-label">Insurance Expiry</label><input type="date" id="ef_insexp" value="${normalizeDate(emp?.insuranceExpiry)||''}"></div>
       </div>
 
-      <div class="form-sub-hdr">Quota, Medical & Contract</div>
+      <div class="form-sub-hdr">Quota & Medical</div>
       <div class="emp-form-grid-3">
         <div class="field"><label class="field-label">Quota Fee Expiry</label><input type="date" id="ef_quotaexp" value="${normalizeDate(emp?.quotaExpiry)||''}"></div>
         <div class="field"><label class="field-label">Medical Expiry</label><input type="date" id="ef_medexp" value="${normalizeDate(emp?.medicalExpiry)||''}"></div>
-        <div class="field"><label class="field-label">Contract Start Date</label><input type="date" id="ef_contractstart" value="${normalizeDate(emp?.contractStartDate)||''}">
-          <div style="font-size:11px;color:var(--text3);margin-top:4px">Defaults to Join Date if blank.</div></div>
-      </div>
-      <div class="emp-form-grid">
-        <div class="field"><label class="field-label">Contract Expiry</label><input type="date" id="ef_contractexp" value="${normalizeDate(emp?.contractExpiry)||''}"></div>
       </div>
     </div>
 
@@ -5824,6 +5819,18 @@ function renderEmpForm(empId){
         <div class="field"><label class="field-label">National ID Number *</label><input type="text" id="ef_nid" value="${emp?.nidNo||''}" placeholder="A-number"></div>
         <div class="field"><label class="field-label">NID Expiry</label><input type="date" id="ef_nidexp" value="${normalizeDate(emp?.nidExpiry)||''}"></div>
         <div class="field"><label class="field-label">Date of Birth</label><input type="date" id="ef_dob" value="${normalizeDate(emp?.dob)||''}" data-no-default="true"></div>
+      </div>
+    </div>
+
+    <!-- Contract sub-section: visible for every staff type but only when
+         Employment Basis is Full Time or Part Time. Other bases (Event Hire,
+         Contract) hide this block via refreshEmpBasisFields(). -->
+    <div id="contractSection" style="display:${(emp?.empBasis==='fulltime' || emp?.empBasis==='parttime' || !emp?.empBasis)?'block':'none'}">
+      <div class="form-sub-hdr">Contract</div>
+      <div class="emp-form-grid">
+        <div class="field"><label class="field-label">Contract Start Date</label><input type="date" id="ef_contractstart" value="${normalizeDate(emp?.contractStartDate)||''}">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Defaults to Join Date if blank.</div></div>
+        <div class="field"><label class="field-label">Contract Expiry</label><input type="date" id="ef_contractexp" value="${normalizeDate(emp?.contractExpiry)||''}"></div>
       </div>
     </div>`;
   const sec4 = sec(4, 'empSec-4',
@@ -5962,6 +5969,8 @@ function refreshStatusFields(){
 function refreshEmpBasisFields(){
   const basis = document.getElementById('ef_empbasis')?.value;
   const isEventHire = basis === 'eventhire';
+  // Contracts apply only to Full Time and Part Time per user policy.
+  const hasContract = basis === 'fulltime' || basis === 'parttime';
 
   // Date Joined: hide + clear for event-hire
   const wrap  = document.getElementById('ef_joinedWrap');
@@ -5990,6 +5999,19 @@ function refreshEmpBasisFields(){
       const el = document.getElementById(id);
       if(el) el.value = '';
     });
+  }
+  // Contract sub-section: visible only for Full Time / Part Time. Hidden
+  // for Event Hire and Contract bases. When hidden, clear the dates so a
+  // stale value doesn't sneak through.
+  const contractSec = document.getElementById('contractSection');
+  if(contractSec){
+    contractSec.style.display = hasContract ? 'block' : 'none';
+    if(!hasContract){
+      const cs = document.getElementById('ef_contractstart');
+      const ce = document.getElementById('ef_contractexp');
+      if(cs) cs.value = '';
+      if(ce) ce.value = '';
+    }
   }
   // If we switched OUT of event-hire, refresh the status-driven sections so
   // the Probation block reappears when status is set back to probation.
@@ -6148,8 +6170,12 @@ function saveEmployee(){
     workPermitNo:emp.workPermitNo||null, workPermitExpiry:emp.workPermitExpiry||null,
     insuranceNo:emp.insuranceNo||null, insuranceAgency:emp.insuranceAgency||null,
     insuranceExpiry:emp.insuranceExpiry||null, quotaExpiry:emp.quotaExpiry||null,
-    medicalExpiry:emp.medicalExpiry||null, contractExpiry:emp.contractExpiry||null,
-    contractStartDate:emp.contractStartDate||null,
+    // Contract dates only persist for Full Time / Part Time per current policy.
+    // Other bases (Event Hire, Contract) null them on save so they don't ride
+    // along if someone toggled basis after typing a date.
+    medicalExpiry:emp.medicalExpiry||null,
+    contractExpiry:    (emp.empBasis==='fulltime' || emp.empBasis==='parttime') ? (emp.contractExpiry||null)    : null,
+    contractStartDate: (emp.empBasis==='fulltime' || emp.empBasis==='parttime') ? (emp.contractStartDate||null) : null,
     nationality:emp.nationality||null, dob:emp.dob||null,
     empBasis:emp.empBasis||'fulltime', pensionEligible:emp.pensionEligible||'yes',
     bankName:emp.bankName||null, bankAcctName:emp.bankAcctName||null,

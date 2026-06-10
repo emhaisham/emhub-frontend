@@ -5065,13 +5065,44 @@ document.addEventListener('DOMContentLoaded',()=>{
 // fields added later by innerHTML / append in form renders.
 (function setupDateDefaulter(){
   const today = () => new Date().toISOString().slice(0,10);
+  // Format an ISO YYYY-MM-DD as "10 Jun 2026" — explicit, locale-independent,
+  // so the confirming hint never matches whatever the OS picker is showing.
+  const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmtISO(iso){
+    if(!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
+    const [y,m,d] = iso.split('-');
+    return `${parseInt(d,10)} ${MONTHS_SHORT[parseInt(m,10)-1]} ${y}`;
+  }
+  // Add (or refresh) a tiny hint span right after the date input that shows
+  // the chosen date in unambiguous "10 Jun 2026" form. So a user in a US
+  // locale picking 6/9 still sees "9 Jun 2026" below the picker and can
+  // confirm they didn't pick the wrong date.
+  function ensureHint(inp){
+    if(!inp || inp.type !== 'date') return;
+    if(inp.dataset.noHint === 'true') return;
+    let hint = inp.nextElementSibling;
+    if(!hint || !hint.classList || !hint.classList.contains('date-hint')){
+      hint = document.createElement('span');
+      hint.className = 'date-hint';
+      // Inline so it sits with the input but doesn't disturb form layout.
+      hint.style.cssText = 'display:block;font-size:11px;color:var(--text3);margin-top:3px;font-variant-numeric:tabular-nums;letter-spacing:.01em';
+      inp.insertAdjacentElement('afterend', hint);
+    }
+    hint.textContent = inp.value ? fmtISO(inp.value) : '';
+    // Wire once — keeps hint live as the user changes the date
+    if(!inp.dataset.hintBound){
+      inp.dataset.hintBound = '1';
+      inp.addEventListener('input', () => { hint.textContent = inp.value ? fmtISO(inp.value) : ''; });
+      inp.addEventListener('change', () => { hint.textContent = inp.value ? fmtISO(inp.value) : ''; });
+    }
+  }
   function fillDates(scope){
     if(!scope || !scope.querySelectorAll) return;
     scope.querySelectorAll('input[type="date"]').forEach(inp => {
-      // Skip if already has a value or if explicitly opted out via data-no-default
-      if(inp.value) return;
-      if(inp.dataset.noDefault === 'true') return;
-      inp.value = today();
+      // Default to today on empty (unless opted out)
+      if(!inp.value && inp.dataset.noDefault !== 'true') inp.value = today();
+      // Always add the confirming format hint
+      ensureHint(inp);
     });
   }
   // Initial pass after DOM is ready
@@ -5083,6 +5114,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         if(node.nodeType !== 1) return; // ELEMENT_NODE only
         if(node.matches?.('input[type="date"]')) {
           if(!node.value && node.dataset.noDefault !== 'true') node.value = today();
+          ensureHint(node);
         }
         // Also walk children — innerHTML replacement adds a parent whose
         // descendants we still need to cover.

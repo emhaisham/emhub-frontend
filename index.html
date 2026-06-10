@@ -5414,7 +5414,11 @@ function hrNav(page, extra){
   if(items[map[page]]) items[map[page]].classList.add('active');
   hrActivePage = page;
   if(page==='employees')     { populateHRFilters(); renderEmployees(); }
-  if(page==='add-employee')  { renderEmpForm(extra||null); }
+  if(page==='add-employee')  {
+    // Always pull the freshest department list before rendering the form so
+    // a renamed/deleted dept can't be picked from a stale cached dropdown.
+    loadDepartments().then(()=>renderEmpForm(extra||null));
+  }
   if(page==='disciplinary')  { renderDisciplinaryPage(); }
   if(page==='staff-assets')  { renderAllStaffAssets(); }
   if(page==='payroll'){
@@ -7823,7 +7827,16 @@ function renderEmployees(){
             ${statusBadge}
             ${emp.salaryConfidential?`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;background:var(--amber-bg);color:var(--amber);border-radius:4px;padding:1px 5px;font-weight:700" title="Salary is confidential — hidden from users without the permission"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Confidential</span>`:''}
           </div>
-          <div class="emp-row-detail">${emp.title||emp.designation||'—'} <span style="color:var(--border2);margin:0 6px">·</span> ${emp.dept||'—'}${emp.joined?` <span style="color:var(--border2);margin:0 6px">·</span> Joined ${fmtDate(emp.joined)}`:''}</div>
+          <div class="emp-row-detail">${emp.title||emp.designation||'—'} <span style="color:var(--border2);margin:0 6px">·</span> ${(()=>{
+            // Show dept; if the stored value doesn't match any current
+            // department (e.g. dept was renamed/deleted after this employee
+            // was saved), flag it visibly so admin can fix the row.
+            const dept = emp.dept || '';
+            if(!dept) return '—';
+            const known = (hrDepartments||[]).some(d => d.name === dept);
+            if(known) return dept;
+            return `<span style="color:var(--amber);font-weight:600" title="This department no longer exists in the list — edit the employee to reassign.">${dept} ⚠</span>`;
+          })()}${emp.joined?` <span style="color:var(--border2);margin:0 6px">·</span> Joined ${fmtDate(emp.joined)}`:''}</div>
         </div>
       </div>
       <div class="pg-right" onclick="event.stopPropagation()">

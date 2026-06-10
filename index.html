@@ -3752,7 +3752,7 @@ function _afterLogin(){
   setHubAvatar(user, firstName);
   // Greeting strip — the warmth move. Replaces static role text.
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
   const greetEl = document.getElementById('hubGreeting');
   if(greetEl) greetEl.textContent = `${greeting},`;
   document.getElementById('hubUname').textContent = firstName;

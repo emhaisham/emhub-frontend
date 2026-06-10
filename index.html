@@ -5173,6 +5173,20 @@ document.addEventListener('DOMContentLoaded',()=>{
 // fields added later by innerHTML / append in form renders.
 (function setupDateDefaulter(){
   const today = () => new Date().toISOString().slice(0,10);
+  // Defensive: also skip any date input whose id, name or label clearly
+  // identifies it as an EXPIRY / END / BIRTH / EXIT date. None of those
+  // semantically default to "today" — they default to whatever the user
+  // actually types. Without this, the previous build was silently filling
+  // contract_expiry, passport_expiry, NID expiry, etc. with today's date
+  // whenever a form opened, creating false alarms on the Probation &
+  // Contracts and Expiring Documents pages.
+  const SKIP_NAME_PATTERNS = /(exp$|expir|expiry|expires|_end$|enddate|end_date|exitdate|exit_date|dob$|birth|deadline)/i;
+  function shouldSkipDefault(inp){
+    if(inp.dataset.noDefault === 'true') return true;
+    if(SKIP_NAME_PATTERNS.test(inp.id || '')) return true;
+    if(SKIP_NAME_PATTERNS.test(inp.name || '')) return true;
+    return false;
+  }
   // Format an ISO YYYY-MM-DD as "10 Jun 2026" — explicit, locale-independent,
   // so the confirming hint never matches whatever the OS picker is showing.
   const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -5207,8 +5221,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   function fillDates(scope){
     if(!scope || !scope.querySelectorAll) return;
     scope.querySelectorAll('input[type="date"]').forEach(inp => {
-      // Default to today on empty (unless opted out)
-      if(!inp.value && inp.dataset.noDefault !== 'true') inp.value = today();
+      // Default to today on empty (unless opted out OR semantically an expiry)
+      if(!inp.value && !shouldSkipDefault(inp)) inp.value = today();
       // Always add the confirming format hint
       ensureHint(inp);
     });
@@ -5221,7 +5235,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       m.addedNodes.forEach(node => {
         if(node.nodeType !== 1) return; // ELEMENT_NODE only
         if(node.matches?.('input[type="date"]')) {
-          if(!node.value && node.dataset.noDefault !== 'true') node.value = today();
+          if(!node.value && !shouldSkipDefault(node)) node.value = today();
           ensureHint(node);
         }
         // Also walk children — innerHTML replacement adds a parent whose
@@ -5822,10 +5836,11 @@ function renderEmpForm(empId){
       </div>
     </div>
 
-    <!-- Contract sub-section: visible for every staff type but only when
-         Employment Basis is Full Time or Part Time. Other bases (Event Hire,
-         Contract) hide this block via refreshEmpBasisFields(). -->
-    <div id="contractSection" style="display:${(emp?.empBasis==='fulltime' || emp?.empBasis==='parttime' || !emp?.empBasis)?'block':'none'}">
+    <!-- Contract sub-section: visible for every staff type when Employment
+         Basis is Full Time, Part Time, or Contract. Hidden for Event Hire
+         (paid per event, no continuing contract). Toggled at runtime by
+         refreshEmpBasisFields(). -->
+    <div id="contractSection" style="display:${(emp?.empBasis==='eventhire')?'none':'block'}">
       <div class="form-sub-hdr">Contract</div>
       <div class="emp-form-grid">
         <div class="field"><label class="field-label">Contract Start Date</label><input type="date" id="ef_contractstart" value="${normalizeDate(emp?.contractStartDate)||''}">
@@ -5969,8 +5984,9 @@ function refreshStatusFields(){
 function refreshEmpBasisFields(){
   const basis = document.getElementById('ef_empbasis')?.value;
   const isEventHire = basis === 'eventhire';
-  // Contracts apply only to Full Time and Part Time per user policy.
-  const hasContract = basis === 'fulltime' || basis === 'parttime';
+  // Contracts apply to Full Time, Part Time, and Contract bases. Event Hire
+  // is per-event so no continuing contract.
+  const hasContract = basis === 'fulltime' || basis === 'parttime' || basis === 'contract';
 
   // Date Joined: hide + clear for event-hire
   const wrap  = document.getElementById('ef_joinedWrap');
@@ -6170,12 +6186,11 @@ function saveEmployee(){
     workPermitNo:emp.workPermitNo||null, workPermitExpiry:emp.workPermitExpiry||null,
     insuranceNo:emp.insuranceNo||null, insuranceAgency:emp.insuranceAgency||null,
     insuranceExpiry:emp.insuranceExpiry||null, quotaExpiry:emp.quotaExpiry||null,
-    // Contract dates only persist for Full Time / Part Time per current policy.
-    // Other bases (Event Hire, Contract) null them on save so they don't ride
-    // along if someone toggled basis after typing a date.
+    // Contract dates persist for Full Time / Part Time / Contract bases.
+    // Event Hire nulls them on save (per-event, no continuing contract).
     medicalExpiry:emp.medicalExpiry||null,
-    contractExpiry:    (emp.empBasis==='fulltime' || emp.empBasis==='parttime') ? (emp.contractExpiry||null)    : null,
-    contractStartDate: (emp.empBasis==='fulltime' || emp.empBasis==='parttime') ? (emp.contractStartDate||null) : null,
+    contractExpiry:    (emp.empBasis==='eventhire') ? null : (emp.contractExpiry||null),
+    contractStartDate: (emp.empBasis==='eventhire') ? null : (emp.contractStartDate||null),
     nationality:emp.nationality||null, dob:emp.dob||null,
     empBasis:emp.empBasis||'fulltime', pensionEligible:emp.pensionEligible||'yes',
     bankName:emp.bankName||null, bankAcctName:emp.bankAcctName||null,

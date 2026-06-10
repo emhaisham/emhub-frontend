@@ -5498,7 +5498,6 @@ function renderEmpForm(empId){
     </div>
     <div class="emp-form-grid">
       <div class="field"><label class="field-label">Staff Type *</label><select id="ef_type" onchange="refreshExpatFields()"><option value="local" ${!isExpat?'selected':''}>Local (Maldivian)</option><option value="expat" ${isExpat?'selected':''}>Expatriate</option></select></div>
-      <div class="field"><label class="field-label">Date Joined</label><input type="date" id="ef_joined" value="${normalizeDate(emp?.joined)||''}"></div>
       <div class="field"><label class="field-label">Phone</label><input type="text" id="ef_phone" value="${emp?.phone||''}" placeholder="+960 7xx xxxx"></div>
       <div class="field"><label class="field-label">Email</label><input type="email" id="ef_email" value="${emp?.email||''}" placeholder="staff@eventmaldives.com.mv"></div>
     </div>`);
@@ -5507,12 +5506,13 @@ function renderEmpForm(empId){
   const sec2 = sec(2, 'empSec-2', 'Employment & Status', 'Engagement type, status, reporting line, and login link.', `
     <div class="emp-form-grid">
       <div class="field"><label class="field-label">Employment Basis *</label>
-        <select id="ef_empbasis">
+        <select id="ef_empbasis" onchange="refreshEmpBasisFields()">
           <option value="fulltime" ${(!emp||emp.empBasis==='fulltime'||!emp.empBasis)?'selected':''}>Full Time</option>
           <option value="eventhire" ${emp?.empBasis==='eventhire'?'selected':''}>Event Hire</option>
           <option value="parttime" ${emp?.empBasis==='parttime'?'selected':''}>Part Time</option>
           <option value="contract" ${emp?.empBasis==='contract'?'selected':''}>Contract</option>
         </select></div>
+      <div class="field" id="ef_joinedWrap" style="display:${emp?.empBasis==='eventhire'?'none':'flex'}"><label class="field-label">Date Joined</label><input type="date" id="ef_joined" value="${normalizeDate(emp?.joined)||''}"></div>
       <div class="field"><label class="field-label">Employment Status</label>
         <select id="ef_status" onchange="refreshStatusFields()">
           <option value="active" ${(!emp||emp.status==='active')?'selected':''}>Active</option>
@@ -5762,6 +5762,22 @@ function refreshStatusFields(){
   const probSec=document.getElementById('probationSection');
   if(exitSec) exitSec.style.display=(status==='resigned'||status==='terminated')?'block':'none';
   if(probSec) probSec.style.display=(status==='probation')?'block':'none';
+}
+
+// Event-hire staff are paid per-event, not by joining date — so we hide the
+// Date Joined field for them. Also clears the value so a stale date doesn't
+// linger on the saved record if someone toggles to Event Hire after typing.
+function refreshEmpBasisFields(){
+  const basis = document.getElementById('ef_empbasis')?.value;
+  const wrap = document.getElementById('ef_joinedWrap');
+  const input = document.getElementById('ef_joined');
+  if(!wrap) return;
+  if(basis === 'eventhire'){
+    wrap.style.display = 'none';
+    if(input) input.value = '';
+  } else {
+    wrap.style.display = 'flex';
+  }
 }
 
 function refreshExpatFields(){

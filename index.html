@@ -5593,7 +5593,7 @@ function renderEmpForm(empId){
       <div class="field"><label class="field-label">Employment Status</label>
         <select id="ef_status" onchange="refreshStatusFields()">
           <option value="active" ${(!emp||emp.status==='active')?'selected':''}>Active</option>
-          <option value="probation" ${emp?.status==='probation'?'selected':''}>On Probation</option>
+          <option value="probation" ${emp?.status==='probation'?'selected':''} class="ef-status-probation">On Probation</option>
           <option value="resigned" ${emp?.status==='resigned'?'selected':''}>Resigned</option>
           <option value="terminated" ${emp?.status==='terminated'?'selected':''}>Terminated</option>
           <option value="inactive" ${emp?.status==='inactive'?'selected':''}>Inactive</option>
@@ -5795,6 +5795,7 @@ function renderEmpForm(empId){
     document.getElementById('bankDetailsSection').style.display=this.value==='cash'?'none':'block';
   });
   refreshExpatFields();
+  refreshEmpBasisFields();
   renderAllowanceRows();
   _wireEmpFormTocObserver();
 }
@@ -5842,19 +5843,45 @@ function refreshStatusFields(){
 }
 
 // Event-hire staff are paid per-event, not by joining date — so we hide the
-// Date Joined field for them. Also clears the value so a stale date doesn't
-// linger on the saved record if someone toggles to Event Hire after typing.
+// Date Joined field for them. Also hides the Probation status option and
+// the entire Probation Period block, since probation isn't relevant when
+// someone is hired one event at a time. Stale values get wiped on toggle so
+// they don't linger on the saved record.
 function refreshEmpBasisFields(){
   const basis = document.getElementById('ef_empbasis')?.value;
-  const wrap = document.getElementById('ef_joinedWrap');
+  const isEventHire = basis === 'eventhire';
+
+  // Date Joined: hide + clear for event-hire
+  const wrap  = document.getElementById('ef_joinedWrap');
   const input = document.getElementById('ef_joined');
-  if(!wrap) return;
-  if(basis === 'eventhire'){
-    wrap.style.display = 'none';
-    if(input) input.value = '';
-  } else {
-    wrap.style.display = 'flex';
+  if(wrap){
+    wrap.style.display = isEventHire ? 'none' : 'flex';
+    if(isEventHire && input) input.value = '';
   }
+
+  // Probation: remove the "On Probation" option AND hide the Probation block
+  const statusSel = document.getElementById('ef_status');
+  const probOpt = statusSel?.querySelector('option[value="probation"]');
+  const probSec = document.getElementById('probationSection');
+  if(probOpt){
+    probOpt.style.display = isEventHire ? 'none' : '';
+    probOpt.disabled = isEventHire;
+    // If the row was already "On Probation" and the user just toggled to
+    // event-hire, snap the status back to Active so we don't ship an
+    // invalid combination to the server.
+    if(isEventHire && statusSel.value === 'probation') statusSel.value = 'active';
+  }
+  if(probSec && isEventHire){
+    probSec.style.display = 'none';
+    // Clear probation fields so nothing stale gets saved
+    ['ef_probstart','ef_probmonths','ef_probsalary','ef_probend','ef_probstatus'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.value = '';
+    });
+  }
+  // If we switched OUT of event-hire, refresh the status-driven sections so
+  // the Probation block reappears when status is set back to probation.
+  if(!isEventHire && typeof refreshStatusFields === 'function') refreshStatusFields();
 }
 
 function refreshExpatFields(){
@@ -6003,9 +6030,14 @@ function saveEmployee(){
     empBasis:emp.empBasis||'fulltime', pensionEligible:emp.pensionEligible||'yes',
     bankName:emp.bankName||null, bankAcctName:emp.bankAcctName||null,
     bankAcct:emp.bankAcct||null, payMethod:emp.payMethod||'bank',
-    probationStart:emp.probationStart||null, probationMonths:emp.probationMonths||0,
-    probationSalary:emp.probationSalary||0,
-    probationEndDate:emp.probationEndDate||null, probationStatus:emp.probationStatus||null,
+    // Event-hire never carries probation — wipe anything stale on save so a
+    // person who was on probation before getting toggled to event-hire
+    // doesn't keep the old probation timeline in the DB.
+    probationStart:   emp.empBasis==='eventhire' ? null : (emp.probationStart||null),
+    probationMonths:  emp.empBasis==='eventhire' ? 0    : (emp.probationMonths||0),
+    probationSalary:  emp.empBasis==='eventhire' ? 0    : (emp.probationSalary||0),
+    probationEndDate: emp.empBasis==='eventhire' ? null : (emp.probationEndDate||null),
+    probationStatus:  emp.empBasis==='eventhire' ? null : (emp.probationStatus||null),
     reportsTo:emp.reportsTo||null,
     exitType:emp.exitType||null, exitDate:emp.exitDate||null, exitReason:emp.exitReason||null,
     emergencyName:emp.emgName||null, emergencyPhone:emp.emgPhone||null,

@@ -4934,20 +4934,28 @@ function userForm(u){
   const roleOpts=appRoles.map(r=>`<option value="${r.id}" ${String(u?.roleId)===String(r.id)?'selected':''}>${r.name}</option>`).join('');
   // Employee linking: list active employees who aren't already linked to a
   // different user (skip if already linked to THIS user — that one is fine).
-  // Pre-select the employee already linked to the current user, if any.
   const currentLinkEmp = u ? hrEmployees.find(e => String(e.linkedUserId||'')===String(u.id)) : null;
-  const empOpts = ['<option value="">— Not linked —</option>']
-    .concat((hrEmployees||[])
-      .filter(e => e.status!=='inactive')
-      .filter(e => !e.linkedUserId || String(e.linkedUserId)===String(u?.id||''))
-      .sort((a,b)=>(a.name||'').localeCompare(b.name||''))
-      .map(e => `<option value="${e.id}" ${String(currentLinkEmp?.id)===String(e.id)?'selected':''}>${e.name}${e.dept?' · '+e.dept:''}${e.phone?' · '+e.phone:''}</option>`))
-    .join('');
+  // Pre-populate the search input + hidden empId with the currently-linked
+  // employee, if any. The hidden input is what saveUser actually reads.
+  const initialEmpLabel = currentLinkEmp
+    ? `${currentLinkEmp.name}${currentLinkEmp.dept?' · '+currentLinkEmp.dept:''}${currentLinkEmp.phone?' · '+currentLinkEmp.phone:''}`
+    : '';
+  const initialEmpId = currentLinkEmp ? currentLinkEmp.id : '';
   return`
+    <div class="field"><label class="field-label">Link to Employee <span style="color:var(--text3);font-weight:400">(type to search · phone used for WhatsApp welcome)</span></label>
+      <div style="position:relative">
+        <input type="text" id="uf_emp_search" value="${initialEmpLabel.replace(/"/g,'&quot;')}"
+          placeholder="Search by name or department…"
+          oninput="userEmpSearch(this.value)"
+          onfocus="userEmpSearch(this.value)"
+          onblur="setTimeout(()=>{const dd=document.getElementById('uf_emp_dd');if(dd)dd.style.display='none'},200)"
+          autocomplete="off">
+        <input type="hidden" id="uf_emp" value="${initialEmpId}">
+        <div id="uf_emp_dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--white);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);max-height:220px;overflow-y:auto;z-index:100;margin-top:2px"></div>
+        ${currentLinkEmp ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Currently linked to ${currentLinkEmp.name}. Clear the field to unlink.</div>` : ''}
+      </div></div>
     <div class="field"><label class="field-label">Full Name</label><input type="text" id="uf_name" value="${u?.name||''}" placeholder="e.g. John Smith"></div>
     <div class="field"><label class="field-label">Username</label><input type="text" id="uf_user" value="${u?.username||''}" placeholder="e.g. jsmith"></div>
-    <div class="field"><label class="field-label">Link to Employee <span style="color:var(--text3);font-weight:400">(phone used for WhatsApp welcome)</span></label>
-      <select id="uf_emp">${empOpts}</select></div>
     ${u ? `<div class="field"><label class="field-label">New Password <span style="color:var(--text3);font-weight:400">(leave blank to keep current)</span></label><input type="text" id="uf_pass" placeholder="Enter new password to change"></div>` :
     `<div class="field"><label class="field-label">Temporary Password <span style="font-size:11px;color:var(--green)">(auto-generated)</span></label>
       <div style="display:flex;gap:8px;align-items:center">
@@ -4980,6 +4988,70 @@ function toggleRoleSection(){
   const role=document.getElementById('uf_role')?.value;
   const wrap=document.getElementById('uf_custom_role_wrap');
   if(wrap) wrap.style.display=role==='custom'?'block':'none';
+}
+
+// Live filter for the user form's "Link to Employee" search. Excludes
+// employees already linked to a different user; also clears the hidden
+// uf_emp value when the visible search box no longer matches a real
+// employee (so deleting the text effectively unlinks).
+function userEmpSearch(q){
+  const dd = document.getElementById('uf_emp_dd'); if(!dd) return;
+  const hidden = document.getElementById('uf_emp');
+  const editingId = (typeof editingUserId !== 'undefined') ? editingUserId : null;
+  const term = String(q||'').trim().toLowerCase();
+
+  // If the visible text doesn't exactly match the currently-selected emp's
+  // label, clear the hidden id — the user is typing fresh.
+  if(hidden){
+    const cur = hrEmployees.find(e => String(e.id)===String(hidden.value));
+    const curLabel = cur ? `${cur.name}${cur.dept?' · '+cur.dept:''}${cur.phone?' · '+cur.phone:''}` : '';
+    if(curLabel.toLowerCase() !== q.toLowerCase()) hidden.value = '';
+  }
+
+  const candidates = (hrEmployees||[])
+    .filter(e => e.status!=='inactive')
+    // Excludes already-linked employees (except the one already on this user)
+    .filter(e => !e.linkedUserId || String(e.linkedUserId)===String(editingId||''))
+    .filter(e => {
+      if(!term) return true;
+      const blob = `${e.name||''} ${e.dept||''} ${e.designation||e.title||''} ${e.phone||''} ${e.empId||''}`.toLowerCase();
+      return blob.includes(term);
+    })
+    .sort((a,b)=>(a.name||'').localeCompare(b.name||''))
+    .slice(0, 15);
+
+  if(!candidates.length){
+    dd.style.display='block';
+    dd.innerHTML = '<div style="padding:10px 12px;color:var(--text3);font-size:12.5px">No matching employee</div>';
+    return;
+  }
+  dd.style.display='block';
+  dd.innerHTML = candidates.map(e => `
+    <div onclick="userEmpPick('${e.id}')" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
+      <div style="font-weight:600;color:var(--text)">${e.name}</div>
+      <div style="font-size:11.5px;color:var(--text3);margin-top:2px">${[e.dept, e.designation||e.title, e.phone, e.empId].filter(Boolean).join(' · ')}</div>
+    </div>
+  `).join('');
+}
+
+// Commit a picked employee: write into hidden uf_emp + visible search input,
+// and AUTO-POPULATE the Full Name field (only if it's empty or matches a
+// previous auto-fill — so editing a user's typed name doesn't get clobbered).
+function userEmpPick(empId){
+  const emp = hrEmployees.find(e => String(e.id)===String(empId)); if(!emp) return;
+  const hidden = document.getElementById('uf_emp');
+  const search = document.getElementById('uf_emp_search');
+  const nameInp = document.getElementById('uf_name');
+  const label = `${emp.name}${emp.dept?' · '+emp.dept:''}${emp.phone?' · '+emp.phone:''}`;
+  if(hidden) hidden.value = empId;
+  if(search) search.value = label;
+  // Auto-populate name if blank or if it currently matches another employee
+  // in the list (likely a previous auto-fill the admin wants to swap).
+  if(nameInp){
+    const prevWasAutoFill = !nameInp.value.trim() || (hrEmployees||[]).some(e => e.name === nameInp.value.trim());
+    if(prevWasAutoFill) nameInp.value = emp.name;
+  }
+  const dd = document.getElementById('uf_emp_dd'); if(dd) dd.style.display='none';
 }
 
 async function saveUser(){

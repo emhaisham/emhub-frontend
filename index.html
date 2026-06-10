@@ -1676,10 +1676,39 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
   .units-actions-cell{justify-content:flex-end!important;border-top:1px dashed var(--border);padding-top:8px;margin-top:2px}
 }
 </style>
+<!-- Set the loading-state attribute on <html> before any DOM renders, so the
+     first paint shows splash (not login) when a saved auth token exists.
+     The attribute is cleared when /auth/me resolves: if the token is valid
+     we activate screen-hub, if invalid we drop back to the login screen. -->
+<script>(function(){
+  try {
+    if(localStorage.getItem('em_auth_token')){
+      document.documentElement.setAttribute('data-app-state','loading');
+    }
+  } catch(e){}
+})();</script>
 </head>
 <body>
 
 <!-- ══ LOGIN SCREEN ══════════════════════════════════ -->
+<!-- Splash screen — shown on refresh when a saved token exists, so the
+     login form doesn't flash before /auth/me resolves. Visibility is
+     driven by data-app-state on <html>, set synchronously in <head>
+     so the very first paint shows the right screen. -->
+<div class="screen" id="screen-splash">
+  <div style="text-align:center">
+    <img src="em-logo.png" alt="" style="height:60px;width:auto;opacity:.6;margin-bottom:18px">
+    <div style="width:28px;height:28px;border:2.5px solid var(--border2);border-top-color:var(--accent);border-radius:50%;margin:0 auto;animation:em-spin .8s linear infinite"></div>
+    <div style="margin-top:14px;font-size:13px;color:var(--text3);letter-spacing:.02em">Loading…</div>
+  </div>
+</div>
+<style>
+  @keyframes em-spin{to{transform:rotate(360deg)}}
+  #screen-splash{display:none;align-items:center;justify-content:center;background:var(--surface);min-height:100vh}
+  html[data-app-state="loading"] #screen-splash{display:flex}
+  html[data-app-state="loading"] #screen-login{display:none}
+</style>
+
 <div class="screen active" id="screen-login">
   <div class="login-box">
     <div class="login-logo">
@@ -17714,20 +17743,33 @@ document.addEventListener('DOMContentLoaded',()=>{
   setTimeout(_injectMobileMenubars, 300);
 
   // ── AUTO LOGIN ON REFRESH ─────────────────────────────────────────────────
-  // If a token exists in localStorage, verify it and restore session
+  // If a token exists in localStorage, verify it and restore session. The
+  // splash screen is already showing (set in <head> sync); we drop the
+  // loading state attribute when auth resolves so the right screen reveals.
   const savedToken = localStorage.getItem('em_auth_token');
+  const _clearLoadingState = () => document.documentElement.removeAttribute('data-app-state');
   if(savedToken){
     _authToken = savedToken;
     // Verify token is still valid with the server
     api('GET', '/auth/me').then(user => {
-      if(!user) return; // token invalid — stay on login screen
+      if(!user){
+        // Token invalid — clear it so we don't loop, drop to login screen
+        localStorage.removeItem('em_auth_token');
+        _authToken = null;
+        _clearLoadingState();
+        return;
+      }
       currentUser = user;
       // Restore last visited module
       const lastModule = localStorage.getItem('em_last_module') || 'launcher';
       // Load roles then restore session
       api('GET', '/users/roles').then(roles => {
         appRoles = roles || [];
+        // _afterLogin activates screen-hub which has its own visibility rules,
+        // so the splash naturally gives way to the app. Also clear the
+        // attribute defensively in case CSS targets it broadly later.
         _afterLogin();
+        _clearLoadingState();
         // After login restores, switch to last module
         setTimeout(() => {
           if(lastModule && lastModule !== 'launcher'){
@@ -17738,11 +17780,18 @@ document.addEventListener('DOMContentLoaded',()=>{
             });
           }
         }, 400);
-      });
+      }).catch(_clearLoadingState);
     }).catch(() => {
-      // Network error — clear bad token
+      // Network error — clear bad token, drop to login
       localStorage.removeItem('em_auth_token');
+      _authToken = null;
+      _clearLoadingState();
     });
+  } else {
+    // No token to begin with: nothing to do, but make sure the attribute
+    // isn't lingering (it shouldn't be — the <head> script only sets it
+    // when a token is present — but belt and braces).
+    _clearLoadingState();
   }
 });
 

@@ -1518,7 +1518,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .wday-mlabel { display: none; }
 .sa-mlabel { display: none; }
 
-/* Staff Assets list: collapse the 6-column desktop grid to a stacked card
+/* Employee Assets list: collapse the 6-column desktop grid to a stacked card
    layout on phones, hide the column header, show inline field labels. */
 @media (max-width: 700px) {
   .sa-hdr { display: none !important; }
@@ -1983,9 +1983,9 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="nav-item" onclick="hrNav('departments')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Departments</div>
               <div class="nav-item" onclick="hrNav('org-chart')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="9" y="15" width="6" height="6" rx="1"/><path d="M6 9v3h12V9M12 12v3"/></svg></span>Org Chart</div>
               <div class="nav-item" onclick="hrNav('disciplinary')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg></span>Disciplinary</div>
-              <div class="nav-item" onclick="hrNav('staff-assets')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></span>Staff Assets</div>
+              <div class="nav-item" onclick="hrNav('staff-assets')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></span>Employee Assets</div>
               <div class="nav-item" onclick="hrNav('reports')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg></span>Reports &amp; Analytics</div>
-              <div class="nav-item" onclick="hrNav('requests')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Staff Requests</div>
+              <div class="nav-item" onclick="hrNav('requests')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Employee Requests</div>
               <div class="nav-lbl">Compliance</div>
               <div class="nav-item" onclick="hrNav('expiring-docs')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>Expiring Documents</div>
               <div class="nav-item" onclick="hrNav('probation-contracts')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>Probation &amp; Contracts</div>
@@ -1999,7 +1999,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="nav-lbl">Leave &amp; Letters</div>
               <div class="nav-item" onclick="hrNav('dept-leave')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Department Leave</div>
               <div class="nav-item" onclick="hrNav('leave')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></span>Leave</div>
-              <div class="nav-item" onclick="hrNav('letters')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>Staff Letters</div>
+              <div class="nav-item" onclick="hrNav('letters')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>Employee Letters</div>
             </div>
           </aside>
           <div class="main-area">
@@ -2239,7 +2239,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
             <!-- ── LETTERS ── -->
             <div class="page" id="hr-page-letters">
               <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between">
-                <div><div class="page-title">Staff Letters</div><div class="page-sub">Generate employment, experience, NOC, salary certificate, warning, increment, transfer, termination, and bank letters. Supports bulk generation for multiple staff in one print job.</div></div>
+                <div><div class="page-title">Employee Letters</div><div class="page-sub">Generate employment, experience, NOC, salary certificate, warning, increment, transfer, termination, and bank letters. Supports bulk generation for multiple staff in one print job.</div></div>
                 <button class="btn btn-ghost btn-sm" id="ltBulkToggle" onclick="ltToggleBulk()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Bulk Mode</button>
               </div>
               <div class="card">
@@ -2322,10 +2322,10 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div id="discList"></div>
             </div>
 
-            <!-- Staff Assets Page -->
+            <!-- Employee Assets Page -->
             <div class="page" id="hr-page-staff-assets">
               <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between">
-                <div><div class="page-title">Staff Assets</div><div class="page-sub">Equipment and assets handed over to staff members</div></div>
+                <div><div class="page-title">Employee Assets</div><div class="page-sub">Equipment and assets handed over to staff members</div></div>
                 <button class="btn btn-primary btn-sm" onclick="guardAction('hr_assets', openAddAssetFromAllStaff)">＋ Hand Over Asset</button>
               </div>
               <div class="toolbar" style="margin-bottom:14px">
@@ -2343,7 +2343,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
             <div class="page" id="hr-page-requests">
               <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
                 <div>
-                  <div class="page-title">Staff Requests</div>
+                  <div class="page-title">Employee Requests</div>
                   <div class="page-sub">Self-service queue: profile update, letter, and loan/advance requests submitted by staff. Review and approve or reject.</div>
                 </div>
               </div>
@@ -3927,7 +3927,7 @@ function applyPerms(){
   // ── HR SIDEBAR nav items (by position) ───────────────
   const hrNavItems=document.querySelectorAll('#mod-hr .nav-wrap .nav-item');
   // positions: 0=All Employees, 1=Add Emp, 2=Departments, 3=Org Chart, 4=Disciplinary,
-  // 5=Staff Assets, 6=Reports, 7=Requests, 8=Expiring Docs, 9=Probation, 10=Training,
+  // 5=Employee Assets, 6=Reports, 7=Requests, 8=Expiring Docs, 9=Probation, 10=Training,
   // 11=Payroll, 12=Salary Revisions, 13=Loans, 14=Pension, 15=Bonus, 16=Dept Leave,
   // 17=Leave, 18=Letters
   const hrMap=['hr_view_all','hr_add_emp','hr_departments','hr_view_all','hr_disc','hr_assets','hr_reports_view','hr_self_request_approve','hr_view_all','hr_view_all','hr_training','hr_payroll','hr_view_all','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
@@ -6648,9 +6648,9 @@ const CP_PAGES = [
   { label:'Add Employee',            sub:'HR · new hire',            group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('add-employee'),50); } },
   { label:'Org Chart',               sub:'HR · reporting tree',      group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('org-chart'),50); } },
   { label:'Disciplinary Records',    sub:'HR',                       group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('disciplinary'),50); } },
-  { label:'Staff Assets',            sub:'HR',                       group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('staff-assets'),50); } },
+  { label:'Employee Assets',            sub:'HR',                       group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('staff-assets'),50); } },
   { label:'Reports & Analytics',     sub:'HR',                       group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('reports'),50); } },
-  { label:'Staff Requests',          sub:'HR · self-service queue',  group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('requests'),50); } },
+  { label:'Employee Requests',          sub:'HR · self-service queue',  group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('requests'),50); } },
   { label:'Expiring Documents',      sub:'HR · compliance',          group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('expiring-docs'),50); } },
   { label:'Probation & Contracts',   sub:'HR · compliance',          group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('probation-contracts'),50); } },
   { label:'Training & Certs',        sub:'HR · compliance',          group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('training'),50); } },
@@ -6661,7 +6661,7 @@ const CP_PAGES = [
   { label:'Bonus',                   sub:'HR · payroll',             group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('bonus'),50); } },
   { label:'Department Leave',        sub:'HR · leave',               group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('dept-leave'),50); } },
   { label:'Leave',                   sub:'HR · leave',               group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('leave'),50); } },
-  { label:'Staff Letters',           sub:'HR · letters',             group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('letters'),50); } }
+  { label:'Employee Letters',           sub:'HR · letters',             group:'Pages', act:()=>{ switchModule('hr'); setTimeout(()=>hrNav('letters'),50); } }
 ];
 
 let _cpResults = [];
@@ -9829,7 +9829,6 @@ function renderDepartments(){
         <div class="pg-name">${d.name}</div>
         <div style="font-size:11.5px;color:var(--text3);margin-top:2px">
           ${counts[d.name]?counts[d.name]+' employee'+(counts[d.name]===1?'':'s'):'No employees'}
-          · sort order ${d.sortOrder||100}
         </div>
       </div>
       <div class="pg-right">
@@ -9854,8 +9853,8 @@ function _openDepartmentModal(d){
   document.getElementById('userModalTitle').textContent = d ? 'Edit Department' : 'New Department';
   document.getElementById('userModalForm').innerHTML = `
     <div class="field"><label class="field-label">Department Name *</label><input type="text" id="dept_name" value="${d?.name||''}" placeholder="e.g. Operations"></div>
-    <div class="field"><label class="field-label">Sort Order</label><input type="number" id="dept_sort" value="${d?.sortOrder||100}" min="1">
-      <div style="font-size:11px;color:var(--text3);margin-top:4px">Lower numbers appear first in the dropdown.</div></div>
+    <div class="field"><label class="field-label">Display Order</label><input type="number" id="dept_sort" value="${d?.sortOrder||100}" min="1">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Controls the order departments appear in the dropdown when adding/editing an employee. Lower numbers come first — leave at 100 if you don't care.</div></div>
     <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:12px;border-top:1px solid var(--border)">
       <button class="btn btn-ghost btn-sm" onclick="closeUserModal()">Cancel</button>
       <button class="btn btn-primary btn-sm" onclick="saveDepartment('${d?.id||''}')">Save</button>
@@ -17102,7 +17101,7 @@ const PERM_TREE = [
     { label:'Add Employee', key:'hr_add_emp', actions:['edit'] },
     { label:'Edit Employee', key:'hr_edit_emp', actions:['edit'] },
     { label:'Disciplinary Records', key:'hr_disc', actions:['view','edit'] },
-    { label:'Staff Assets', key:'hr_assets', actions:['view','edit'] },
+    { label:'Employee Assets', key:'hr_assets', actions:['view','edit'] },
     { label:'Monthly Payroll', key:'hr_payroll', actions:['view','edit'] },
     { label:'Payroll — View All Records', key:'hr_payroll_view_all', actions:['view'] },
     { label:'Salary — View Confidential', key:'hr_view_confidential_salary', actions:['view'] },
@@ -17118,7 +17117,7 @@ const PERM_TREE = [
     { label:'Leave Approve / Reject (Stage 1 — Manager)', key:'hr_leave_approve', actions:['edit'] },
     { label:'Leave Final Approve (Stage 2 — GM/COO)', key:'hr_leave_final_approve', actions:['edit'] },
     { label:'Leave Types', key:'hr_leave_types', actions:['view','edit'] },
-    { label:'Staff Letters', key:'hr_letters', actions:['view','edit'] },
+    { label:'Employee Letters', key:'hr_letters', actions:['view','edit'] },
     { label:'HR Settings', key:'hr_settings_edit', actions:['edit'] },
     { label:'Manage Departments', key:'hr_departments', actions:['view','edit'] },
   ]},

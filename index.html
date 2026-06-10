@@ -4925,9 +4925,22 @@ function generateTempPassword(){
 function userForm(u){
   const tempPass = u ? '' : generateTempPassword();
   const roleOpts=appRoles.map(r=>`<option value="${r.id}" ${String(u?.roleId)===String(r.id)?'selected':''}>${r.name}</option>`).join('');
+  // Employee linking: list active employees who aren't already linked to a
+  // different user (skip if already linked to THIS user — that one is fine).
+  // Pre-select the employee already linked to the current user, if any.
+  const currentLinkEmp = u ? hrEmployees.find(e => String(e.linkedUserId||'')===String(u.id)) : null;
+  const empOpts = ['<option value="">— Not linked —</option>']
+    .concat((hrEmployees||[])
+      .filter(e => e.status!=='inactive')
+      .filter(e => !e.linkedUserId || String(e.linkedUserId)===String(u?.id||''))
+      .sort((a,b)=>(a.name||'').localeCompare(b.name||''))
+      .map(e => `<option value="${e.id}" ${String(currentLinkEmp?.id)===String(e.id)?'selected':''}>${e.name}${e.dept?' · '+e.dept:''}${e.phone?' · '+e.phone:''}</option>`))
+    .join('');
   return`
     <div class="field"><label class="field-label">Full Name</label><input type="text" id="uf_name" value="${u?.name||''}" placeholder="e.g. John Smith"></div>
     <div class="field"><label class="field-label">Username</label><input type="text" id="uf_user" value="${u?.username||''}" placeholder="e.g. jsmith"></div>
+    <div class="field"><label class="field-label">Link to Employee <span style="color:var(--text3);font-weight:400">(phone used for WhatsApp welcome)</span></label>
+      <select id="uf_emp">${empOpts}</select></div>
     ${u ? `<div class="field"><label class="field-label">New Password <span style="color:var(--text3);font-weight:400">(leave blank to keep current)</span></label><input type="text" id="uf_pass" placeholder="Enter new password to change"></div>` :
     `<div class="field"><label class="field-label">Temporary Password <span style="font-size:11px;color:var(--green)">(auto-generated)</span></label>
       <div style="display:flex;gap:8px;align-items:center">
@@ -4968,6 +4981,7 @@ async function saveUser(){
   const pass = document.getElementById('uf_pass').value.trim();
   const roleType = document.getElementById('uf_role').value;
   const roleId = document.getElementById('uf_role_id')?.value || null;
+  const linkEmpId = document.getElementById('uf_emp')?.value || '';
   if(!name) return toast('Enter a name');
   if(!username) return toast('Enter a username');
   if(!editingUserId && !pass) return toast('Password is required');
@@ -4981,8 +4995,102 @@ async function saveUser(){
     res = await api('POST', '/users', body);
   }
   if(!res) return;
+  const newUserId = editingUserId || res.id || res.user?.id;
+
+  // Link employee → user (or clear an existing link if dropdown was set to —)
+  // Done after the user save so we have a valid newUserId for new users.
+  await _syncEmployeeUserLink(newUserId, linkEmpId);
+
   users = await api('GET', '/users') || users;
-  closeUserModal(); renderUsers(); toast(editingUserId ? 'User updated ✓' : 'User added ✓');
+  const fresh = await api('GET','/hr/employees');
+  if(Array.isArray(fresh)) hrEmployees = fresh.map(_mapEmployeeFromApi);
+
+  const wasNew = !editingUserId;
+  renderUsers();
+
+  // WhatsApp welcome: only for fresh creations where we have a phone +
+  // password to share. Offer it as a follow-up screen inside the same modal
+  // instead of just closing, so it's a single click to send.
+  const linkedEmp = linkEmpId ? hrEmployees.find(e => String(e.id)===String(linkEmpId)) : null;
+  const phone = linkedEmp?.phone || '';
+  if(wasNew && pass && phone){
+    _openWhatsAppWelcomeStep({ name, username, tempPassword: pass, phone });
+  } else {
+    closeUserModal();
+    toast(wasNew ? 'User added ✓' : 'User updated ✓');
+  }
+}
+
+// Updates hr_employees.linked_user_id so user↔employee linking works in one
+// direction: pick employee from the user form, employee row gets stamped.
+// If newEmpId is empty, also clears any existing employee that pointed at
+// this user (so re-saving with "— Not linked —" cleanly unlinks).
+async function _syncEmployeeUserLink(userId, newEmpId){
+  if(!userId) return;
+  const currentlyLinked = (hrEmployees||[]).find(e => String(e.linkedUserId||'')===String(userId));
+  // Already in the right state? Skip the round trip.
+  if(String(currentlyLinked?.id||'')===String(newEmpId||'')) return;
+  // 1. Clear the old link if it points at a different employee
+  if(currentlyLinked && String(currentlyLinked.id)!==String(newEmpId||'')){
+    await api('PUT','/hr/employees/'+currentlyLinked.id, { ...currentlyLinked,
+      designation: currentlyLinked.title||currentlyLinked.designation||null,
+      salary: currentlyLinked.basicSalary, allowance: currentlyLinked.allowance||0,
+      joinDate: currentlyLinked.joined||null,
+      emergencyName: currentlyLinked.emgName, emergencyPhone: currentlyLinked.emgPhone, emergencyRel: currentlyLinked.emgRelation,
+      linkedUserId: null
+    });
+  }
+  // 2. Set the new link
+  if(newEmpId){
+    const tgt = hrEmployees.find(e => String(e.id)===String(newEmpId));
+    if(tgt){
+      await api('PUT','/hr/employees/'+tgt.id, { ...tgt,
+        designation: tgt.title||tgt.designation||null,
+        salary: tgt.basicSalary, allowance: tgt.allowance||0,
+        joinDate: tgt.joined||null,
+        emergencyName: tgt.emgName, emergencyPhone: tgt.emgPhone, emergencyRel: tgt.emgRelation,
+        linkedUserId: userId
+      });
+    }
+  }
+}
+
+// WhatsApp welcome step shown after a new user is saved with a linked
+// employee that has a phone number. Renders the exact message preview
+// (so the admin sees what's about to go), plus a one-click button that
+// opens wa.me with the message URL-encoded. wa.me opens whatever WhatsApp
+// client the device has (Desktop / Web / Phone) with the chat pre-filled.
+function _openWhatsAppWelcomeStep({ name, username, tempPassword, phone }){
+  // Normalise phone — wa.me wants digits-only with country code, no +, no
+  // spaces, no dashes. Maldives default to +960 if user typed just 7-digits.
+  const rawDigits = String(phone).replace(/\D/g,'');
+  const intlPhone = rawDigits.length === 7 ? '960'+rawDigits : rawDigits;
+  const msg =
+`Hi ${name},
+Your EM HUB account has been created.
+ Link: https://emhub.eventmaldives.com.mv
+👤 Username: ${username}
+🔑 Temporary Password: ${tempPassword}
+
+Please log in and change your password on first sign-in.
+— Event Maldives`;
+  const waUrl = `https://wa.me/${intlPhone}?text=${encodeURIComponent(msg)}`;
+
+  document.getElementById('userModalTitle').textContent = 'User Created — Send Welcome';
+  document.getElementById('userModalForm').innerHTML = `
+    <div style="padding:14px 16px;background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <div><div style="font-weight:700;color:var(--green)">User created</div><div style="font-size:12px;color:var(--text2)">Send the credentials to ${name} via WhatsApp on +${intlPhone}.</div></div>
+    </div>
+    <div class="field-label" style="margin-bottom:6px">Message preview</div>
+    <pre style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:'Inter',sans-serif;font-size:12.5px;color:var(--text);white-space:pre-wrap;word-break:break-word;margin:0 0 14px;line-height:1.5">${msg.replace(/</g,'&lt;')}</pre>
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:8px;border-top:1px solid var(--border)">
+      <button class="btn btn-ghost btn-sm" onclick="closeUserModal();toast('User added ✓ — welcome not sent')">Skip</button>
+      <button class="btn btn-primary btn-sm" onclick="window.open('${waUrl}','_blank','noopener');closeUserModal();toast('Opening WhatsApp…')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right:6px;vertical-align:-2px"><path d="M17.5 14.4c-.3-.1-1.8-.9-2-1s-.5-.1-.7.2c-.2.3-.8 1-.9 1.1-.2.2-.3.2-.6.1s-1.3-.5-2.4-1.5c-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.1 3c.1.2 2 3 4.8 4.2 1.7.7 2.3.8 3.1.7.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.7 1.5 5.3L2 22l4.8-1.5C8.3 21.5 10.1 22 12 22c5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18c-1.7 0-3.3-.4-4.7-1.3l-.3-.2-2.8.9.9-2.7-.2-.3C3.9 15 3.5 13.5 3.5 12c0-4.7 3.8-8.5 8.5-8.5s8.5 3.8 8.5 8.5-3.8 8.5-8.5 8.5z"/></svg>
+        Send via WhatsApp
+      </button>
+    </div>`;
 }
 
 async function deleteUser(id){

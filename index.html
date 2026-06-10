@@ -5936,6 +5936,18 @@ function saveEmployee(){
   const nidNo = document.getElementById('ef_nid')?.value.trim();
   if(!name) return toast('Enter employee name');
   if(!basicSalary && !editingEmpId) return toast('Enter basic salary');
+  // Hard sanity check on the picked department BEFORE we build the payload.
+  // Catches the case where what the user sees in the select doesn't match
+  // what saves — by logging the picked dept and validating it against the
+  // current catalogue, plus a console line we can read after the fact if
+  // anything ever drifts again.
+  const deptSel  = document.getElementById('ef_dept');
+  const deptVal  = deptSel?.value || '';
+  const deptText = deptSel?.options?.[deptSel.selectedIndex]?.text || '';
+  console.log('[saveEmployee] dept select →', { value: deptVal, displayed: deptText, knownDepts: (hrDepartments||[]).map(d=>d.name) });
+  if(deptVal && !(hrDepartments||[]).some(d => d.name === deptVal)){
+    return toast(`"${deptVal}" isn't in the current department list. Pick a valid department, or add it via HR → Departments first.`);
+  }
   // NID uniqueness check for local
   if(type==='local'&&nidNo){
     const dup=hrEmployees.find(e=>e.nidNo===nidNo&&String(e.id)!==String(editingEmpId));

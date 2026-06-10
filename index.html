@@ -4886,15 +4886,22 @@ function renderUsers(){
     if(hasAny('hr'))perms.push('<span class="perm-chip perm-hr">HR</span>');
     if(hasAny('cal')||hasAny('inv')||hasAny('eel')||hasAny('fault'))perms.push('<span class="perm-chip perm-calendar">Events/Equip</span>');
     const isSelf=currentUser&&currentUser.id===u.id;
-    return`<div class="user-card">
-      <div class="user-avatar" style="background:${avatarColor(u.name)}">${u.name[0].toUpperCase()}</div>
+    // Treat a missing `active` flag as true (legacy rows pre-migration).
+    const isActive = u.active !== false;
+    return`<div class="user-card" style="${isActive?'':'opacity:.6'}">
+      <div class="user-avatar" style="background:${isActive?avatarColor(u.name):'var(--border2)'}">${u.name[0].toUpperCase()}</div>
       <div class="user-info">
-        <div class="user-name">${u.name} ${isSelf?'<span style="font-size:11px;color:var(--text3)">(you)</span>':''}</div>
+        <div class="user-name">${u.name} ${isSelf?'<span style="font-size:11px;color:var(--text3)">(you)</span>':''}
+          ${!isActive?'<span class="badge badge-red" style="font-size:10px;margin-left:6px;padding:2px 7px">Deactivated</span>':''}
+        </div>
         <div class="user-email">@${u.username} · ${u.role==='admin'?'Administrator':u.roleId?(appRoles.find(r=>String(r.id)===String(u.roleId))?.name||'Custom Role'):'Staff'}</div>
         <div class="user-perms">${perms.join('')}</div>
       </div>
       <div class="user-actions">
         <button class="btn btn-ghost btn-sm" onclick="openEditUser('${u.id}')">Edit</button>
+        ${!isSelf?(isActive
+          ? `<button class="btn btn-amber btn-sm" onclick="toggleUserActive('${u.id}', false)" title="Disable login for this account">Deactivate</button>`
+          : `<button class="btn btn-green btn-sm" onclick="toggleUserActive('${u.id}', true)" title="Allow this account to log in again">Reactivate</button>`):''}
         ${!isSelf?`<button class="btn btn-red btn-sm" onclick="deleteUser('${u.id}')">Delete</button>`:''}
       </div>
     </div>`;
@@ -5099,6 +5106,26 @@ async function deleteUser(id){
   await api('DELETE', '/users/' + id);
   users = await api('GET', '/users') || users;
   renderUsers(); toast('User deleted');
+}
+
+// Soft-disable / re-enable a user account. Keeps the row so FK references
+// (hr_employees.linked_user_id, audit_log etc.) survive; just blocks login.
+async function toggleUserActive(id, makeActive){
+  if(currentUser && currentUser.id === id) return toast("Can't deactivate yourself");
+  const u = users.find(x => String(x.id)===String(id));
+  if(!u) return;
+  const title  = makeActive ? 'Reactivate this user?' : 'Deactivate this user?';
+  const detail = makeActive
+    ? `${u.name} will be able to log in again with their existing password.`
+    : `${u.name} will no longer be able to log in. The account row is kept so existing records (employee link, audit log, leave history) stay intact. You can reactivate any time.`;
+  openConfirm(title, detail, makeActive?'Reactivate':'Deactivate', async ()=>{
+    const res = await api('PATCH', '/users/' + id + '/active', { active: !!makeActive });
+    if(!res) return;
+    // Update cache locally and re-render — skip the full GET round-trip
+    u.active = !!makeActive;
+    renderUsers();
+    toast(makeActive ? 'User reactivated ✓' : 'User deactivated');
+  });
 }
 
 // closeUserModal defined below (after calendar functions)

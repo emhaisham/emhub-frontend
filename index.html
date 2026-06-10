@@ -1977,9 +1977,10 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="sidebar-brand-sub">Human Resources</div>
             </div>
             <div class="nav-wrap">
-              <div class="nav-lbl">Records</div>
-              <div class="nav-item active" onclick="hrNav('employees')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>All Staff</div>
+              <div class="nav-lbl">Employees</div>
+              <div class="nav-item active" onclick="hrNav('employees')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>All Employees</div>
               <div class="nav-item" onclick="guardAction('hr_add_emp', ()=>hrNav('add-employee'))"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>Add Employee</div>
+              <div class="nav-item" onclick="hrNav('departments')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Departments</div>
               <div class="nav-item" onclick="hrNav('org-chart')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="9" y="15" width="6" height="6" rx="1"/><path d="M6 9v3h12V9M12 12v3"/></svg></span>Org Chart</div>
               <div class="nav-item" onclick="hrNav('disciplinary')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg></span>Disciplinary</div>
               <div class="nav-item" onclick="hrNav('staff-assets')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></span>Staff Assets</div>
@@ -1999,8 +2000,6 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="nav-item" onclick="hrNav('dept-leave')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Department Leave</div>
               <div class="nav-item" onclick="hrNav('leave')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></span>Leave</div>
               <div class="nav-item" onclick="hrNav('letters')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>Staff Letters</div>
-              <div class="nav-lbl">Setup</div>
-              <div class="nav-item" onclick="hrNav('departments')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Departments</div>
             </div>
           </aside>
           <div class="main-area">
@@ -2008,7 +2007,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
             <!-- ── EMPLOYEES LIST ── -->
             <div class="page active" id="hr-page-employees">
               <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between">
-                <div><div class="page-title">All Staff</div><div class="page-sub">Manage employee records, documents and contracts</div></div>
+                <div><div class="page-title">All Employees</div><div class="page-sub">Manage employee records, documents and contracts</div></div>
                 <button class="btn btn-primary" onclick="guardAction('hr_add_emp', ()=>hrNav('add-employee'))">＋ Add Employee</button>
               </div>
               <!-- v2: three tiles, not eight. Total / Type Mix / Compliance.
@@ -2103,7 +2102,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <div class="stat-card"><div class="stat-top"><span class="stat-label">Active Loans</span><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span></div><div class="stat-val amber" id="lnStatActive">0</div></div>
               </div>
               <div class="toolbar">
-                <select id="lnFilterEmp" onchange="_pages.loans=1;renderLoans()"><option value="">All Staff</option></select>
+                <select id="lnFilterEmp" onchange="_pages.loans=1;renderLoans()"><option value="">All Employees</option></select>
                 <select id="lnFilterStatus" onchange="_pages.loans=1;renderLoans()"><option value="">All Status</option><option value="active">Active</option><option value="completed">Completed</option></select>
                 <span class="toolbar-count" id="lnCount"></span>
               </div>
@@ -2135,7 +2134,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <div class="page-sub">Local Crew event payouts — populated from CrewPay → Local Crew</div>
               </div>
               <div class="toolbar">
-                <select id="bnFilterStaff" onchange="renderBonus()"><option value="">All Staff</option></select>
+                <select id="bnFilterStaff" onchange="renderBonus()"><option value="">All Employees</option></select>
                 <select id="bnFilterYear" onchange="renderBonus()"><option value="">All Years</option></select>
                 <select id="bnFilterPaid" onchange="renderBonus()"><option value="">All Status</option><option value="paid">Paid Only</option><option value="unpaid">Unpaid Only</option></select>
                 <span class="toolbar-count" id="bnCount"></span>
@@ -2204,7 +2203,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                   <div class="stat-card"><div class="stat-top"><span class="stat-label">Days Used (YTD)</span><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div><div class="stat-val" id="lvStatDays">0</div></div>
                 </div>
                 <div class="toolbar">
-                  <select id="lvFilterEmp" onchange="_pages.leave=1;renderLeave()"><option value="">All Staff</option></select>
+                  <select id="lvFilterEmp" onchange="_pages.leave=1;renderLeave()"><option value="">All Employees</option></select>
                   <select id="lvFilterStatus" onchange="_pages.leave=1;renderLeave()"><option value="">All Status</option><option value="pending">Stage 1 — Pending Manager</option><option value="manager_approved">Stage 2 — Awaiting Final</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select>
                   <select id="lvFilterType" onchange="_pages.leave=1;renderLeave()"><option value="">All Types</option></select>
                   <span class="toolbar-count" id="lvCount"></span>
@@ -2330,7 +2329,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <button class="btn btn-primary btn-sm" onclick="guardAction('hr_assets', openAddAssetFromAllStaff)">＋ Hand Over Asset</button>
               </div>
               <div class="toolbar" style="margin-bottom:14px">
-                <select id="assetFilterEmp" onchange="renderAllStaffAssets()"><option value="">All Staff</option></select>
+                <select id="assetFilterEmp" onchange="renderAllStaffAssets()"><option value="">All Employees</option></select>
                 <select id="assetFilterStatus" onchange="renderAllStaffAssets()">
                   <option value="">All Status</option>
                   <option value="active">Active</option>
@@ -2651,7 +2650,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                   <div class="field">
                     <label class="field-label">Recipients *</label>
                     <select id="msgRecipient" onchange="renderMsgRecipientDetail()">
-                      <option value="all">All Staff</option>
+                      <option value="all">All Employees</option>
                       <option value="specific">Specific Staff</option>
                       <option value="dept">By Department</option>
                     </select>
@@ -3200,7 +3199,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
       <div class="field" style="margin-bottom:10px">
         <label class="field-label">Notify</label>
         <select id="enRecipient">
-          <option value="all">All Staff</option>
+          <option value="all">All Employees</option>
           <option value="specific">Specific Staff</option>
         </select>
       </div>
@@ -3927,8 +3926,11 @@ function applyPerms(){
 
   // ── HR SIDEBAR nav items (by position) ───────────────
   const hrNavItems=document.querySelectorAll('#mod-hr .nav-wrap .nav-item');
-  // positions: 0=All Staff, 1=Add Emp, 2=Disciplinary, 3=Staff Assets, 4=Payroll, 5=Loans, 6=Pension, 7=Bonus, 8=Leave, 9=Letters
-  const hrMap=['hr_view_all','hr_add_emp','hr_view_all','hr_disc','hr_assets','hr_reports_view','hr_self_request_approve','hr_view_all','hr_view_all','hr_training','hr_payroll','hr_view_all','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
+  // positions: 0=All Employees, 1=Add Emp, 2=Departments, 3=Org Chart, 4=Disciplinary,
+  // 5=Staff Assets, 6=Reports, 7=Requests, 8=Expiring Docs, 9=Probation, 10=Training,
+  // 11=Payroll, 12=Salary Revisions, 13=Loans, 14=Pension, 15=Bonus, 16=Dept Leave,
+  // 17=Leave, 18=Letters
+  const hrMap=['hr_view_all','hr_add_emp','hr_departments','hr_view_all','hr_disc','hr_assets','hr_reports_view','hr_self_request_approve','hr_view_all','hr_view_all','hr_training','hr_payroll','hr_view_all','hr_loans','hr_pension','__bonus__','hr_leave','hr_leave','hr_letters'];
   hrMap.forEach((k,i)=>{
     if(!hrNavItems[i]) return;
     // All Staff and Bonus both gate on hr_view_all OR hr_view_own
@@ -8425,7 +8427,7 @@ let editingLoanId=null;
 function populateLoanFilter(){
   const sel=document.getElementById('lnFilterEmp');if(!sel)return;
   const cur=sel.value;
-  sel.innerHTML='<option value="">All Staff</option>'+hrEmployees.map(e=>`<option value="${e.id}" ${e.id===cur?'selected':''}>${e.name}</option>`).join('');
+  sel.innerHTML='<option value="">All Employees</option>'+hrEmployees.map(e=>`<option value="${e.id}" ${e.id===cur?'selected':''}>${e.name}</option>`).join('');
 }
 
 function openAddLoan(preEmpId){
@@ -9541,7 +9543,7 @@ async function saveCalEvent(){
 function populateLeaveFilter(){
   const sel=document.getElementById('lvFilterEmp');if(!sel)return;
   const cur=sel.value;
-  sel.innerHTML='<option value="">All Staff</option>'+hrEmployees.map(e=>`<option value="${e.id}" ${String(e.id)===String(cur)?'selected':''}>${e.name}</option>`).join('');
+  sel.innerHTML='<option value="">All Employees</option>'+hrEmployees.map(e=>`<option value="${e.id}" ${String(e.id)===String(cur)?'selected':''}>${e.name}</option>`).join('');
 }
 
 function calcLeaveDays(){
@@ -11620,7 +11622,7 @@ function populateBonusFilters(){
     const cur=staffSel.value;
     const seen=new Map();
     rows.forEach(r=>{ if(r.empId&&!seen.has(r.empId)) seen.set(r.empId,r.empName); });
-    staffSel.innerHTML='<option value="">All Staff</option>'+
+    staffSel.innerHTML='<option value="">All Employees</option>'+
       [...seen.entries()].sort((a,b)=>a[1].localeCompare(b[1]))
         .map(([id,name])=>`<option value="${id}"${String(id)===String(cur)?' selected':''}>${name}</option>`).join('');
   }
@@ -15198,7 +15200,7 @@ function renderAllStaffAssets(){
   const empSel=document.getElementById('assetFilterEmp');
   if(empSel){
     const cur=empSel.value;
-    empSel.innerHTML='<option value="">All Staff</option>'+
+    empSel.innerHTML='<option value="">All Employees</option>'+
       hrEmployees.map(e=>`<option value="${e.id}" ${cur===String(e.id)?'selected':''}>${e.name}</option>`).join('');
     empSel.value=cur;
   }

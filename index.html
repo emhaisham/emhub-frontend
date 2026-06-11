@@ -17469,26 +17469,26 @@ const PERM_TREE = [
     { label:'View Own Profile Only', key:'hr_view_own', actions:['view'] },
     { label:'Add Employee', key:'hr_add_emp', actions:['edit'] },
     { label:'Edit Employee', key:'hr_edit_emp', actions:['edit'] },
-    { label:'Disciplinary Records', key:'hr_disc', actions:['view','edit'] },
+    { label:'Disciplinary Records', key:'hr_disc', actions:['view','create','edit'] },
     { label:'Employee Assets', key:'hr_assets', actions:['view','edit'] },
     { label:'Monthly Payroll', key:'hr_payroll', actions:['view','edit'] },
     { label:'Payroll — View All Records', key:'hr_payroll_view_all', actions:['view'] },
     { label:'Salary — View Confidential', key:'hr_view_confidential_salary', actions:['view'] },
-    { label:'Loans', key:'hr_loans', actions:['view','edit'] },
+    { label:'Loans', key:'hr_loans', actions:['view','create','edit','delete'] },
     { label:'Pension', key:'hr_pension', actions:['view','edit'] },
     { label:'Propose Salary Revision', key:'hr_salary_revise', actions:['edit'] },
     { label:'Approve Salary Revision', key:'hr_salary_approve', actions:['edit'] },
-    { label:'Training & Certs', key:'hr_training', actions:['view','edit'] },
+    { label:'Training & Certs', key:'hr_training', actions:['view','create','edit','delete'] },
     { label:'Reports & Analytics', key:'hr_reports_view', actions:['view'] },
     { label:'Self-Service Requests (submit)',  key:'hr_self_request_edit',    actions:['edit'] },
     { label:'Self-Service Requests (approve)', key:'hr_self_request_approve', actions:['edit'] },
     { label:'Leave', key:'hr_leave', actions:['view','edit'] },
     { label:'Leave Approve / Reject (Stage 1 — Manager)', key:'hr_leave_approve', actions:['edit'] },
     { label:'Leave Final Approve (Stage 2 — GM/COO)', key:'hr_leave_final_approve', actions:['edit'] },
-    { label:'Leave Types', key:'hr_leave_types', actions:['view','edit'] },
+    { label:'Leave Types', key:'hr_leave_types', actions:['view','create','edit','delete'] },
     { label:'Employee Letters', key:'hr_letters', actions:['view','edit'] },
     { label:'HR Settings', key:'hr_settings_edit', actions:['edit'] },
-    { label:'Manage Departments', key:'hr_departments', actions:['view','edit'] },
+    { label:'Manage Departments', key:'hr_departments', actions:['view','create','edit','delete'] },
   ]},
   { module:'Push Notification', key:'msging', pages:[
     { label:'Send Notification', key:'msg_send', actions:['edit'] },
@@ -17563,14 +17563,12 @@ function _openRoleModal(role){
         <span>${mod.module}</span>
         <button type="button" onclick="toggleModulePerms('${mod.key}',this)" class="btn btn-ghost btn-xs">Select All</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr auto auto;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:1fr auto auto auto auto;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden">
         <div style="padding:5px 12px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);background:var(--surface);border-bottom:1px solid var(--border)">Page / Action</div>
-        <div style="padding:5px 14px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);background:var(--surface);border-bottom:1px solid var(--border);text-align:center;min-width:60px">View</div>
-        <div style="padding:5px 14px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);background:var(--surface);border-bottom:1px solid var(--border);text-align:center;min-width:60px">Edit</div>
+        ${['view','create','edit','delete'].map(a=>`<div style="padding:5px 12px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);background:var(--surface);border-bottom:1px solid var(--border);text-align:center;min-width:54px">${a.charAt(0).toUpperCase()+a.slice(1)}</div>`).join('')}
         ${mod.pages.map((p,pi)=>`
         <div style="padding:7px 12px;font-size:13px;color:var(--text);border-top:${pi>0?'1px solid var(--border)':'none'}">${p.label}</div>
-        <div style="padding:7px 0;text-align:center;border-top:${pi>0?'1px solid var(--border)':'none'}">${p.actions.includes('view')?`<input type="checkbox" data-perm="${p.key}_view" data-mod="${mod.key}" ${role.perms?.[p.key+'_view']?'checked':''} style="accent-color:var(--accent);width:16px;height:16px">`:'<span style="color:var(--text3);font-size:16px">—</span>'}</div>
-        <div style="padding:7px 0;text-align:center;border-top:${pi>0?'1px solid var(--border)':'none'}">${p.actions.includes('edit')?`<input type="checkbox" data-perm="${p.key}_edit" data-mod="${mod.key}" ${role.perms?.[p.key+'_edit']?'checked':''} style="accent-color:var(--accent);width:16px;height:16px">`:'<span style="color:var(--text3);font-size:16px">—</span>'}</div>
+        ${['view','create','edit','delete'].map(a=>`<div style="padding:7px 0;text-align:center;border-top:${pi>0?'1px solid var(--border)':'none'}">${p.actions.includes(a)?`<input type="checkbox" data-perm="${p.key}_${a}" data-mod="${mod.key}" ${role.perms?.[p.key+'_'+a]?'checked':''} style="accent-color:var(--accent);width:16px;height:16px">`:'<span style="color:var(--text3);font-size:15px">—</span>'}</div>`).join('')}
         `).join('')}
       </div>
     </div>`).join('');

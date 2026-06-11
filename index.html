@@ -17408,34 +17408,19 @@ const PERM_TREE = [
     { label:'Home Dashboard', key:'home_view', actions:['view'] }
   ]},
   { module:'Events', key:'events', pages:[
-    { label:'Events Calendar', key:'events_view', actions:['view'] },
-    { label:'Create Event', key:'events_create', actions:['edit'] },
-    { label:'Edit Event', key:'events_edit', actions:['edit'] },
-    { label:'Delete Event', key:'events_delete', actions:['edit'] },
+    { label:'Events', cols:{ view:'events_view_view', create:'events_create_edit', edit:'events_edit_edit', delete:'events_delete_edit' } },
     { label:'Mark Event Done', key:'events_done', actions:['edit'] },
   ]},
   { module:'Equipment', key:'equipment', pages:[
-    { label:'Inventory List', key:'inv_list', actions:['view','edit'] },
-    { label:'Add Inventory Item', key:'inv_add', actions:['edit'] },
-    { label:'Edit Parent & Child Item', key:'inv_edit', actions:['edit'] },
+    { label:'Inventory Items', cols:{ view:'inv_list_view', create:'inv_add_edit', edit:'inv_edit_edit', delete:'inv_delete_edit' } },
     { label:'Request Discard Unit', key:'inv_discard_request', actions:['edit'] },
     { label:'Approve / Reject Discard', key:'inv_discard_approve', actions:['edit'] },
-    { label:'Delete Inventory Unit', key:'inv_delete', actions:['edit'] },
     { label:'Import CSV', key:'inv_import', actions:['edit'] },
-    { label:'Categories Page', key:'cat_page', actions:['view'] },
-    { label:'Add Category', key:'cat_add', actions:['edit'] },
-    { label:'Edit Category', key:'cat_edit', actions:['edit'] },
-    { label:'Add Sub-Category', key:'subcat_add', actions:['edit'] },
-    { label:'Edit Sub-Category', key:'subcat_edit', actions:['edit'] },
-    { label:'Warehouse Page', key:'wh_page', actions:['view'] },
-    { label:'Add Storage Location', key:'wh_add', actions:['edit'] },
-    { label:'Edit Storage Location', key:'wh_edit', actions:['edit'] },
-    { label:'Delete Storage Location', key:'wh_delete', actions:['edit'] },
+    { label:'Categories', cols:{ view:'cat_page_view', create:'cat_add_edit', edit:'cat_edit_edit', delete:'cat_delete_edit' } },
+    { label:'Sub-Categories', cols:{ create:'subcat_add_edit', edit:'subcat_edit_edit', delete:'subcat_delete_edit' } },
+    { label:'Warehouses', cols:{ view:'wh_page_view', create:'wh_add_edit', edit:'wh_edit_edit', delete:'wh_delete_edit' } },
     { label:'Warehouse Transfer Page', key:'wh_transfer', actions:['view','edit'] },
-    { label:'Flight Cases Page', key:'fc_page', actions:['view'] },
-    { label:'Add Flight Case', key:'fc_add', actions:['edit'] },
-    { label:'Edit Flight Case', key:'fc_edit', actions:['edit'] },
-    { label:'Delete Flight Case', key:'fc_delete', actions:['edit'] },
+    { label:'Flight Cases', cols:{ view:'fc_page_view', create:'fc_add_edit', edit:'fc_edit_edit', delete:'fc_delete_edit' } },
     { label:'Fault Reports Page', key:'fault_page', actions:['view'] },
     { label:'Add Fault Report', key:'fault_add', actions:['edit'] },
     { label:'Assign Fault to Repairer', key:'fault_assign', actions:['edit'] },
@@ -17568,7 +17553,16 @@ function _openRoleModal(role){
         ${['view','create','edit','delete'].map(a=>`<div style="padding:5px 12px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);background:var(--surface);border-bottom:1px solid var(--border);text-align:center;min-width:54px">${a.charAt(0).toUpperCase()+a.slice(1)}</div>`).join('')}
         ${mod.pages.map((p,pi)=>`
         <div style="padding:7px 12px;font-size:13px;color:var(--text);border-top:${pi>0?'1px solid var(--border)':'none'}">${p.label}</div>
-        ${['view','create','edit','delete'].map(a=>`<div style="padding:7px 0;text-align:center;border-top:${pi>0?'1px solid var(--border)':'none'}">${p.actions.includes(a)?`<input type="checkbox" data-perm="${p.key}_${a}" data-mod="${mod.key}" ${role.perms?.[p.key+'_'+a]?'checked':''} style="accent-color:var(--accent);width:16px;height:16px">`:'<span style="color:var(--text3);font-size:15px">—</span>'}</div>`).join('')}
+        ${['view','create','edit','delete'].map(a=>{
+          // Two entry formats: { cols:{view:'exactKey',...} } maps each column
+          // to an exact stored permission key (used for consolidated entity
+          // rows so columns line up with real backend keys); otherwise the
+          // legacy { key, actions:[...] } computes `${key}_${action}`.
+          let permKey = null;
+          if (p.cols) permKey = p.cols[a] || null;
+          else if (p.actions && p.actions.includes(a)) permKey = p.key + '_' + a;
+          return `<div style="padding:7px 0;text-align:center;border-top:${pi>0?'1px solid var(--border)':'none'}">${permKey?`<input type="checkbox" data-perm="${permKey}" data-mod="${mod.key}" ${role.perms?.[permKey]?'checked':''} style="accent-color:var(--accent);width:16px;height:16px">`:'<span style="color:var(--text3);font-size:15px">—</span>'}</div>`;
+        }).join('')}
         `).join('')}
       </div>
     </div>`).join('');

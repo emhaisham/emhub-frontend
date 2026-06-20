@@ -3841,26 +3841,10 @@ async function _loadAllData(){
     eventDateTo:   normalizeDate(e.eventDateTo),
   }));
   events = calEvents;
-  hrEmployees = (emps||[]).map(e => ({
-    ...e,
-    // Map API field names to frontend form field names
-    title: e.designation,
-    joined: e.joinDate ? String(e.joinDate).slice(0,10) : '',
-    basicSalary: e.salary,
-    emgName: e.emergencyName,
-    emgPhone: e.emergencyPhone,
-    emgRelation: e.emergencyRel,
-    nidExpiry: e.nidExpiry ? String(e.nidExpiry).slice(0,10) : '',
-    passportExpiry: e.passportExpiry ? String(e.passportExpiry).slice(0,10) : '',
-    workPermitExpiry: e.workPermitExpiry ? String(e.workPermitExpiry).slice(0,10) : '',
-    insuranceExpiry: e.insuranceExpiry ? String(e.insuranceExpiry).slice(0,10) : '',
-    quotaExpiry: e.quotaExpiry ? String(e.quotaExpiry).slice(0,10) : '',
-    medicalExpiry: e.medicalExpiry ? String(e.medicalExpiry).slice(0,10) : '',
-    contractExpiry: e.contractExpiry ? String(e.contractExpiry).slice(0,10) : '',
-    // docs from extraDocs array
-    docs: (e.extraDocs||[]).reduce((acc,d) => { if(d.type) acc[d.type]=d; return acc; }, 
-      e.photo ? {photo:{key:e.photo}} : {}),
-  }));
+  // Use the canonical mapper (was a drifted inline copy that omitted dob /
+  // probationStart / exitDate slicing + defaults, breaking probation-salary
+  // payroll on a fresh login). Keep this identical to every other refetch site.
+  hrEmployees = (emps||[]).map(_mapEmployeeFromApi);
   hrLoans = loans || [];
   hrPayrolls = payrolls || [];
   hrPensions = pensions || [];
@@ -8608,14 +8592,18 @@ function renderPayslipCard(pr,emp,showBtn){
 }
 
 function markPayslipPaid(prId){
-  openConfirm('Mark this payslip as paid?','This records the salary payment for this month.','Mark Paid',()=>{
+  openConfirm('Mark this payslip as paid?','This records the salary payment for this month.','Mark Paid',async ()=>{
     const pr=hrPayrolls.find(p=>String(p.id)===String(prId)); if(!pr) return;
-    pr.status='paid'; pr.paidDate=new Date().toISOString().slice(0,10);
+    // Persist via the dedicated endpoint (previously this only set a local flag
+    // then refetched, which reverted it — paid was never stored server-side).
+    const res=await api('PATCH','/hr/payroll/'+prId+'/paid',{paid:true});
+    if(!res){ toast('Failed to mark paid'); return; }
+    pr.paid=true; pr.status=res.status||'paid'; pr.paidDate=res.paidDate||new Date().toISOString().slice(0,10);
     if(pr.loanId&&(parseFloat(pr.loan_deduction)||0)>0){
       const loan=hrLoans.find(l=>String(l.id)===String(pr.loanId));
       if(loan){ loan.repayments=loan.repayments||{}; loan.repayments[pr.month]='paid'; loan.remaining=Math.max(0,loan.remaining-(parseFloat(pr.loan_deduction)||0)); if(loan.remaining<=0) loan.status='completed'; }
     }
-    api('GET','/hr/payroll').then(r=>{if(r)hrPayrolls=r;}); renderPayroll(); toast('Payslip marked as paid ✓');
+    renderPayroll(); toast('Payslip marked as paid ✓');
   });
 }
 
@@ -8900,7 +8888,8 @@ async function saveLoan(){
     const status=remaining<=0?'completed':'active';
     const res=await api('PUT','/hr/loans/'+editingLoanId,{
       empId,amount,monthlyAmount:monthly,startMonth:start,
-      schedule,notes,remaining,status
+      schedule,notes,remaining,status,
+      repayments: loan.repayments||{}
     });
     if(!res){toast('Failed to update loan');return;}
     // Merge updated record into local cache; skip redundant GET
@@ -9772,15 +9761,15 @@ function closeUserModal(){
 }
 
 function addCalLoading(){ calLoadings.push({id:uid(),dateFrom:'',dateTo:'',timeFrom:'',timeTo:'',vehicle:''}); renderCalLoadings(); }
-function removeCalLoading(id){ calLoadings=calLoadings.filter(l=>l.id!==id); renderCalLoadings(); }
+function removeCalLoading(id){ calLoadings=calLoadings.filter(l=>String(l.id)!==String(id)); renderCalLoadings(); }
 function onCalLoading(id,f,v){ const l=calLoadings.find(x=>x.id===id);if(l)l[f]=v; }
 function renderCalLoadings(){
   const el=document.getElementById('cef_loadings');if(!el)return;
   el.innerHTML=calLoadings.map(l=>`<div style="background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:7px;padding:10px 12px;margin-bottom:8px">
     <div class="cef-grid-loading">
-      <div class="field"><label class="field-label" style="font-size:10px">Date From</label><input type="date" value="${l.dateFrom}" oninput="onCalLoading(${l.id},'dateFrom',this.value)" style="font-size:12px;padding:6px 8px"></div>
+      <div class="field"><label class="field-label" style="font-size:10px">Date From</label><input type="date" value="${normalizeDate(l.dateFrom)||''}" oninput="onCalLoading(${l.id},'dateFrom',this.value)" style="font-size:12px;padding:6px 8px"></div>
       <div class="field"><label class="field-label" style="font-size:10px">Time From</label><input type="time" value="${l.timeFrom}" oninput="onCalLoading(${l.id},'timeFrom',this.value)" style="font-size:12px;padding:6px 8px"></div>
-      <div class="field"><label class="field-label" style="font-size:10px">Date To</label><input type="date" value="${l.dateTo}" oninput="onCalLoading(${l.id},'dateTo',this.value)" style="font-size:12px;padding:6px 8px"></div>
+      <div class="field"><label class="field-label" style="font-size:10px">Date To</label><input type="date" value="${normalizeDate(l.dateTo)||''}" oninput="onCalLoading(${l.id},'dateTo',this.value)" style="font-size:12px;padding:6px 8px"></div>
       <div class="field"><label class="field-label" style="font-size:10px">Time To</label><input type="time" value="${l.timeTo}" oninput="onCalLoading(${l.id},'timeTo',this.value)" style="font-size:12px;padding:6px 8px"></div>
       <button class="btn btn-red btn-xs" onclick="removeCalLoading('${l.id}')" style="align-self:flex-end">✕</button>
     </div>
@@ -9789,7 +9778,7 @@ function renderCalLoadings(){
 }
 
 function addCalPhase(){ calPhases.push({id:uid(),type:'setup',dateFrom:'',dateTo:'',timeFrom:'',timeTo:''}); renderCalPhases(); }
-function removeCalPhase(id){ calPhases=calPhases.filter(p=>p.id!==id); renderCalPhases(); }
+function removeCalPhase(id){ calPhases=calPhases.filter(p=>String(p.id)!==String(id)); renderCalPhases(); }
 function onCalPhase(id,f,v){ const p=calPhases.find(x=>x.id===id);if(p)p[f]=v; }
 function renderCalPhases(){
   const el=document.getElementById('cef_phases');if(!el)return;
@@ -9799,9 +9788,9 @@ function renderCalPhases(){
         <select oninput="onCalPhase(${p.id},'type',this.value)" style="font-size:12px;padding:6px 8px">
           ${PHASE_TYPES.map(t=>`<option value="${t}" ${p.type===t?'selected':''}>${t.charAt(0).toUpperCase()+t.slice(1)}</option>`).join('')}
         </select></div>
-      <div class="field"><label class="field-label" style="font-size:10px">Date From</label><input type="date" value="${p.dateFrom}" oninput="onCalPhase(${p.id},'dateFrom',this.value)" style="font-size:12px;padding:6px 8px"></div>
+      <div class="field"><label class="field-label" style="font-size:10px">Date From</label><input type="date" value="${normalizeDate(p.dateFrom)||''}" oninput="onCalPhase(${p.id},'dateFrom',this.value)" style="font-size:12px;padding:6px 8px"></div>
       <div class="field"><label class="field-label" style="font-size:10px">Time From</label><input type="time" value="${p.timeFrom}" oninput="onCalPhase(${p.id},'timeFrom',this.value)" style="font-size:12px;padding:6px 8px"></div>
-      <div class="field"><label class="field-label" style="font-size:10px">Date To</label><input type="date" value="${p.dateTo}" oninput="onCalPhase(${p.id},'dateTo',this.value)" style="font-size:12px;padding:6px 8px"></div>
+      <div class="field"><label class="field-label" style="font-size:10px">Date To</label><input type="date" value="${normalizeDate(p.dateTo)||''}" oninput="onCalPhase(${p.id},'dateTo',this.value)" style="font-size:12px;padding:6px 8px"></div>
       <div class="field"><label class="field-label" style="font-size:10px">Time To</label><input type="time" value="${p.timeTo}" oninput="onCalPhase(${p.id},'timeTo',this.value)" style="font-size:12px;padding:6px 8px"></div>
       <button class="btn btn-red btn-xs" onclick="removeCalPhase('${p.id}')" style="align-self:flex-end">✕</button>
     </div>
@@ -9813,7 +9802,7 @@ function addCalOtherMember(){
   calOtherMembers.push({id:uid(), name:'', role:''});
   renderCalOtherMembers();
 }
-function removeCalOtherMember(id){ calOtherMembers=calOtherMembers.filter(m=>m.id!==id); renderCalOtherMembers(); }
+function removeCalOtherMember(id){ calOtherMembers=calOtherMembers.filter(m=>String(m.id)!==String(id)); renderCalOtherMembers(); }
 function onCalMember(id,f,v){ const m=calOtherMembers.find(x=>x.id===id);if(m)m[f]=v; }
 function renderCalOtherMembers(){
   const el=document.getElementById('cef_otherMembers');if(!el)return;
@@ -9841,7 +9830,7 @@ function handleCalDocs(input){
   });
   input.value='';
 }
-function removeCalDoc(id){ calEventDocs=calEventDocs.filter(d=>d.id!==id); renderCalDocs(); }
+function removeCalDoc(id){ calEventDocs=calEventDocs.filter(d=>String(d.id)!==String(id)); renderCalDocs(); }
 function renderCalDocs(){
   const el=document.getElementById('cef_docs');if(!el)return;
   if(!calEventDocs.length){ el.innerHTML='<div style="font-size:12px;color:var(--text3)">No documents attached</div>'; return; }
@@ -17650,7 +17639,6 @@ function renderRoles(){
   }
   el.innerHTML=appRoles.map(role=>{
     const permCount=Object.values(role.perms||{}).filter(v=>v).length;
-    const totalPerms=PERM_TREE.reduce((s,m)=>s+m.pages.reduce((ps,p)=>ps+p.actions.length,0),0);
     const usersWithRole=users.filter(u=>String(u.role_id||u.roleId)===String(role.id)).length;
     return`<div style="border:1px solid var(--border);border-radius:12px;margin-bottom:10px;background:var(--white);overflow:hidden">
       <div style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px">

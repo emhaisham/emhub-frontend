@@ -8169,7 +8169,14 @@ function _wireStickyTools(){
 
 function deleteEmployee(id){
   openConfirm('Delete this employee?','Payroll and loan records will remain.','Delete',()=>{
-    api('DELETE','/hr/employees/'+id).then(()=>api('GET','/hr/employees').then(r=>{if(r)hrEmployees=r.map(e=>({...e,title:e.designation,joined:e.joinDate?String(e.joinDate).slice(0,10):'',basicSalary:e.salary,allowance:e.allowance||0,emgName:e.emergencyName,emgPhone:e.emergencyPhone,emgRelation:e.emergencyRel,docs:(e.extraDocs||[]).reduce((acc,d)=>{if(d.type)acc[d.type]=d;return acc;},e.photo?{photo:{key:e.photo}}:{})}));renderEmployees();updateHRSidebar();toast('Deleted');}));
+    api('DELETE','/hr/employees/'+id).then(r=>{
+      if(!r) return;
+      // The deleted id is already known — drop it from the cache instead of
+      // re-downloading the whole decrypted employee list. Mirrors saveEmployee,
+      // which already merges locally rather than refetching.
+      hrEmployees=hrEmployees.filter(e=>String(e.id)!==String(id));
+      renderEmployees();updateHRSidebar();toast('Deleted');
+    });
   });
 }
 
@@ -9611,17 +9618,15 @@ async function markCalEventComplete(eid){
   const ev=calEvents.find(e=>String(e.id)===String(eid));if(!ev)return;
   const res=await api('PATCH','/events/'+eid+'/complete',{});
   if(!res) return;
-  // Refresh events from API
-  const rawEvts=await api('GET','/events')||[];
-  calEvents=rawEvts.map(e=>({...e,
-    eventDateFrom:normalizeDate(e.eventDateFrom),
-    eventDateTo:normalizeDate(e.eventDateTo)
-  }));
+  // The PATCH returns the full updated event with the flipped `completed` flag.
+  // Merge it into the local list instead of re-downloading every event.
+  res.eventDateFrom=normalizeDate(res.eventDateFrom);
+  res.eventDateTo=normalizeDate(res.eventDateTo);
+  _upsertById(calEvents,res,false);
   events=calEvents;
   renderCal();
   if(document.getElementById('calPopup').classList.contains('open')) showCalPopup(eid);
-  const updated=calEvents.find(e=>String(e.id)===String(eid));
-  toast(updated?.completed?'Event marked as completed ✓':'Event reopened');
+  toast(res.completed?'Event marked as completed ✓':'Event reopened');
 }
 
 function outsidePopupClick(e){ if(!e.target.closest('#calPopup')) closeCalPopup(); }
@@ -9635,13 +9640,11 @@ function closeCalPopup(){
 async function deleteCalEvent(eid){
   closeCalPopup();
   openConfirm('Delete this event?','This will remove the event and all its equipment lists.','Delete',async()=>{
-    await api('DELETE','/events/'+eid);
-    const rawEvts = await api('GET','/events') || [];
-    calEvents = rawEvts.map(e=>({
-      ...e,
-      eventDateFrom: e.eventDateFrom ? String(e.eventDateFrom).slice(0,10) : null,
-      eventDateTo:   e.eventDateTo   ? String(e.eventDateTo).slice(0,10)   : null,
-    }));
+    const ok=await api('DELETE','/events/'+eid);
+    if(!ok) return;
+    // The deleted id is already known — drop it from the local list instead of
+    // re-downloading every remaining event.
+    calEvents = calEvents.filter(e=>String(e.id)!==String(eid));
     events = calEvents;
     renderCal();toast('Event deleted');
   });
@@ -9890,14 +9893,12 @@ async function saveCalEvent(){
   if(calEditId){ res=await api('PUT','/events/'+calEditId,evData); }
   else { res=await api('POST','/events',evData); }
   if(!res) return;
-  const rawEvts = await api('GET','/events') || [];
-  calEvents = rawEvts.map(e=>({
-    ...e,
-    eventDateFrom: normalizeDate(e.eventDateFrom),
-    eventDateTo:   normalizeDate(e.eventDateTo),
-  }));
+  // The PUT/POST already returns the full saved event. Merge it into the local
+  // list instead of re-downloading every event (one round-trip instead of two).
+  res.eventDateFrom=normalizeDate(res.eventDateFrom);
+  res.eventDateTo=normalizeDate(res.eventDateTo);
+  _upsertById(calEvents,res,!calEditId);
   events = calEvents;
-  console.log('[saveCalEvent] after save, calEvents:', calEvents.length, calEvents.map(e=>e.eventDateFrom));
   closeUserModal();
   setTimeout(()=>{ calDate=new Date(); calSetView('month'); }, 100);
   if(calEditId){ toast('Event updated ✓'); }
@@ -13876,10 +13877,11 @@ async function saveAssignFault(parentId, unitId, faultId){
     } catch (e) { /* swallow; assignment already persisted */ }
   }
 
-  invItems = await api('GET','/inventory/items') || invItems;
+  // PATCH returned the saved unit — merge it into the local unit object in
+  // place instead of re-downloading the whole inventory list.
+  Object.assign(unit, res);
   closeSimpleModal();
-  const fresh = invItems.find(x=>String(x.id)===String(parentId));
-  if(fresh && _detailParentId === String(parentId)) renderUnitDetailModal();
+  if(_detailParentId === String(parentId)) renderUnitDetailModal();
   renderInventory();
   if(document.getElementById('faultReportsList')) renderFaultReports();
   toast(`Fault assigned to ${target.name} ✓`);
@@ -13896,7 +13898,7 @@ async function unassignFault(parentId, unitId, faultId){
   const dbUnitId = unit.id || unit.unitId;
   const res = await api('PATCH','/inventory/units/'+dbUnitId+'/faults',{ faults: unit.faults, status: unit.status });
   if(!res){ toast('Failed to unassign'); return; }
-  invItems = await api('GET','/inventory/items') || invItems;
+  Object.assign(unit, res);
   closeSimpleModal();
   if(_detailParentId === String(parentId)) renderUnitDetailModal();
   renderInventory();
@@ -13967,10 +13969,11 @@ async function saveDiscardUnit(){
   const discardReason=reason==='other'?other:reason;
   const res=await api('POST','/inventory/units/'+dbUnitId+'/discard-request',{ reason: discardReason });
   if(!res){toast('Failed to submit request');return;}
-  invItems=await api('GET','/inventory/items')||invItems;
+  // The request endpoint returned the updated unit — merge it locally instead
+  // of re-downloading the whole inventory list.
+  Object.assign(unit, res);
   closeSimpleModal();
-  const freshItem = invItems.find(x=>String(x.id)===String(_editUnitParentId));
-  if(freshItem) openInvParent(freshItem.id);
+  openInvParent(_editUnitParentId);
   renderInventory();
   toast('Discard request submitted — awaiting approval');
 }
@@ -13989,9 +13992,10 @@ async function approveDiscardUnit(parentId, unitId){
     async () => {
       const res = await api('POST','/inventory/units/'+dbUnitId+'/discard-approve');
       if(!res) return;
-      invItems = await api('GET','/inventory/items')||invItems;
-      const fresh = invItems.find(x=>String(x.id)===String(parentId));
-      if(fresh) openInvParent(fresh.id);
+      // res carries discarded=true; the render layer already filters discarded
+      // units out of active listings, so merging locally is equivalent to a refetch.
+      Object.assign(unit, res);
+      openInvParent(parentId);
       renderInventory();
       toast('Discard approved ✓');
     }
@@ -14009,9 +14013,8 @@ async function rejectDiscardUnit(parentId, unitId){
     async () => {
       const res = await api('POST','/inventory/units/'+dbUnitId+'/discard-reject');
       if(!res) return;
-      invItems = await api('GET','/inventory/items')||invItems;
-      const fresh = invItems.find(x=>String(x.id)===String(parentId));
-      if(fresh) openInvParent(fresh.id);
+      Object.assign(unit, res);
+      openInvParent(parentId);
       renderInventory();
       toast('Discard request rejected');
     }
@@ -14032,9 +14035,8 @@ async function undoDiscard(parentId, unitId){
     discardReason:null
   });
   if(!res){toast('Failed to restore unit');return;}
-  invItems=await api('GET','/inventory/items')||invItems;
-  const freshItem2=invItems.find(x=>String(x.id)===String(parentId));
-  if(freshItem2) openInvParent(freshItem2.id);
+  Object.assign(unit, res);
+  openInvParent(parentId);
   renderInventory(); toast('Unit restored ✓');
 }
 
@@ -14119,8 +14121,7 @@ async function saveFaultReport(){
   // Save faults to database
   const res = await api('PATCH','/inventory/units/'+unitId+'/faults',{faults:unit.faults, status:'faulty'});
   if(!res){ unit.faults.pop(); toast('Failed to save fault'); return; }
-  // Refresh items
-  invItems=await api('GET','/inventory/items')||invItems;
+  Object.assign(unit, res);
   closeSimpleModal();
   refreshUnitsPanel(); renderInventory();
   openUnitDetail(_editUnitParentId, unitId, 'faults');
@@ -14162,8 +14163,9 @@ async function saveRepaired(parentId, unitId, faultId){
   const fault=(unit.faults||[]).find(f=>f.faultId===faultId); if(!fault) return;
   fault.repairedDate=date; fault.repairNote=note; fault.repairedBy=by;
   const allFixed=!(unit.faults||[]).some(f=>!f.repairedDate);
-  await api('PATCH','/inventory/units/'+dbUnitId+'/faults',{faults:unit.faults,status:allFixed?'working':undefined});
-  invItems=await api('GET','/inventory/items')||invItems;
+  const res=await api('PATCH','/inventory/units/'+dbUnitId+'/faults',{faults:unit.faults,status:allFixed?'working':undefined});
+  if(!res){ toast('Failed to save repair'); return; }
+  Object.assign(unit, res);
   closeSimpleModal(); refreshUnitsPanel(); renderInventory();
   if(_detailParentId===String(parentId)) openUnitDetail(parentId,dbUnitId,'faults');
   toast('Repair details saved ✓');
@@ -14175,8 +14177,9 @@ function deleteFault(parentId, unitId, faultId){
   openConfirm('Delete this fault report?','','Delete',async()=>{
     unit.faults=(unit.faults||[]).filter(f=>f.faultId!==faultId);
     const allFixed=!(unit.faults||[]).some(f=>!f.repairedDate);
-    await api('PATCH','/inventory/units/'+dbUnitId+'/faults',{faults:unit.faults,status:allFixed?'working':undefined});
-    invItems=await api('GET','/inventory/items')||invItems;
+    const res=await api('PATCH','/inventory/units/'+dbUnitId+'/faults',{faults:unit.faults,status:allFixed?'working':undefined});
+    if(!res){ toast('Failed to delete fault'); return; }
+    Object.assign(unit, res);
     openUnitDetail(parentId,dbUnitId,'faults'); refreshUnitsPanel(); toast('Fault deleted');
   });
 }
@@ -14303,7 +14306,10 @@ async function saveUnitNew(){
     warehouseId, fcId, notes, importDate, itemSerial, qty
   }]);
   if(!res) return;
-  invItems=await api('GET','/inventory/items')||invItems;
+  // The POST returns the created unit(s) as an array. Push them into the parent
+  // item's units in-memory instead of re-fetching the whole inventory list.
+  const _p=invItems.find(x=>String(x.id)===String(_editUnitParentId));
+  if(_p){ if(!Array.isArray(_p.units)) _p.units=[]; _p.units.push(...res); }
   refreshUnitsPanel(); renderInventory();
   closeSimpleModal(); toast('Unit added ✓');
 }
@@ -14359,7 +14365,13 @@ async function saveUnitEdit(){
   const qty=parseInt(document.getElementById('unit_qty')?.value)||1;
   const res=await api('PUT','/inventory/units/'+unitId,{itemSerial,importDate,warehouseId,fcId,notes,qty});
   if(!res) return;
-  invItems=await api('GET','/inventory/items')||invItems;
+  // PUT returns the updated unit. Replace it in its parent's units array in
+  // memory rather than re-downloading the whole inventory list.
+  const _pp=invItems.find(x=>String(x.id)===String(_editUnitParentId));
+  if(_pp&&Array.isArray(_pp.units)){
+    const _ix=_pp.units.findIndex(u=>String(u.id||u.unitId)===String(res.id||unitId));
+    if(_ix>=0) _pp.units[_ix]={..._pp.units[_ix],...res};
+  }
   refreshUnitsPanel(); renderInventory();
   closeSimpleModal(); toast('Unit updated ✓');
 }
@@ -14368,8 +14380,10 @@ async function saveUnitEdit(){
 function deleteInvItem(id){
   const item=invItems.find(x=>String(x.id)===String(id));
   openConfirm('Delete this item?',`This will also delete all ${(item?.units||[]).length} units. Cannot be undone.`,'Delete',async()=>{
-    await api('DELETE','/inventory/items/'+id);
-    invItems=await api('GET','/inventory/items')||invItems;
+    const ok=await api('DELETE','/inventory/items/'+id);
+    if(!ok) return;
+    // Drop the deleted item from the cache instead of re-downloading everything.
+    invItems=invItems.filter(x=>String(x.id)!==String(id));
     renderInventory();toast('Item deleted');
   });
 }
@@ -14492,7 +14506,10 @@ async function saveInvItem(){
   if(_editInvId){ res=await api('PUT','/inventory/items/'+_editInvId,data); }
   else { res=await api('POST','/inventory/items',data); }
   if(!res) return;
-  invItems=await api('GET','/inventory/items')||invItems;
+  // The save already returned the full updated item (PUT includes its units,
+  // POST returns units:[]). Merge it into the cache instead of re-downloading
+  // the whole inventory list. Saves one round-trip to Bangalore per save.
+  _upsertById(invItems, res, !_editInvId);
   closeUserModal(); renderInventory();
   toast(_editInvId?'Item updated ✓':'Item added ✓ — now add units to it');
 }
@@ -14760,12 +14777,21 @@ async function _parseAndImportCSV(csvText){
       createdUnits+=arr.length;
     }
 
-    // 7. Refetch all caches LAST, then re-render.
-    invItems=await api('GET','/inventory/items')||invItems;
-    invCats=await api('GET','/inventory/categories')||invCats;
-    invSubCats=await api('GET','/inventory/subcategories')||invSubCats;
-    invWarehouses=await api('GET','/inventory/warehouses')||invWarehouses;
-    invFlightCases=await api('GET','/inventory/flightcases')||invFlightCases;
+    // 7. Refetch all caches LAST, then re-render. These five GETs are
+    // independent, so run them in parallel (one round-trip instead of five
+    // sequential ones over the Bangalore link). Keep the ||old fallback per slot.
+    const [_it,_ct,_sc,_wh,_fc]=await Promise.all([
+      api('GET','/inventory/items'),
+      api('GET','/inventory/categories'),
+      api('GET','/inventory/subcategories'),
+      api('GET','/inventory/warehouses'),
+      api('GET','/inventory/flightcases'),
+    ]);
+    invItems=_it||invItems;
+    invCats=_ct||invCats;
+    invSubCats=_sc||invSubCats;
+    invWarehouses=_wh||invWarehouses;
+    invFlightCases=_fc||invFlightCases;
     if(typeof populateInvCatFilter==='function') populateInvCatFilter();
     if(typeof populateInvWhFilter==='function') populateInvWhFilter();
     renderInventory();
@@ -16001,11 +16027,11 @@ async function openAddEquipList(evId){
     const res=await api('PATCH','/events/'+evId+'/equip-lists',{equipLists:ev.equipLists});
     if(!res){ev.equipLists.pop();toast('Failed to create list');return;}
     // Refresh calEvents
-    const rawEvts=await api('GET','/events')||[];
-    calEvents=rawEvts.map(e=>({...e,
-      eventDateFrom:normalizeDate(e.eventDateFrom),
-      eventDateTo:normalizeDate(e.eventDateTo)
-    }));
+    // The PATCH already returned the full updated event — merge it locally
+    // instead of re-downloading the whole event list.
+    res.eventDateFrom=normalizeDate(res.eventDateFrom);
+    res.eventDateTo=normalizeDate(res.eventDateTo);
+    _upsertById(calEvents,res,false);
     events=calEvents;
     closeSimpleModal(); renderEventLists();
     toast(missingNote ? `List created. ${missingNote}` : 'List created ✓');
@@ -16283,10 +16309,12 @@ function _applyTemplateToList(tplId, ev){
 function deleteEquipList(evId,li){
   openConfirm('Delete this list?','All items in it will be removed.','Delete',async()=>{
     const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
-    ev.equipLists.splice(li,1);
-    await api('PATCH','/events/'+ev.id+'/equip-lists',{equipLists:ev.equipLists});
-    const rawEvts=await api('GET','/events')||[];
-    calEvents=rawEvts.map(e=>({...e,eventDateFrom:normalizeDate(e.eventDateFrom),eventDateTo:normalizeDate(e.eventDateTo)}));
+    const removed=ev.equipLists.splice(li,1);
+    const res=await api('PATCH','/events/'+ev.id+'/equip-lists',{equipLists:ev.equipLists});
+    if(!res){ ev.equipLists.splice(li,0,...removed); return toast('Failed to delete list'); }
+    res.eventDateFrom=normalizeDate(res.eventDateFrom);
+    res.eventDateTo=normalizeDate(res.eventDateTo);
+    _upsertById(calEvents,res,false);
     events=calEvents;
     renderEventLists(); toast('List deleted');
   });
@@ -16451,11 +16479,11 @@ async function saveFlightCaseToList(){
     }));
     const res=await api('PATCH','/events/'+ev.id+'/equip-lists',{equipLists:ev.equipLists});
     if(!res){toast('Failed to save');return;}
-    const rawEvts=await api('GET','/events')||[];
-    calEvents=rawEvts.map(e=>({...e,
-      eventDateFrom:normalizeDate(e.eventDateFrom),
-      eventDateTo:normalizeDate(e.eventDateTo)
-    }));
+    // The PATCH already returned the full updated event — merge it locally
+    // instead of re-downloading the whole event list.
+    res.eventDateFrom=normalizeDate(res.eventDateFrom);
+    res.eventDateTo=normalizeDate(res.eventDateTo);
+    _upsertById(calEvents,res,false);
     events=calEvents;
     closeSimpleModal(); renderEventLists();
     toast(`${toAdd.length} unit${toAdd.length>1?'s':''} from ${fc.fcSerial} added ✓`);
@@ -16684,11 +16712,11 @@ async function saveItemsToList(){
     });
     const res=await api('PATCH','/events/'+ev.id+'/equip-lists',{equipLists:ev.equipLists});
     if(!res){toast('Failed to save');return;}
-    const rawEvts=await api('GET','/events')||[];
-    calEvents=rawEvts.map(e=>({...e,
-      eventDateFrom:normalizeDate(e.eventDateFrom),
-      eventDateTo:normalizeDate(e.eventDateTo)
-    }));
+    // The PATCH already returned the full updated event — merge it locally
+    // instead of re-downloading the whole event list.
+    res.eventDateFrom=normalizeDate(res.eventDateFrom);
+    res.eventDateTo=normalizeDate(res.eventDateTo);
+    _upsertById(calEvents,res,false);
     events=calEvents;
     closeSimpleModal(); renderEventLists();
     toast(`${toAdd.length} unit${toAdd.length>1?'s':''} added to list ✓`);
@@ -16785,19 +16813,23 @@ async function updateEquipListItemQty(inputEl){
   item.totalQty = totalCap;
   const res = await api('PATCH','/events/'+evId+'/equip-lists',{equipLists: ev.equipLists});
   if(!res){ item.qtyUsed = prev; renderEventLists(); return toast('Failed to update quantity'); }
-  // Refresh from server so the rest of the app picks up the change
-  const rawEvts = await api('GET','/events') || [];
-  calEvents = rawEvts.map(e => ({...e, eventDateFrom:normalizeDate(e.eventDateFrom), eventDateTo:normalizeDate(e.eventDateTo)}));
+  // The PATCH returned the updated event — merge it locally instead of
+  // re-downloading every event.
+  res.eventDateFrom=normalizeDate(res.eventDateFrom);
+  res.eventDateTo=normalizeDate(res.eventDateTo);
+  _upsertById(calEvents,res,false);
   events = calEvents;
   toast('Quantity updated ✓');
 }
 
 async function removeItemFromList(evId,li,ii){
   const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
-  ev.equipLists[li].items.splice(ii,1);
-  await api('PATCH','/events/'+evId+'/equip-lists',{equipLists:ev.equipLists});
-  const rawEvts=await api('GET','/events')||[];
-  calEvents=rawEvts.map(e=>({...e,eventDateFrom:normalizeDate(e.eventDateFrom),eventDateTo:normalizeDate(e.eventDateTo)}));
+  const removed=ev.equipLists[li].items.splice(ii,1);
+  const res=await api('PATCH','/events/'+evId+'/equip-lists',{equipLists:ev.equipLists});
+  if(!res){ ev.equipLists[li].items.splice(ii,0,...removed); renderEventLists(); return toast('Failed to remove item'); }
+  res.eventDateFrom=normalizeDate(res.eventDateFrom);
+  res.eventDateTo=normalizeDate(res.eventDateTo);
+  _upsertById(calEvents,res,false);
   events=calEvents;
   renderEventLists(); toast('Item removed');
 }
@@ -17005,7 +17037,7 @@ async function doCheckOutSelected(li){
       count++;
     }
   }
-  invItems=await api('GET','/inventory/items')||invItems;
+  // each unit's checkout was set locally before its PUT — no full refetch needed.
   renderCheckOutPage();
   toast(`${count} item${count!==1?'s':''} checked out ✓`);
 }
@@ -17110,7 +17142,7 @@ async function doCheckOut(){
     }
     toast(`${count} unit${count!==1?'s':''} from ${_coTarget.fc.name} checked out ✓`);
   }
-  invItems=await api('GET','/inventory/items')||invItems;
+  // checkout was set on the unit(s) locally before each PUT — no full refetch.
   document.getElementById('coItemPreview').style.display='none';
   document.getElementById('coConfirmWrap').style.display='none';
   document.getElementById('coSearchInput').value='';
@@ -17186,7 +17218,7 @@ async function doCheckInSelected(li){
       count++;
     }
   }
-  invItems=await api('GET','/inventory/items')||invItems;
+  // checkedInAt was set locally before each PUT — no full refetch needed.
   renderCiEventList(); renderCiRecent();
   toast(`${count} item${count!==1?'s':''} checked in ✓`);
 }
@@ -17289,7 +17321,8 @@ async function doCheckIn(){
     await _clearContainerForFC(_ciTarget.fc?.id);
     toast(`${count} units checked in ✓`);
   }
-  invItems=await api('GET','/inventory/items')||invItems;
+  // unit check-ins were applied locally before each PUT, so skip the inventory
+  // refetch. The /events refetch stays — _clearContainerForFC changed events.
   const rawEvts=await api('GET','/events')||[];
   calEvents=rawEvts.map(e=>({...e,
     eventDateFrom:normalizeDate(e.eventDateFrom),
@@ -17504,7 +17537,7 @@ async function doTransfer(){
     }
     toast(`${count} unit${count!==1?'s':''} transferred to ${destEv.name} ✓`);
   }
-  invItems = await api('GET','/inventory/items')||invItems;
+  // each unit's checkout was set locally before its PUT — no full refetch.
   document.getElementById('trItemPreview').style.display='none';
   document.getElementById('trConfirmWrap').style.display='none';
   document.getElementById('trSearchInput').value='';

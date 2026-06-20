@@ -5564,7 +5564,7 @@ let hrPayrolls  = [];
 let hrPensions  = [];
 let hrLeave     = [];
 
-async function hrSave(){ hrEmployees = await api('GET','/hr/employees') || hrEmployees; }
+async function hrSave(){ const r = await api('GET','/hr/employees'); if(Array.isArray(r)) hrEmployees = r.map(_mapEmployeeFromApi); }
 async function leaveSave(){ hrLeave = await api('GET','/hr/leave') || hrLeave; }
 
 // Department catalog — loaded from /api/hr/departments. The literal fallback
@@ -6447,7 +6447,7 @@ async function submitMarkRenewed(){
   if(!res){ toast('Failed to update'); return; }
   // Refresh employees cache so dashboard tiles + profile reflect the new date
   const fresh = await api('GET','/hr/employees');
-  if(Array.isArray(fresh)){ hrEmployees = fresh; markFresh('hrEmployees'); }
+  if(Array.isArray(fresh)){ hrEmployees = fresh.map(_mapEmployeeFromApi); markFresh('hrEmployees'); }
   closeRenewModal();
   renderExpiringDocs();
   toast(_renewCtx?.label+' renewed ✓');
@@ -6563,7 +6563,7 @@ async function rqAct(kind, id, status){
   // Refresh employees cache in case profile update was applied
   if (kind === 'profile' && status === 'approved') {
     const fresh = await api('GET','/hr/employees');
-    if (Array.isArray(fresh)) { hrEmployees = fresh; markFresh('hrEmployees'); }
+    if (Array.isArray(fresh)) { hrEmployees = fresh.map(_mapEmployeeFromApi); markFresh('hrEmployees'); }
   }
 }
 function rqOpenLetter(template, empId, purpose, addressee){
@@ -7619,7 +7619,7 @@ async function srvActStatus(id, status){
   if(!res) return;
   if(status==='approved' && res.status==='applied'){
     const fresh = await api('GET','/hr/employees');
-    if(Array.isArray(fresh)){ hrEmployees = fresh; markFresh('hrEmployees'); }
+    if(Array.isArray(fresh)){ hrEmployees = fresh.map(_mapEmployeeFromApi); markFresh('hrEmployees'); }
   }
   toast(`Revision ${status}${res.status==='applied'?' & applied':''} ✓`);
   renderSalaryRevisions();
@@ -7628,7 +7628,7 @@ async function srvActApply(id){
   const res = await api('POST','/hr/salary-revisions/'+id+'/apply',{});
   if(!res) return;
   const fresh = await api('GET','/hr/employees');
-  if(Array.isArray(fresh)){ hrEmployees = fresh; markFresh('hrEmployees'); }
+  if(Array.isArray(fresh)){ hrEmployees = fresh.map(_mapEmployeeFromApi); markFresh('hrEmployees'); }
   toast('Revision applied ✓');
   renderSalaryRevisions();
 }
@@ -7942,7 +7942,7 @@ async function submitPcAction(){
   const res = await api('POST', path, body);
   if(!res){ return; }
   const fresh = await api('GET','/hr/employees');
-  if(Array.isArray(fresh)){ hrEmployees = fresh; markFresh('hrEmployees'); }
+  if(Array.isArray(fresh)){ hrEmployees = fresh.map(_mapEmployeeFromApi); markFresh('hrEmployees'); }
   closePcModal();
   renderProbationContracts();
   toast({confirm:'Probation confirmed ✓', extend:'Probation extended ✓', terminate:'Terminated', renew:'Contract renewed ✓'}[c.action]);

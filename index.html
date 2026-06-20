@@ -14499,35 +14499,41 @@ async function saveInvItem(){
 
 // ── CSV Template ──────────────────────────────────────────────────────────────
 function downloadInvTemplate(){
-  // Two-section format: ITEMS section then UNITS section
-  const csv='\uFEFF'+`"EM HUB INVENTORY IMPORT TEMPLATE"
+  // Two-section format: ITEMS section then UNITS section.
+  // ITEMS columns mirror inv_items (+ Flight Case Prefix -> inv_categories.fc_prefix).
+  // UNITS columns mirror inv_units (+ Quantity -> inv_units.qty).
+  const csv='﻿'+`"EM HUB INVENTORY IMPORT TEMPLATE"
 "Fill in the ITEMS section first, then the UNITS section."
 "Do not change the section headers (ITEMS: and UNITS:)."
 ""
 "ITEMS: (one row per parent item)"
-"Item Name","Model Number","Manufacturer","Category","Sub-Category"
-"DAS PA Top Speaker","Event 210A","DAS Audio","Sound","Main PA"
-"Shure SM58 Microphone","SM58-LC","Shure","Audio","Microphones"
-"Chauvet Rogue Spot","Rogue R1 Spot","Chauvet","Lighting","Spotlights"
+"Item Name","Model Number","Manufacturer","Category","Flight Case Prefix","Sub-Category"
+"DAS Event 210A Top","Event 210A","DAS Audio","Sound","SP","Main PA"
+"Shure SM58 Microphone","SM58-LC","Shure","Sound","MC","Microphones"
+"Chauvet Rogue R1 Spot","Rogue R1 Spot","Chauvet","Lighting","LT","Moving Heads"
+"XLR Cable 5m","","Generic","Cables","CB","Audio Cables"
 ""
-"UNITS: (one row per individual physical unit — Item Name must match exactly)"
-"Item Name","Item Serial (manufacturer's)","Import Date (YYYY-MM-DD)","Warehouse","Flight Case Serial","Notes"
-"DAS PA Top Speaker","DAS-2024-001","2024-01-15","Main Warehouse","FC-00001","Left channel unit"
-"DAS PA Top Speaker","DAS-2024-002","2024-01-15","Main Warehouse","FC-00001","Right channel unit"
-"Shure SM58 Microphone","SHR-001","2024-03-20","Studio A","",""
-"Shure SM58 Microphone","SHR-002","2024-03-20","Studio A","",""
-"Shure SM58 Microphone","SHR-003","2024-03-20","Studio A","",""
-"Chauvet Rogue Spot","CHV-001","2023-11-10","","FC-00002",""
-"Chauvet Rogue Spot","CHV-002","2023-11-10","","FC-00002",""
+"UNITS: (one row per physical unit - Item Name must match exactly)"
+"Item Name","Item Serial (manufacturer's)","Import Date (YYYY-MM-DD)","Warehouse","Flight Case Serial","Quantity","Notes"
+"DAS Event 210A Top","DAS-2024-001","2024-01-15","Main Warehouse","FC-00001","1","Left channel unit"
+"DAS Event 210A Top","DAS-2024-002","2024-01-15","Main Warehouse","FC-00001","1","Right channel unit"
+"Shure SM58 Microphone","SHR-001","2024-03-20","Studio A","","1",""
+"Shure SM58 Microphone","SHR-002","2024-03-20","Studio A","","1",""
+"Shure SM58 Microphone","SHR-003","2024-03-20","Studio A","","1",""
+"Chauvet Rogue R1 Spot","CHV-001","2023-11-10","Main Warehouse","FC-00002","1",""
+"Chauvet Rogue R1 Spot","CHV-002","2023-11-10","Main Warehouse","FC-00002","1",""
+"XLR Cable 5m","","2024-02-01","Main Warehouse","","20","Bulk stock - 20 cables"
 ""
 "NOTES:"
-"* Each UNIT row creates one individual unit with its own auto-generated EM serial (EM-00001 etc)."
-"* Item Name in UNITS section must match exactly with an Item Name in the ITEMS section."
-"* If an item already exists in inventory, units are added to it — no duplicate parent is created."
-"* Category and Sub-Category are auto-created if they don't exist."
-"* Warehouse is auto-created if it doesn't exist."
-"* Flight Case Serial must match an existing flight case (e.g. FC-00001) — create these first."
-"* Item Serial is the manufacturer's serial number printed on the physical unit."`;
+"* Each UNIT row creates one unit record with its own auto-generated EM serial (EM-00001, EM-00002 ...)."
+"* Quantity is how many identical pieces that row represents. Use 1 for serial-tracked gear, or a higher number for bulk stock like cables."
+"* Item Name in the UNITS section must match an Item Name in the ITEMS section exactly (or an item already in inventory)."
+"* If an item already exists in inventory, units are added to it - no duplicate parent item is created."
+"* Category, Sub-Category and Warehouse are created automatically if they do not already exist."
+"* Flight Case Prefix is 2 letters that set the serial prefix for flight cases in that category (e.g. SP -> SP-00001). Optional - leave blank to skip."
+"* Flight Case Serial must match an existing flight case (create flight cases first). Leave blank if the unit is not in a case."
+"* Item Serial is the manufacturer's serial printed on the unit. Leave blank if none."
+"* Import Date must be in YYYY-MM-DD format. Leave blank if unknown."`;
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -14535,154 +14541,251 @@ function downloadInvTemplate(){
   toast('Template downloaded ✓');
 }
 
-function _parseAndImportCSV(csvText){
-  const text=csvText.replace(/^\uFEFF/,'');
-  const lines=text.split('\n').map(l=>l.trim());
+// Entry point wired to the file <input> in the Inventory toolbar.
+// Reads the chosen file (CSV directly, Excel via a lazily-loaded reader) and
+// hands the text to the importer.
+async function importInventoryFile(inputEl){
+  const file=inputEl&&inputEl.files&&inputEl.files[0];
+  if(!file) return;
+  inputEl.value=''; // reset so the SAME file can be re-picked after a fix
+  const lower=(file.name||'').toLowerCase();
+  showInvFeedback('info','Reading file...');
+  try{
+    let csvText;
+    if(lower.endsWith('.xlsx')||lower.endsWith('.xls')){
+      csvText=await _excelToCsvText(file);
+    }else{
+      csvText=await file.text();
+    }
+    await _parseAndImportCSV(csvText);
+  }catch(e){
+    showInvFeedback('error','Could not read the file: '+(e.message||e));
+  }
+}
 
-  // Find ITEMS: and UNITS: section boundaries
-  const itemsStart=lines.findIndex(l=>l.replace(/"/g,'').trim().startsWith('ITEMS:'));
-  const unitsStart=lines.findIndex(l=>l.replace(/"/g,'').trim().startsWith('UNITS:'));
+// SheetJS is only pulled in when an Excel file is actually chosen, so the
+// normal CSV path stays zero-cost.
+let _xlsxLibPromise=null;
+function _loadXlsxLib(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  if(!_xlsxLibPromise){
+    _xlsxLibPromise=new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.onload=()=>window.XLSX?resolve(window.XLSX):reject(new Error('Excel reader failed to load'));
+      s.onerror=()=>reject(new Error('Could not load the Excel reader. Please save the file as CSV and try again.'));
+      document.head.appendChild(s);
+    });
+  }
+  return _xlsxLibPromise;
+}
+async function _excelToCsvText(file){
+  const XLSX=await _loadXlsxLib();
+  const buf=await file.arrayBuffer();
+  const wb=XLSX.read(buf,{type:'array'});
+  const sheet=wb.Sheets[wb.SheetNames[0]];
+  if(!sheet) throw new Error('The spreadsheet has no sheets');
+  return XLSX.utils.sheet_to_csv(sheet);
+}
 
-  if(itemsStart<0||unitsStart<0){
-    // Fallback: try flat format (old style)
-    _parseAndImportCSVFlat(csvText);
+// Parse the two-section template and PERSIST everything via the API in
+// dependency order: categories -> sub-categories -> warehouses -> items -> units.
+// Flight cases are looked up (their serials are server-generated, so they
+// must already exist). Caches are refetched only at the very end.
+async function _parseAndImportCSV(csvText){
+  const text=String(csvText||'').replace(/^﻿/,'');
+  const lines=text.split('\n').map(l=>l.replace(/\r$/,''));
+  const norm=s=>String(s||'').replace(/"/g,'').trim();
+  const lc=s=>String(s||'').trim().toLowerCase();
+
+  const itemsStart=lines.findIndex(l=>norm(l).toUpperCase().startsWith('ITEMS:'));
+  const unitsStart=lines.findIndex(l=>norm(l).toUpperCase().startsWith('UNITS:'));
+  if(itemsStart<0||unitsStart<0||unitsStart<itemsStart){
+    showInvFeedback('error','This file is not in the template format. Download the CSV template, fill it in, and keep the "ITEMS:" and "UNITS:" section headers.');
     return;
   }
 
-  // Parse ITEMS section: header row after ITEMS: label, data rows until blank or UNITS:
-  const itemHeaderIdx=itemsStart+1;
-  const itemHeaders=_csvParseLine(lines[itemHeaderIdx]).map(h=>h.toLowerCase().replace(/[^a-z0-9]/g,''));
-  const getI=(row,key)=>{const k=key.toLowerCase().replace(/[^a-z0-9]/g,'');const idx=itemHeaders.findIndex(h=>h===k||h.includes(k)||k.includes(h));return idx>=0?row[idx]?.trim()||'':'';}
+  // Header matcher: exact match first (so "Sub-Category" never collides with
+  // "Category"), then a loose contains-match as a fallback for renamed headers.
+  const mkGet=(headers)=>(row,...keys)=>{
+    for(const key of keys){
+      const k=key.toLowerCase().replace(/[^a-z0-9]/g,'');
+      const idx=headers.indexOf(k);
+      if(idx>=0) return (row[idx]||'').trim();
+    }
+    for(const key of keys){
+      const k=key.toLowerCase().replace(/[^a-z0-9]/g,'');
+      const idx=headers.findIndex(h=>h&&(h.includes(k)||k.includes(h)));
+      if(idx>=0) return (row[idx]||'').trim();
+    }
+    return '';
+  };
 
+  // -- Parse ITEMS --
+  const itemHeaders=_csvParseLine(lines[itemsStart+1]||'').map(h=>h.toLowerCase().replace(/[^a-z0-9]/g,''));
+  const gi=mkGet(itemHeaders);
   const itemRows=[];
-  for(let i=itemHeaderIdx+1;i<unitsStart;i++){
+  for(let i=itemsStart+2;i<unitsStart;i++){
     const row=_csvParseLine(lines[i]);
-    if(!row.length||row.every(c=>!c.trim())) continue;
-    const name=getI(row,'itemname')||getI(row,'name'); if(!name) continue;
-    itemRows.push({name,model:getI(row,'modelnumber')||getI(row,'model'),manufacturer:getI(row,'manufacturer'),category:getI(row,'category'),subCategory:getI(row,'subcategory')});
+    if(!row.length||row.every(c=>!norm(c))) continue;
+    const name=gi(row,'itemname','name'); if(!name) continue;
+    itemRows.push({
+      name,
+      model:gi(row,'modelnumber','model'),
+      manufacturer:gi(row,'manufacturer'),
+      category:gi(row,'category'),
+      fcPrefix:gi(row,'flightcaseprefix','fcprefix','prefix'),
+      subCategory:gi(row,'subcategory')
+    });
   }
 
-  // Parse UNITS section: header row after UNITS: label
-  const unitHeaderIdx=unitsStart+1;
-  const unitHeaders=_csvParseLine(lines[unitHeaderIdx]).map(h=>h.toLowerCase().replace(/[^a-z0-9]/g,''));
-  const getU=(row,key)=>{const k=key.toLowerCase().replace(/[^a-z0-9]/g,'');const idx=unitHeaders.findIndex(h=>h===k||h.includes(k)||k.includes(h));return idx>=0?row[idx]?.trim()||'':'';}
-
+  // -- Parse UNITS --
+  const unitHeaders=_csvParseLine(lines[unitsStart+1]||'').map(h=>h.toLowerCase().replace(/[^a-z0-9]/g,''));
+  const gu=mkGet(unitHeaders);
   const unitRows=[];
-  for(let i=unitHeaderIdx+1;i<lines.length;i++){
+  for(let i=unitsStart+2;i<lines.length;i++){
+    const raw=norm(lines[i]).toUpperCase();
+    if(raw.startsWith('NOTES:')||raw.startsWith('*')) break; // footer reached
     const row=_csvParseLine(lines[i]);
-    if(!row.length||row.every(c=>!c.trim())) continue;
-    const raw=lines[i].replace(/"/g,'').trim();
-    if(raw.startsWith('NOTES:') || raw.startsWith('*')) continue;
-    const name=getU(row,'itemname')||getU(row,'name'); if(!name) continue;
+    if(!row.length||row.every(c=>!norm(c))) continue;
+    const name=gu(row,'itemname','name'); if(!name) continue;
+    const qtyRaw=gu(row,'quantity','qty');
     unitRows.push({
       itemName:name,
-      itemSerial:getU(row,'itemserial')||getU(row,'serialmanufacturer'),
-      importDate:getU(row,'importdate'),
-      warehouse:getU(row,'warehouse'),
-      flightCaseSerial:getU(row,'flightcaseserial')||getU(row,'flightcase'),
-      notes:getU(row,'notes')
+      itemSerial:gu(row,'itemserial','serialmanufacturers','serial'),
+      importDate:gu(row,'importdate'),
+      warehouse:gu(row,'warehouse'),
+      flightCaseSerial:gu(row,'flightcaseserial','flightcase'),
+      qty:Math.max(1,parseInt(qtyRaw,10)||1),
+      notes:gu(row,'notes')
     });
   }
 
-  // Now process: create parents first
-  let addedParents=0, addedUnits=0;
+  if(!itemRows.length&&!unitRows.length){
+    showInvFeedback('error','No data rows found. Fill in the ITEMS and UNITS sections of the template before importing.');
+    return;
+  }
 
-  itemRows.forEach(ir=>{
-    const name=ir.name;
-    // Auto-create category
-    let catId=null,subCatId=null;
-    if(ir.category){
-      let cat=invCats.find(c=>c.name.toLowerCase()===ir.category.toLowerCase());
-      if(!cat){cat={id:uid(),name:ir.category};invCats.push(cat);invCatSave();}
-      catId=cat.id;
-    }
-    if(ir.subCategory&&catId){
-      let sub=invSubCats.find(s=>s.name.toLowerCase()===ir.subCategory.toLowerCase()&&String(s.catId)===String(catId));
-      if(!sub){sub={id:uid(),catId,name:ir.subCategory};invSubCats.push(sub);invSubCatSave();}
-      subCatId=sub.id;
-    }
-    // Check if parent already exists
-    const existing=invItems.find(x=>x.name.toLowerCase()===name.toLowerCase());
-    if(!existing){
-      invItems.push({id:uid(),name,model:ir.model,manufacturer:ir.manufacturer,catId,subCatId,photo:null,units:[],createdAt:new Date().toISOString()});
-      addedParents++;
-    }
-  });
+  showInvFeedback('info','Importing... please wait.');
+  const warn=[];
 
-  // Process units
-  unitRows.forEach(ur=>{
-    // Find parent — match by name
-    const parent=invItems.find(x=>x.name.toLowerCase()===ur.itemName.toLowerCase());
-    if(!parent){
-      // Parent not in ITEMS section — try to find existing
-      const existing=invItems.find(x=>x.name.toLowerCase()===ur.itemName.toLowerCase());
-      if(!existing) return; // skip
-    }
-    const parentItem=invItems.find(x=>x.name.toLowerCase()===ur.itemName.toLowerCase());
-    if(!parentItem) return;
-    if(!parentItem.units) parentItem.units=[];
-
-    // Resolve warehouse
-    let warehouseId=null;
-    if(ur.warehouse){
-      let wh=invWarehouses.find(w=>w.name.toLowerCase()===ur.warehouse.toLowerCase());
-      if(!wh){wh={id:uid(),name:ur.warehouse,description:''};invWarehouses.push(wh);invWhSave();}
-      warehouseId=wh.id;
+  try{
+    // 1. Categories (create missing; pass Flight Case Prefix through).
+    let cats=await api('GET','/inventory/categories')||invCats||[];
+    const catMap=new Map(cats.map(c=>[lc(c.name),c.id]));
+    let createdCats=0;
+    for(const ir of itemRows){
+      if(ir.category&&!catMap.has(lc(ir.category))){
+        const res=await api('POST','/inventory/categories',{name:ir.category,fcPrefix:ir.fcPrefix||''});
+        if(!res||!res.id){ showInvFeedback('error',`Couldn't create the category "${ir.category}". You may not have permission to add categories.`); return; }
+        catMap.set(lc(ir.category),res.id);
+        createdCats++;
+      }
     }
 
-    // Resolve flight case by serial
-    let flightCaseId=null;
-    if(ur.flightCaseSerial){
-      const fc=invFlightCases.find(f=>f.fcSerial.toLowerCase()===ur.flightCaseSerial.toLowerCase()||f.name.toLowerCase()===ur.flightCaseSerial.toLowerCase());
-      if(fc) flightCaseId=fc.id;
+    // 2. Sub-categories (scoped to their category).
+    let subs=await api('GET','/inventory/subcategories')||invSubCats||[];
+    const subKey=(catId,name)=>String(catId)+'|'+lc(name);
+    const subMap=new Map(subs.map(s=>[subKey(s.catId,s.name),s.id]));
+    let createdSubs=0;
+    for(const ir of itemRows){
+      if(ir.subCategory&&ir.category){
+        const catId=catMap.get(lc(ir.category));
+        if(catId&&!subMap.has(subKey(catId,ir.subCategory))){
+          const res=await api('POST','/inventory/subcategories',{catId,name:ir.subCategory});
+          if(!res||!res.id){ showInvFeedback('error',`Couldn't create the sub-category "${ir.subCategory}".`); return; }
+          subMap.set(subKey(catId,ir.subCategory),res.id);
+          createdSubs++;
+        }
+      }
     }
 
-    parentItem.units.push({
-      unitId:'u'+uid(),
-      serial:_nextSerial(),
-      itemSerial:ur.itemSerial||'',
-      importDate:ur.importDate||'',
-      status:'working',
-      warehouseId,
-      flightCaseId,
-      notes:ur.notes||'',
-      faults:[],
-      discarded:false,
-      createdAt:new Date().toISOString()
-    });
-    addedUnits++;
-  });
-
-  api('GET','/inventory/items').then(r=>{if(r)invItems=r;});populateInvCatFilter();populateInvWhFilter();renderInventory();
-  const msg=`${addedParents} item${addedParents!==1?'s':''} and ${addedUnits} unit${addedUnits!==1?'s':''} imported.${addedUnits===0?' Tip: make sure unit Item Names match exactly with ITEMS section.':''}`;
-  showInvFeedback(addedUnits>0||addedParents>0?'success':'error', msg);
-}
-
-function _parseAndImportCSVFlat(csvText){
-  // Legacy flat format fallback
-  const text=csvText.replace(/^\uFEFF/,'');
-  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l&&!l.startsWith('"*'));
-  if(lines.length<2){showInvFeedback('error','Empty file');return;}
-  const headers=_csvParseLine(lines[0]).map(h=>h.toLowerCase().replace(/[^a-z0-9]/g,''));
-  const get=(row,key)=>{const k=key.toLowerCase().replace(/[^a-z0-9]/g,'');const idx=headers.findIndex(h=>h===k||h.includes(k)||k.includes(h));return idx>=0?row[idx]?.trim()||'':'';}
-  let added=0,skipped=0;
-  lines.slice(1).forEach(line=>{
-    const row=_csvParseLine(line);if(!row.length||row.every(c=>!c.trim()))return;
-    const name=get(row,'itemname')||get(row,'name');if(!name){skipped++;return;}
-    let catId=null,subCatId=null;
-    const catName=get(row,'category');const subCatName=get(row,'subcategory');
-    if(catName){let cat=invCats.find(c=>c.name.toLowerCase()===catName.toLowerCase());if(!cat){cat={id:uid(),name:catName};invCats.push(cat);invCatSave();}catId=cat.id;}
-    if(subCatName&&catId){let sub=invSubCats.find(s=>s.name.toLowerCase()===subCatName.toLowerCase());if(!sub){sub={id:uid(),catId,name:subCatName};invSubCats.push(sub);invSubCatSave();}subCatId=sub.id;}
-    const numUnits=parseInt(get(row,'numberofunits')||get(row,'units')||'1')||1;
-    const units=[];
-    for(let u=0;u<numUnits;u++){
-      units.push({unitId:'u'+uid(),serial:_nextSerial(),itemSerial:'',importDate:get(row,'importdate')||'',status:'working',warehouseId:null,flightCaseId:null,notes:'',faults:[],discarded:false,createdAt:new Date().toISOString()});
+    // 3. Warehouses (create missing).
+    let whs=await api('GET','/inventory/warehouses')||invWarehouses||[];
+    const whMap=new Map(whs.map(w=>[lc(w.name),w.id]));
+    let createdWhs=0;
+    for(const ur of unitRows){
+      if(ur.warehouse&&!whMap.has(lc(ur.warehouse))){
+        const res=await api('POST','/inventory/warehouses',{name:ur.warehouse,description:''});
+        if(!res||!res.id){ showInvFeedback('error',`Couldn't create the warehouse "${ur.warehouse}".`); return; }
+        whMap.set(lc(ur.warehouse),res.id);
+        createdWhs++;
+      }
     }
-    invItems.push({id:uid(),name,model:get(row,'modelnumber')||get(row,'model'),manufacturer:get(row,'manufacturer'),catId,subCatId,photo:null,units,createdAt:new Date().toISOString()});
-    added++;
-  });
-  api('GET','/inventory/items').then(r=>{if(r)invItems=r;});populateInvCatFilter();populateInvWhFilter();renderInventory();
-  showInvFeedback(added>0?'success':'error',`${added} item${added!==1?'s':''} imported (flat format).${skipped?' '+skipped+' skipped.':''}`);
+
+    // 4. Flight cases - lookup ONLY (serials are server-generated, can't create from a serial).
+    const fcs=await api('GET','/inventory/flightcases')||invFlightCases||[];
+    const fcMap=new Map(fcs.map(f=>[lc(f.fcSerial),f.id]));
+
+    // 5. Items (reuse existing by name; create the rest).
+    let items=await api('GET','/inventory/items')||invItems||[];
+    const itemMap=new Map(items.map(it=>[lc(it.name),it.id]));
+    let createdItems=0;
+    for(const ir of itemRows){
+      if(itemMap.has(lc(ir.name))) continue; // already in inventory -> reuse parent
+      const catId=ir.category?(catMap.get(lc(ir.category))||null):null;
+      const subCatId=(ir.subCategory&&catId)?(subMap.get(subKey(catId,ir.subCategory))||null):null;
+      const res=await api('POST','/inventory/items',{name:ir.name,model:ir.model,manufacturer:ir.manufacturer,catId,subCatId});
+      if(!res||!res.id){ showInvFeedback('error',`Couldn't create the item "${ir.name}". You may not have permission to add inventory items.`); return; }
+      itemMap.set(lc(ir.name),res.id);
+      createdItems++;
+    }
+
+    // 6. Units - grouped by parent item, posted as one array per item.
+    const byItem=new Map();
+    for(const ur of unitRows){
+      const itemId=itemMap.get(lc(ur.itemName));
+      if(!itemId){ warn.push(`Skipped a unit - no item named "${ur.itemName}" found. Add it to the ITEMS section.`); continue; }
+      let fcId=null;
+      if(ur.flightCaseSerial){
+        fcId=fcMap.get(lc(ur.flightCaseSerial))||null;
+        if(!fcId) warn.push(`Flight case "${ur.flightCaseSerial}" not found - its unit was imported without a case.`);
+      }
+      const warehouseId=ur.warehouse?(whMap.get(lc(ur.warehouse))||null):null;
+      if(!byItem.has(itemId)) byItem.set(itemId,[]);
+      byItem.get(itemId).push({
+        itemSerial:ur.itemSerial||'',
+        importDate:ur.importDate||null,
+        warehouseId,
+        fcId,
+        notes:ur.notes||'',
+        qty:ur.qty||1
+      });
+    }
+    let createdUnits=0;
+    for(const [itemId,arr] of byItem){
+      if(!arr.length) continue;
+      const res=await api('POST','/inventory/items/'+itemId+'/units',arr);
+      if(!res){ showInvFeedback('error','Some units could not be created. Items and any units before this point were saved.'); return; }
+      createdUnits+=arr.length;
+    }
+
+    // 7. Refetch all caches LAST, then re-render.
+    invItems=await api('GET','/inventory/items')||invItems;
+    invCats=await api('GET','/inventory/categories')||invCats;
+    invSubCats=await api('GET','/inventory/subcategories')||invSubCats;
+    invWarehouses=await api('GET','/inventory/warehouses')||invWarehouses;
+    invFlightCases=await api('GET','/inventory/flightcases')||invFlightCases;
+    if(typeof populateInvCatFilter==='function') populateInvCatFilter();
+    if(typeof populateInvWhFilter==='function') populateInvWhFilter();
+    renderInventory();
+
+    let msg=`Imported ${createdItems} item${createdItems!==1?'s':''} and ${createdUnits} unit${createdUnits!==1?'s':''}.`;
+    const extras=[];
+    if(createdCats) extras.push(`${createdCats} categor${createdCats!==1?'ies':'y'}`);
+    if(createdSubs) extras.push(`${createdSubs} sub-categor${createdSubs!==1?'ies':'y'}`);
+    if(createdWhs) extras.push(`${createdWhs} warehouse${createdWhs!==1?'s':''}`);
+    if(extras.length) msg+=' Also created '+extras.join(', ')+'.';
+    if(createdItems===0&&createdUnits===0&&!extras.length) msg='Nothing new to import - everything in the file already exists.';
+    if(warn.length){
+      const shown=warn.slice(0,6).join('\n• ');
+      msg+='\n\n'+warn.length+' warning'+(warn.length!==1?'s':'')+':\n• '+shown+(warn.length>6?`\n...and ${warn.length-6} more`:'');
+    }
+    showInvFeedback(warn.length?'warning':'success',msg);
+    toast('Import complete ✓');
+  }catch(e){
+    showInvFeedback('error','Import failed: '+(e.message||e)+'. Anything saved before the error was kept.');
+  }
 }
 function _csvParseLine(line){
   const result=[];let cur='';let inQ=false;
@@ -14691,9 +14794,19 @@ function _csvParseLine(line){
 }
 function showInvFeedback(type,msg){
   const el=document.getElementById('invImportFeedback');if(!el)return;
-  const bg=type==='success'?'var(--green-bg)':'var(--red-bg)';const border=type==='success'?'var(--green-bd)':'var(--red-bd)';
-  el.style.display='block';el.innerHTML=`<div style="padding:12px 16px;background:${bg};border:1px solid ${border};border-radius:10px;font-size:13px;display:flex;align-items:center;gap:8px"><span style="color:${type==='success'?'var(--green)':'var(--red)'};display:inline-flex">${type==='success'?ICON.checkCircle:ICON.alert}</span><span style="flex:1">${msg}</span><button onclick="this.parentElement.parentElement.style.display='none'" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px">×</button></div>`;
-  setTimeout(()=>{if(el)el.style.display='none';},8000);
+  // Four tones. info/warning added for the import flow.
+  const tone = {
+    success:{bg:'var(--green-bg)',bd:'var(--green-bd)',fg:'var(--green)',icon:ICON.checkCircle},
+    error:  {bg:'var(--red-bg)',  bd:'var(--red-bd)',  fg:'var(--red)',  icon:ICON.alert},
+    warning:{bg:'var(--amber-bg)',bd:'var(--amber-bd)',fg:'var(--amber)',icon:ICON.alert},
+    info:   {bg:'var(--surface)', bd:'var(--border)',  fg:'var(--text3)',icon:ICON.alert},
+  }[type] || {bg:'var(--red-bg)',bd:'var(--red-bd)',fg:'var(--red)',icon:ICON.alert};
+  const html = String(msg||'').replace(/</g,'&lt;').replace(/\n/g,'<br>');
+  el.style.display='block';
+  el.innerHTML=`<div style="padding:12px 16px;background:${tone.bg};border:1px solid ${tone.bd};border-radius:10px;font-size:13px;display:flex;align-items:flex-start;gap:8px;line-height:1.5"><span style="color:${tone.fg};display:inline-flex;flex-shrink:0;margin-top:1px">${tone.icon}</span><span style="flex:1">${html}</span><button onclick="this.parentElement.parentElement.style.display='none'" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;flex-shrink:0">×</button></div>`;
+  // Success messages auto-dismiss; info/warning/error stay so the user can read
+  // the result (and any per-row warnings) without it vanishing.
+  if(type==='success'){ setTimeout(()=>{if(el)el.style.display='none';},9000); }
 }
 
 function closeSimpleModal(){

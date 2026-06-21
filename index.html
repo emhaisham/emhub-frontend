@@ -15250,34 +15250,6 @@ async function _listBackCams(){
   }catch(e){ return []; }
 }
 
-// Pick the MAIN rear lens. facingMode:'environment' alone lets Chrome on
-// multi-lens Android (e.g. Samsung A15) grab the ultra-wide/macro. Strategy:
-// remembered manual choice → drop ultra-wide/tele/macro by label → if labels are
-// generic, probe each lens: the MAIN camera has a torch (flash) and the highest
-// resolution; ultra-wide/macro usually don't. Probe streams aren't shown, so
-// this only costs a brief startup delay.
-async function _pickBackCameraId(backCams){
-  if(!backCams||!backCams.length) return null;
-  if(backCams.length===1) return backCams[0].deviceId;
-  try{ const saved=localStorage.getItem('em_qr_cam'); if(saved && backCams.some(c=>c.deviceId===saved)) return saved; }catch(e){}
-  const notMain=/wide|ultra|tele|zoom|macro|depth|mono|fisheye|0\.5|infrared|\bir\b/i;
-  const labelled=backCams.filter(c=>!notMain.test(c.label));
-  if(labelled.length===1) return labelled[0].deviceId;
-  const pool=labelled.length?labelled:backCams;
-  let best=pool[0].deviceId, bestScore=-1;
-  for(const c of pool){
-    try{
-      const s=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:c.deviceId}},audio:false});
-      const tr=s.getVideoTracks()[0];
-      const caps=tr.getCapabilities?tr.getCapabilities():{};
-      s.getTracks().forEach(t=>t.stop());
-      const score=(caps.torch?1e7:0)+(caps.width&&caps.width.max?caps.width.max:0);
-      if(score>bestScore){ bestScore=score; best=c.deviceId; }
-    }catch(e){}
-  }
-  return best;
-}
-
 function _updateQRSwitchBtn(){
   const btn=document.getElementById('qrSwitchBtn');
   if(btn) btn.style.display=_qrBackCams.length>1?'inline-flex':'none';
@@ -15299,27 +15271,36 @@ async function _startCamera(){
     statusEl.textContent='Camera not supported in this browser — use manual entry or upload QR image below';
     return;
   }
+  // Open ONE camera and start scanning right away. We deliberately do NOT probe
+  // multiple lenses at startup — opening a second camera while one is live
+  // breaks the feed on phones (that was the "not picking" bug). Use the lens the
+  // user picked before (if any), else the default rear camera; the Switch Camera
+  // button changes it and remembers the choice.
+  let saved=null; try{ saved=localStorage.getItem('em_qr_cam'); }catch(e){}
+  const rear={video:{facingMode:{ideal:'environment'},..._QR_RES},audio:false};
   try{
-    // Permission first (also unlocks camera labels), then choose the main lens.
-    let stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},..._QR_RES},audio:false});
-    _qrBackCams=await _listBackCams();
-    const pickId=await _pickBackCameraId(_qrBackCams);
-    _qrCamIdx=Math.max(0,_qrBackCams.findIndex(c=>c.deviceId===pickId));
-    const curId=stream.getVideoTracks()[0]?.getSettings?.().deviceId;
-    if(pickId && curId && pickId!==curId){
-      stream.getTracks().forEach(t=>t.stop());
-      try{ stream=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:pickId},..._QR_RES},audio:false}); }
-      catch(e){ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},..._QR_RES},audio:false}); }
+    let stream;
+    if(saved){
+      try{ stream=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:saved},..._QR_RES},audio:false}); }
+      catch(e){ stream=await navigator.mediaDevices.getUserMedia(rear); }
+    } else {
+      stream=await navigator.mediaDevices.getUserMedia(rear);
     }
-    _updateQRSwitchBtn();
     _attachQRStream(stream);
+    // Build the lens list for the Switch button — enumerate only, no camera opens.
+    _qrBackCams=await _listBackCams();
+    const curId=stream.getVideoTracks()[0]?.getSettings?.().deviceId;
+    _qrCamIdx=Math.max(0,_qrBackCams.findIndex(c=>c.deviceId===curId));
+    _updateQRSwitchBtn();
   }catch(err){
     if(err.name==='NotAllowedError'){
       statusEl.textContent='Camera permission denied — please allow camera access in your browser settings, then try again';
       return;
     }
-    try{ _attachQRStream(await navigator.mediaDevices.getUserMedia({video:true,audio:false})); }
-    catch(e2){
+    try{
+      _attachQRStream(await navigator.mediaDevices.getUserMedia({video:true,audio:false}));
+      _qrBackCams=await _listBackCams(); _updateQRSwitchBtn();
+    }catch(e2){
       statusEl.textContent = e2.name==='NotFoundError'
         ? 'No camera found — use manual entry or upload a QR image below'
         : 'Camera unavailable ('+e2.message+') — use manual entry below';

@@ -11,7 +11,7 @@
 //   - API calls and third-party (Firebase, gstatic, googleapis): bypassed entirely
 //
 // Bump CACHE_VERSION to force all clients to drop the old cache on next activate.
-const CACHE_VERSION = 'emhub-v4';
+const CACHE_VERSION = 'emhub-v5';
 
 self.addEventListener('install', () => self.skipWaiting());
 

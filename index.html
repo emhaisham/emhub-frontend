@@ -17136,23 +17136,28 @@ async function doCheckOutSelected(li){
   const chks=[...document.querySelectorAll(`.co-item-chk-${li}:checked`)];
   if(!chks.length){toast('Tick at least one item');return;}
   const now=new Date().toISOString(); let count=0;
+  // Fire the unit PUTs concurrently instead of one-after-another. The browser
+  // caps concurrent requests per host (~6), so this self-throttles — no server
+  // overload — but a multi-unit checkout finishes in a fraction of the time.
+  const puts=[];
   for(const chk of chks){
     const res=_findUnitBySerial(chk.dataset.serial);
     if(res&&(!res.unit.checkout||res.unit.checkout.checkedInAt)){
       const checkout={eventId:evId,eventName:ev?.name||'',checkedOutAt:now,checkedInAt:null};
       res.unit.checkout=checkout;
       const dbUnitId=res.unit.id||res.unit.unitId;
-      await api('PUT','/inventory/units/'+dbUnitId,{
+      puts.push(api('PUT','/inventory/units/'+dbUnitId,{
         itemSerial:res.unit.itemSerial||null,
         importDate:res.unit.importDate?String(res.unit.importDate).slice(0,10):null,
         warehouseId:res.unit.warehouseId||null,
         fcId:res.unit.fcId||res.unit.flightCaseId||null,
         notes:res.unit.notes||null,
         checkoutData:checkout
-      });
+      }));
       count++;
     }
   }
+  await Promise.all(puts);
   // each unit's checkout was set locally before its PUT — no full refetch needed.
   renderCheckOutPage();
   toast(`${count} item${count!==1?'s':''} checked out ✓`);
@@ -17248,14 +17253,16 @@ async function doCheckOut(){
     toast(`${_coTarget.unit.serial} checked out to ${ev?.name} ✓`);
   } else {
     let count=0;
+    const puts=[];
     for(const {unit} of _coTarget.units){
       if(!unit.checkout||unit.checkout.checkedInAt){
         unit.checkout=checkout;
         const dbId=unit.id||unit.unitId;
-        await api('PUT','/inventory/units/'+dbId,{itemSerial:unit.itemSerial||null,importDate:unit.importDate?String(unit.importDate).slice(0,10):null,warehouseId:unit.warehouseId||null,fcId:unit.fcId||unit.flightCaseId||null,notes:unit.notes||null,checkoutData:checkout});
+        puts.push(api('PUT','/inventory/units/'+dbId,{itemSerial:unit.itemSerial||null,importDate:unit.importDate?String(unit.importDate).slice(0,10):null,warehouseId:unit.warehouseId||null,fcId:unit.fcId||unit.flightCaseId||null,notes:unit.notes||null,checkoutData:checkout}));
         count++;
       }
     }
+    await Promise.all(puts);
     toast(`${count} unit${count!==1?'s':''} from ${_coTarget.fc.name} checked out ✓`);
   }
   // checkout was set on the unit(s) locally before each PUT — no full refetch.
@@ -17436,12 +17443,14 @@ async function doCheckIn(){
     toast(`${_ciTarget.unit.serial} checked in ✓`);
   } else {
     let count=0;
+    const puts=[];
     for(const {unit} of _ciTarget.units){
       unit.checkout.checkedInAt=now;
       const dbId=unit.id||unit.unitId;
-      await api('PUT','/inventory/units/'+dbId,{itemSerial:unit.itemSerial||null,importDate:unit.importDate?String(unit.importDate).slice(0,10):null,warehouseId:unit.warehouseId||null,fcId:unit.fcId||unit.flightCaseId||null,notes:unit.notes||null,checkoutData:unit.checkout});
+      puts.push(api('PUT','/inventory/units/'+dbId,{itemSerial:unit.itemSerial||null,importDate:unit.importDate?String(unit.importDate).slice(0,10):null,warehouseId:unit.warehouseId||null,fcId:unit.fcId||unit.flightCaseId||null,notes:unit.notes||null,checkoutData:unit.checkout}));
       count++;
     }
+    await Promise.all(puts);
     // FC check-in completed — clear any dynamic per-event packing into this case
     await _clearContainerForFC(_ciTarget.fc?.id);
     toast(`${count} units checked in ✓`);

@@ -15215,26 +15215,16 @@ function _openQRScanner(callback){
   // Try to start camera immediately, load jsQR in parallel
   _startCamera();
   if(!window.jsQR){
-    // jsQR loader (SRI-pinned to 1.4.0 — a CDN compromise cannot inject other JS).
-    // cdnjs dropped the library, so jsdelivr is the only source. Manual entry + image upload
-    // remain as fallbacks if jsdelivr is unreachable.
-    const cdns=[
-      {src:'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
-       integrity:'sha384-9Q0jWoineiIq95JeIyBsNV90KKLfDsbkj29k/YFxf76a2JwkHDYkMuSbNGN6XJfV'}
-    ];
-    let tried=0;
-    const tryNext=()=>{
-      if(tried>=cdns.length) return; // will rely on manual/upload
-      const cdn=cdns[tried++];
-      const s=document.createElement('script');
-      s.src=cdn.src;
-      s.integrity=cdn.integrity;
-      s.crossOrigin='anonymous';
-      s.onload=()=>{ console.log('jsQR loaded'); };
-      s.onerror=tryNext;
-      document.head.appendChild(s);
-    };
-    tryNext();
+    // jsQR is SELF-HOSTED (same origin). It used to load from jsDelivr with a
+    // pinned SRI hash, but jsDelivr dynamically re-minifies its .min.js, so the
+    // hash silently stopped matching and the browser BLOCKED the script — the
+    // camera showed video but never decoded. Local file removes the CDN/network
+    // dependency and the SRI fragility entirely.
+    const s=document.createElement('script');
+    s.src='/jsQR.min.js';
+    s.onload=()=>{ console.log('jsQR loaded'); };
+    s.onerror=()=>{ const st=document.getElementById('qrStatus'); if(st) st.textContent='QR reader failed to load — use manual entry or upload a QR image below'; };
+    document.head.appendChild(s);
   }
 }
 

@@ -10312,7 +10312,7 @@ async function saveLeaveType(existingId){
   // normalise the `days` field and refresh localStorage — no GET round-trip.
   hrLeaveTypes = hrLeaveTypes.map(lt=>({...lt, days: lt.days_allowed||lt.days||0}));
   _cacheLeaveTypes(hrLeaveTypes);
-  closeSimpleModal(); renderLeaveTypes(); populateLeaveTypeFilter(); toast('Leave type saved ✓');
+  closeUserModal(); renderLeaveTypes(); populateLeaveTypeFilter(); toast('Leave type saved ✓');
 }
 function deleteLeaveType(id){
   openConfirm('Delete this leave type?','Existing leave records will remain.','Delete',async()=>{

@@ -12084,9 +12084,16 @@ function renderMsgRecipientDetail(){
   if(!wrap) return;
   if(val==='specific'){
     wrap.style.display = 'block';
-    const opts = hrEmployees.filter(e=>e.status!=='inactive')
+    // Only staff with a linked login account can be notified; the checkbox
+    // value is that account's USER id so the message targets it directly.
+    const linkable = hrEmployees.filter(e=>e.status!=='inactive' && e.linkedUserId);
+    if(!linkable.length){
+      wrap.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:10px 4px">No staff have a linked login account yet. Link a user account on the employee profile first.</div>';
+      return;
+    }
+    const opts = linkable
       .map(e=>`<label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer">
-        <input type="checkbox" class="msg-staff-chk" value="${e.id}" style="accent-color:var(--accent)">
+        <input type="checkbox" class="msg-staff-chk" value="${e.linkedUserId}" style="accent-color:var(--accent)">
         <span style="font-size:13px;font-weight:500">${e.name}</span>
         <span style="font-size:11px;color:var(--text3)">${e.dept||''}</span>
       </label>`).join('');
@@ -12117,9 +12124,20 @@ async function sendMsg(){
   const type=document.querySelector('input[name="msgType"]:checked')?.value||'info';
   const recipient=document.getElementById('msgRecipient')?.value||'all';
   if(!title||!body)return toast('Enter title and message');
-  const res=await api('POST','/notifications',{title,body,type,recipient});
+  // Resolve the chosen target to user ids. 'all' stays a broadcast (no ids).
+  let recipientIds=null;
+  if(recipient==='specific'){
+    recipientIds=[...new Set([...document.querySelectorAll('.msg-staff-chk:checked')].map(c=>c.value).filter(Boolean))];
+    if(!recipientIds.length) return toast('Select at least one staff member');
+  } else if(recipient==='dept'){
+    const dept=document.getElementById('msgDept')?.value||'';
+    recipientIds=[...new Set(hrEmployees.filter(e=>(!dept||e.dept===dept)&&e.linkedUserId).map(e=>e.linkedUserId))];
+    if(!recipientIds.length) return toast(dept?('No staff with a login account in '+dept):'No staff with a login account');
+  }
+  const res=await api('POST','/notifications',{title,body,type,recipient,recipientIds});
   if(!res)return;
-  toast('Notification sent ✓');
+  const who = recipient==='all' ? 'all staff' : (recipientIds.length+' recipient'+(recipientIds.length!==1?'s':''));
+  toast('Notification sent to '+who+' ✓');
   document.getElementById('msgTitle').value='';
   document.getElementById('msgBody').value='';
   renderMsgHistory();
@@ -12302,7 +12320,7 @@ async function loadInAppNotifs(){
 async function renderMsgHistory(){
   const el = document.getElementById('msgHistoryList');
   if(!el) return;
-  const msgs = await api('GET','/notifications') || [];
+  const msgs = await api('GET','/notifications?sent=1') || [];
   if(!msgs.length){
     el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div><div class="empty-title">No notifications sent yet</div><div class="empty-sub">Compose a message to get started</div></div>';
     return;
@@ -12331,7 +12349,7 @@ async function renderMsgHistory(){
 }
 
 async function resendNotif(id){
-  const msgs = await api('GET','/notifications') || [];
+  const msgs = await api('GET','/notifications?sent=1') || [];
   const m = msgs.find(x=>x.id===id); if(!m) return;
   openConfirm('Resend Notification?',`"${m.title}" will be sent to all staff again.`,'Resend',async()=>{
     const res = await api('POST','/notifications',{

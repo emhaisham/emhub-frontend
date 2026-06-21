@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-24T00:00:00.000Z",
+  "title": "Design System: EM HUB",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Deep Operational Blue",
+        "canonical": "oklch(43% 0.16 263)",
+        "tonalRamp": ["#0c1f4e", "#11296a", "#163585", "#1a3da0", "#1e40af", "#3b5fc5", "#6086d4", "#94aee3"]
+      },
+      "green": {
+        "role": "secondary",
+        "displayName": "Confirmation Green",
+        "canonical": "oklch(58% 0.14 161)",
+        "tonalRamp": ["#022c1e", "#054232", "#075946", "#0a715a", "#059669", "#22b585", "#52cfa3", "#a7f3d0"]
+      },
+      "amber": {
+        "role": "secondary",
+        "displayName": "Attention Amber",
+        "canonical": "oklch(67% 0.15 48)",
+        "tonalRamp": ["#2b1b00", "#42290a", "#5a3814", "#75451a", "#d97706", "#e8901e", "#f0aa50", "#fde68a"]
+      },
+      "red": {
+        "role": "secondary",
+        "displayName": "Critical Red",
+        "canonical": "oklch(58% 0.21 27)",
+        "tonalRamp": ["#3d0000", "#560a08", "#701814", "#8d2520", "#dc2626", "#e5524e", "#ed7e79", "#fecaca"]
+      },
+      "purple": {
+        "role": "tertiary",
+        "displayName": "Override Purple",
+        "canonical": "oklch(55% 0.24 295)",
+        "tonalRamp": ["#1c0a44", "#2b1359", "#3a1f70", "#4a2989", "#7c3aed", "#9665ee", "#b58eef", "#dfd2f9"]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Page Background",
+        "canonical": "oklch(96.7% 0.003 262)",
+        "tonalRamp": ["#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1", "#f4f5f7"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface Tint",
+        "canonical": "oklch(97.5% 0.003 262)",
+        "tonalRamp": ["#162032", "#1e293b", "#334155", "#475569", "#64748b", "#94a3b8", "#d0d3d9", "#f8f9fa"]
+      },
+      "white": {
+        "role": "neutral",
+        "displayName": "Elevated Paper",
+        "canonical": "oklch(100% 0 0)",
+        "tonalRamp": ["#1e293b", "#293548", "#3a4a64", "#4d5f7b", "#7088a5", "#a3b3c8", "#e6ebf2", "#ffffff"]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline Border",
+        "canonical": "oklch(92.4% 0.004 263)",
+        "tonalRamp": ["#2d3f55", "#3d5068", "#4d627d", "#5e7591", "#828ea0", "#a8b1bf", "#d0d3d9", "#e8eaed"]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Primary Text",
+        "canonical": "oklch(20.5% 0.025 270)",
+        "tonalRamp": ["#111827", "#1f2937", "#374151", "#4b5563", "#6b7280", "#9ca3af", "#d1d5db", "#f1f5f9"]
+      },
+      "hub-charcoal": {
+        "role": "neutral",
+        "displayName": "Topbar Charcoal",
+        "canonical": "oklch(20.5% 0.025 270)",
+        "tonalRamp": ["#0a0f1a", "#111827", "#1f2937", "#374151", "#4b5563", "#6b7280", "#9ca3af", "#d1d5db"]
+      }
+    },
+    "typographyMeta": {
+      "display":         { "displayName": "Display",        "purpose": "Home launcher + login wordmark. Single instance per screen." },
+      "page-title":      { "displayName": "Page Title",     "purpose": "Top of every module page." },
+      "card-title":      { "displayName": "Card Title",     "purpose": "Header of a .card container." },
+      "body":            { "displayName": "Body",           "purpose": "All running text and 13px table cells." },
+      "label":           { "displayName": "Field Label",    "purpose": "Form input label sitting above the field." },
+      "uppercase-label": { "displayName": "Section Label",  "purpose": "Section dividers, table column headers, bucket urgency headers." },
+      "mono-numeric":    { "displayName": "Mono Numeric",   "purpose": "Every monetary value, count, timestamp. Tabular numerals on." }
+    },
+    "shadows": [
+      { "name": "shadow-sm", "value": "0 1px 2px rgba(0,0,0,.05)",                                   "purpose": "Default card and sidebar elevation; pairs with 1px border." },
+      { "name": "shadow",    "value": "0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06)",        "purpose": "Hover state on event cards." },
+      { "name": "shadow-md", "value": "0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06)",        "purpose": "Active profile-tab pill." },
+      { "name": "shadow-lg", "value": "0 10px 15px rgba(0,0,0,.08), 0 4px 6px rgba(0,0,0,.05)",      "purpose": "Modals, drawers, login card." },
+      { "name": "focus-ring","value": "0 0 0 3px rgba(26,86,219,.1)",                                "purpose": "Input focus glow, paired with accent border." }
+    ],
+    "motion": [
+      { "name": "ease-out-cubic-bezier", "value": "cubic-bezier(.16,1,.3,1)",                       "purpose": "Standard ease for button presses, row reveals, drawer slide." },
+      { "name": "duration-fast",         "value": "120ms",                                          "purpose": "Button press feedback." },
+      { "name": "duration-base",         "value": "150ms",                                          "purpose": "Hover state changes, border colour shifts." },
+      { "name": "duration-modal",        "value": "250ms",                                          "purpose": "Drawer slide-in, theme transition." },
+      { "name": "row-reveal-stagger",    "value": "28ms per index via --i CSS var",                  "purpose": "Staggered list-row fade-up on mount." }
+    ],
+    "breakpoints": [
+      { "name": "phone-small", "value": "480px" },
+      { "name": "phone",       "value": "600px" },
+      { "name": "tablet",      "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "One per page. The single Deep Operational Blue CTA; carries the page's primary action.",
+      "html": "<button class=\"ds-btn-primary\">Generate Payroll</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 6px; background: #1e40af; color: #ffffff; border: none; border-radius: 7px; padding: 8px 16px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 4px rgba(30,64,175,.25); transition: transform 120ms cubic-bezier(.16,1,.3,1), background-color 150ms; white-space: nowrap; } .ds-btn-primary:hover { background: #1648c0; transform: translateY(-1px); } .ds-btn-primary:active { transform: translateY(1px) scale(.98); } .ds-btn-primary:focus-visible { outline: 2px solid #1e40af; outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Workhorse secondary action. White background, accent on hover.",
+      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; gap: 6px; background: #ffffff; color: #374151; border: 1px solid #d0d3d9; border-radius: 7px; padding: 8px 16px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: transform 120ms cubic-bezier(.16,1,.3,1), color 150ms, background-color 150ms, border-color 150ms; white-space: nowrap; } .ds-btn-ghost:hover { background: #eff6ff; color: #1e40af; border-color: #1e40af; } .ds-btn-ghost:active { transform: translateY(1px) scale(.98); }"
+    },
+    {
+      "name": "State Badge (Pending)",
+      "kind": "chip",
+      "refersTo": "badge-amber",
+      "description": "Tinted pill, bordered. State only, never decorative. The four variants share this exact shape; only the colour triad changes (bg / border / text).",
+      "html": "<span class=\"ds-badge ds-badge-amber\">Stage 1 — Awaiting Manager</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 20px; white-space: nowrap; } .ds-badge-amber { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Default text/date/email input with accent focus ring. Label sits above; helper text below.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-field-label\" for=\"f1\">Employee Name</label><input id=\"f1\" type=\"text\" class=\"ds-input\" placeholder=\"e.g. Aishath Niuma\"><div class=\"ds-field-help\">Full legal name as on NID or passport.</div></div>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 5px; } .ds-field-label { font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 600; letter-spacing: .03em; color: #374151; } .ds-input { background: #ffffff; border: 1px solid #d0d3d9; border-radius: 7px; padding: 8px 11px; font-family: 'Inter', sans-serif; font-size: 13.5px; color: #111827; outline: none; width: 100%; transition: border-color 150ms, box-shadow 150ms; } .ds-input::placeholder { color: #9ca3af; font-weight: 400; } .ds-input:focus { border-color: #1e40af; box-shadow: 0 0 0 3px rgba(26,86,219,.1); } .ds-field-help { font-family: 'Inter', sans-serif; font-size: 11px; color: #9ca3af; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Default elevated container. Used for grouping (a dashboard widget, a payroll record). NOT for individual list rows.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-hdr\"><div class=\"ds-card-hdr-icon\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"23\"/><path d=\"M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6\"/></svg></div><div><div class=\"ds-card-title\">Monthly Payroll</div><div class=\"ds-card-sub\">May 2026 - 47 employees</div></div></div><div class=\"ds-card-body\">Body content here.</div></div>",
+      "css": ".ds-card { background: #ffffff; border: 1px solid #e8eaed; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,.05); } .ds-card-hdr { padding: 14px 20px; border-bottom: 1px solid #e8eaed; display: flex; align-items: center; gap: 12px; } .ds-card-hdr-icon { width: 32px; height: 32px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; color: #1e40af; display: flex; align-items: center; justify-content: center; flex-shrink: 0; } .ds-card-title { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: #111827; } .ds-card-sub { font-family: 'Inter', sans-serif; font-size: 12px; color: #9ca3af; margin-top: 1px; } .ds-card-body { padding: 20px; font-family: 'Inter', sans-serif; font-size: 13px; color: #374151; line-height: 1.5; }"
+    },
+    {
+      "name": "List Row (pay-group-row)",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "The signature row pattern. Used across Expiring Documents, Probation, Salary Revisions, Training, Staff Requests. Leading info block (name + detail line) and trailing action cluster. Tight 8px vertical gap between rows; hairline border; no shadow.",
+      "html": "<div class=\"ds-row\"><div><div class=\"ds-row-name\">Aishath Niuma <span class=\"ds-badge ds-badge-amber\">Stage 1</span></div><div class=\"ds-row-detail\">Production - submitted 22 May - 3 days</div></div><div class=\"ds-row-right\"><span class=\"ds-row-aux\">Awaiting Yoosuf</span><button class=\"ds-btn-ghost\" style=\"padding:5px 11px;font-size:12px\">Profile</button></div></div>",
+      "css": ".ds-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #f8f9fa; border: 1px solid #e8eaed; border-radius: 7px; margin-bottom: 8px; gap: 12px; transition: border-color 150ms; } .ds-row:hover { border-color: #d0d3d9; } .ds-row > div:first-child { min-width: 0; flex: 1 1 auto; } .ds-row-name { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: #111827; display: flex; align-items: center; gap: 8px; } .ds-row-detail { font-family: 'Inter', sans-serif; font-size: 12px; color: #9ca3af; margin-top: 2px; } .ds-row-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; } .ds-row-aux { font-family: 'Inter', sans-serif; font-size: 11px; color: #9ca3af; } .ds-badge { display: inline-flex; align-items: center; gap: 4px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 20px; white-space: nowrap; } .ds-badge-amber { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; } .ds-btn-ghost { display: inline-flex; align-items: center; gap: 6px; background: #ffffff; color: #374151; border: 1px solid #d0d3d9; border-radius: 7px; padding: 8px 16px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; } .ds-btn-ghost:hover { background: #eff6ff; color: #1e40af; border-color: #1e40af; }"
+    },
+    {
+      "name": "Bucket Header",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Urgency band header used on Expiring Documents / Probation / Training. Leading 3px colored pill, then uppercase label, then count. The red variant pulses slowly to read as live status.",
+      "html": "<div class=\"ds-bucket ds-bucket-red\">Overdue <span class=\"ds-bucket-count\">(3)</span></div>",
+      "css": ".ds-bucket { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-family: 'Inter', sans-serif; font-size: 12.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #374151; } .ds-bucket::before { content: ''; display: inline-block; width: 3px; height: 14px; background: currentColor; border-radius: 2px; opacity: .6; } .ds-bucket-count { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #9ca3af; letter-spacing: 0; text-transform: none; } .ds-bucket-red { color: #dc2626; } .ds-bucket-red::before { animation: dsBucketPulse 2.2s ease-in-out infinite; } @keyframes dsBucketPulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }"
+    },
+    {
+      "name": "Top Navigation",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "Always-dark topbar. Frames every authenticated screen. Wordmark on the left, module tab strip in the middle, user pill on the right. Theme-independent.",
+      "html": "<div class=\"ds-topbar\"><div class=\"ds-topbar-logo\">EM<span>HUB</span></div><nav class=\"ds-topbar-nav\"><button class=\"ds-tab\">Events</button><button class=\"ds-tab ds-tab-active\">Equipment</button><button class=\"ds-tab\">HR</button><button class=\"ds-tab\">CrewPay</button></nav><div class=\"ds-topbar-user\"><div class=\"ds-avatar\">YH</div><div><div class=\"ds-uname\">Yoosuf Hassan</div><div class=\"ds-urole\">HR Officer</div></div></div></div>",
+      "css": ".ds-topbar { background: #111827; padding: 0 24px; display: flex; align-items: center; gap: 0; height: 52px; border-bottom: 1px solid rgba(255,255,255,.08); font-family: 'Inter', sans-serif; } .ds-topbar-logo { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-right: 32px; } .ds-topbar-logo span { color: #60a5fa; } .ds-topbar-nav { display: flex; align-items: center; gap: 2px; flex: 1; } .ds-tab { display: flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 7px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; color: rgba(255,255,255,.6); cursor: pointer; transition: all 150ms; border: none; background: none; } .ds-tab:hover { color: #fff; background: rgba(255,255,255,.07); } .ds-tab-active { color: #fff; background: rgba(255,255,255,.12); } .ds-topbar-user { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 7px; cursor: pointer; } .ds-topbar-user:hover { background: rgba(255,255,255,.08); } .ds-avatar { width: 30px; height: 30px; border-radius: 50%; background: #1e40af; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; } .ds-uname { font-size: 13px; font-weight: 500; color: rgba(255,255,255,.85); } .ds-urole { font-size: 11px; color: rgba(255,255,255,.4); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Operations Console",
+    "overview": "EM HUB is a console, not a canvas. The interface exists to make a busy operations team faster and more correct, not to impress. Aesthetically it sits in the space of utility-first software (Linear's restraint, Stripe Dashboard's tabular precision, Notion's quiet borders) and is deliberately distant from anything that reads as marketing surface, decoration, or trend. The dominant impression should be competent silence: a tool the user stops noticing because it is doing its job. The system uses tinted neutrals on a near-white page background, with a single deep blue accent doing all the work of indicating active state, primary action, and current selection.",
+    "keyCharacteristics": [
+      "Tinted-neutral surfaces with one deep-blue accent (Restrained palette).",
+      "Inter throughout; system-font fallback. No display font, no editorial pairing.",
+      "Density that follows the data: dense tables, breathing empty states.",
+      "Tabular numerals everywhere money or time appears.",
+      "Light + dark both first-class; dark slate, never near-black.",
+      "Status badges are pill-shaped, tinted, and bordered (low chroma, never neon).",
+      "Motion is feedback, not choreography. 120-250ms, ease-out, transform/opacity only."
+    ],
+    "rules": [
+      { "name": "The One Accent Rule",        "body": "Deep Operational Blue is the only colour used decoratively on chrome. All other colour is reserved for state. Hover and selection share the same accent.", "section": "colors" },
+      { "name": "The Tinted Neutral Rule",     "body": "Every neutral is tinted toward the cool/blue family. #000 and #fff are forbidden as background or text values.", "section": "colors" },
+      { "name": "The Status Quadrant Rule",    "body": "Every status fits into exactly one of four buckets: green, amber, red, blue. Purple is reserved; not a state. No additional state colours may be introduced.", "section": "colors" },
+      { "name": "The Tabular Numerals Rule",   "body": "Any column with a number uses font-variant-numeric: tabular-nums. Numbers align to the decimal in tables.", "section": "typography" },
+      { "name": "The One Family Rule",         "body": "Inter does everything. Adding a display, monospace, or serif companion is a design failure unless it serves a job no Inter cut can do.", "section": "typography" },
+      { "name": "The Hairline Rule",           "body": "Default cards lift off the page with shadow-sm plus a 1px border. Removing either alone makes the surface read flat or floating.", "section": "elevation" },
+      { "name": "The Mode-Aware Shadow Rule",  "body": "Dark-mode shadows are recalibrated, not just inherited; alpha is heavier (0.3-0.5) to compensate for the smaller luminance gap.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use the four-colour state vocabulary (green / amber / red / blue) consistently across every module.",
+      "Do use tabular numerals on every numeric column.",
+      "Do lead the primary action with the one Deep Operational Blue button. One per page.",
+      "Do use the pay-group-row list pattern for any many-items-scan-and-act surface.",
+      "Do keep dark mode and light mode visually equivalent.",
+      "Do respect prefers-reduced-motion.",
+      "Do size text inputs at 16px+ on mobile.",
+      "Do keep the topbar dark in both themes. It is a frame, not a surface.",
+      "Do use inline SVG icons from the established ICON.* library. 14px, stroke 1.75, currentColor."
+    ],
+    "donts": [
+      "Don't use emojis anywhere user-facing.",
+      "Don't use a left or right colored stripe greater than 1px on a card, alert, callout, or list item.",
+      "Don't use gradients on text.",
+      "Don't introduce glassmorphism, backdrop-blur, neon glow, or pure-black-and-white.",
+      "Don't use the hero-metric template.",
+      "Don't introduce a second font family.",
+      "Don't wrap individual list items in cards.",
+      "Don't use modals as the first reach.",
+      "Don't introduce a new accent or state colour.",
+      "Don't animate width, height, top, left, or any layout property.",
+      "Don't spin a spinner in the middle of content while loading a list.",
+      "Don't use cute illustrations or friendly mascots in empty states."
+    ]
+  }
+}

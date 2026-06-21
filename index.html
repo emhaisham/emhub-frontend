@@ -13687,7 +13687,7 @@ function renderUnitsHtml(item){
             <button class="btn btn-red btn-xs" onclick="deleteUnit('${item.id}','${u.unitId||u.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`;
       return`<div class="units-grid-row" style="background:${u.discarded?'#f9fafb':isPendingDiscard?'var(--amber-bg)':u.status==='faulty'?'var(--red-bg)':'var(--white)'};border:1px solid ${u.discarded?'#e5e7eb':isPendingDiscard?'var(--amber-bd)':u.status==='faulty'?'var(--red-bd)':'var(--border)'};opacity:${u.discarded?'0.6':'1'}">
         <div style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span class="units-cell-label">EM Serial</span>${u.serial}</div>
-        <div style="font-size:12px;color:var(--text2);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis"><span class="units-cell-label">Item Serial</span>${u.itemSerial||'—'}${(u.qty||1)>1?` <span style="background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700">×${u.qty}</span>`:''}</div>
+        <div style="font-size:12px;color:var(--text2);font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis"><span class="units-cell-label">Item Serial</span>${u.itemSerial||'—'}${(u.qty||1)>1?` <span style="background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700">×${u.qty}</span>`:''}${u.consumable?` <span style="background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700" title="Consumable — not returned at check-in">Consumable</span>`:''}</div>
         <div><span class="units-cell-label">Status</span>${statusBadge}</div>
         <div style="min-width:0"><span class="units-cell-label">Flight Case</span><span style="min-width:0">${fcHtml}</span></div>
         <div style="min-width:0"><span class="units-cell-label">Location</span><span>${whHtml}</span></div>
@@ -14262,6 +14262,13 @@ async function openAddUnit(parentId){
         <input type="number" id="unit_qty" value="1" min="1" style="width:90px">
         <div style="font-size:12px;color:var(--text3)">For serialized items (with item serial), keep qty at 1.<br>For non-serialized bulk items (e.g. vases), enter total qty.</div>
       </div>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="unit_consumable" style="width:16px;height:16px;accent-color:var(--accent)">
+        <span class="field-label" style="margin:0">Consumable (tape, cable ties, etc.)</span>
+      </label>
+      <div style="font-size:12px;color:var(--text3);margin-top:2px">Consumables get used up — they are not checked back in to the warehouse after an event.</div>
     </div>`;
   document.getElementById('simpleModalSave').textContent='Add Unit';
   document.getElementById('simpleModalSave').onclick=saveUnitNew;
@@ -14314,8 +14321,9 @@ async function saveUnitNew(){
   const importDate=document.getElementById('unit_import_date')?.value||'';
   const itemSerial=document.getElementById('unit_item_serial')?.value.trim()||'';
   const qty=parseInt(document.getElementById('unit_qty')?.value)||1;
+  const consumable=!!document.getElementById('unit_consumable')?.checked;
   const res=await api('POST','/inventory/items/'+_editUnitParentId+'/units',[{
-    warehouseId, fcId, notes, importDate, itemSerial, qty
+    warehouseId, fcId, notes, importDate, itemSerial, qty, consumable
   }]);
   if(!res) return;
   // The POST returns the created unit(s) as an array. Push them into the parent
@@ -14359,6 +14367,13 @@ function openEditUnit(parentId, unitId){
     <div class="field"><label class="field-label">Quantity</label>
       <input type="number" id="unit_qty" value="${unit.qty||1}" min="1" style="width:90px">
       <div style="font-size:11px;color:var(--text3);margin-top:4px">For serialized items keep at 1. For bulk non-serialized items enter total qty.</div></div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="unit_consumable" ${unit.consumable?'checked':''} style="width:16px;height:16px;accent-color:var(--accent)">
+        <span class="field-label" style="margin:0">Consumable (tape, cable ties, etc.)</span>
+      </label>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">Not checked back in to the warehouse after an event.</div>
+    </div>
     <div class="field"><label class="field-label">Notes</label>
       <input type="text" id="unit_notes" value="${unit.notes||''}" placeholder="e.g. scratched corner"></div>`;
   document.getElementById('simpleModalSave').textContent='Save Changes';
@@ -14375,7 +14390,8 @@ async function saveUnitEdit(){
   const fcId=document.getElementById('unit_fc')?.value||null;
   const notes=document.getElementById('unit_notes')?.value.trim()||'';
   const qty=parseInt(document.getElementById('unit_qty')?.value)||1;
-  const res=await api('PUT','/inventory/units/'+unitId,{itemSerial,importDate,warehouseId,fcId,notes,qty});
+  const consumable=!!document.getElementById('unit_consumable')?.checked;
+  const res=await api('PUT','/inventory/units/'+unitId,{itemSerial,importDate,warehouseId,fcId,notes,qty,consumable});
   if(!res) return;
   // PUT returns the updated unit. Replace it in its parent's units array in
   // memory rather than re-downloading the whole inventory list.
@@ -17253,7 +17269,7 @@ async function doCheckOut(){
 let _ciTarget=null;
 
 function renderCheckInPage(){
-  const evs=calEvents.filter(ev=>invItems.some(item=>(item.units||[]).some(u=>u.checkout&&!u.checkout.checkedInAt&&String(u.checkout.eventId)===String(ev.id))));
+  const evs=calEvents.filter(ev=>invItems.some(item=>(item.units||[]).some(u=>u.checkout&&!u.checkout.checkedInAt&&!u.consumable&&String(u.checkout.eventId)===String(ev.id))));
   const sel=document.getElementById('ciEventSel');
   if(sel) sel.innerHTML='<option value="">— Select event —</option>'+evs.map(e=>`<option value="${e.id}">${e.name}${e.eventDateFrom?' ('+e.eventDateFrom+')':''}</option>`).join('');
   renderCiEventList(); renderCiRecent();
@@ -17280,10 +17296,14 @@ function renderCiEventList(){
         <tbody>${list.items.map(item=>{
           const res=_findUnitBySerial(item.emSerial);
           const unit=res?.unit;
+          const isConsumable=!!unit?.consumable;
           const isOut=unit?.checkout&&!unit?.checkout.checkedInAt&&String(unit.checkout.eventId)===String(evId);
-          const badge=isOut?'<span class="inv-badge-faulty" style="font-size:11px">Out</span>':'<span class="inv-badge-working" style="font-size:11px">In</span>';
-          return`<tr style="border-top:1px solid var(--border);background:${isOut?'var(--amber-bg)':''}">
-            <td style="padding:6px 12px">${isOut?`<input type="checkbox" class="ci-item-chk-${li}" data-serial="${item.emSerial}" style="accent-color:var(--green);width:16px;height:16px;cursor:pointer">`:`<span style="color:var(--green)">${ICON.check}</span>`}</td>
+          const needsCheckIn=isOut&&!isConsumable; // consumables are used up, no return
+          const badge=isConsumable
+            ?'<span style="font-size:11px;background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd);border-radius:10px;padding:2px 7px;font-weight:700">Consumable</span>'
+            :(isOut?'<span class="inv-badge-faulty" style="font-size:11px">Out</span>':'<span class="inv-badge-working" style="font-size:11px">In</span>');
+          return`<tr style="border-top:1px solid var(--border);background:${needsCheckIn?'var(--amber-bg)':''}">
+            <td style="padding:6px 12px">${needsCheckIn?`<input type="checkbox" class="ci-item-chk-${li}" data-serial="${item.emSerial}" style="accent-color:var(--green);width:16px;height:16px;cursor:pointer">`:(isConsumable?'<span style="color:var(--text3)" title="Consumable — used, no return needed">—</span>':`<span style="color:var(--green)">${ICON.check}</span>`)}</td>
             <td style="padding:6px 12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.parentName}</td>
             <td style="padding:6px 12px;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700">${item.emSerial}</td>
             <td style="padding:6px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.fcName?''+item.fcSerial:'—'}</td>
@@ -17343,6 +17363,11 @@ function ciLookup(){
   let result=_findUnitBySerial(serial);
   if(result){
     const {unit,item}=result;
+    if(unit.consumable){
+      preview.style.display='block';
+      preview.innerHTML=`<div style="background:var(--accent-bg);border:1px solid var(--accent-bd);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--accent)">Consumable — no check-in needed</div><div style="font-size:13px">${item.name} · <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit.serial}</span> is used up, not returned.</div></div>`;
+      confirmWrap.style.display='none'; _ciTarget=null; return;
+    }
     if(!unit.checkout||unit.checkout.checkedInAt){
       preview.style.display='block';
       preview.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--text3)">Already in warehouse</div><div style="font-size:13px">${item.name} · <span style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums">${unit.serial}</span></div></div>`;
@@ -17357,7 +17382,7 @@ function ciLookup(){
   }
   const fcResult=_findByFCSerial(serial);
   if(fcResult){
-    const outUnits=fcResult.units.filter(x=>x.unit.checkout&&!x.unit.checkout.checkedInAt);
+    const outUnits=fcResult.units.filter(x=>x.unit.checkout&&!x.unit.checkout.checkedInAt&&!x.unit.consumable);
     if(!outUnits.length){
       preview.style.display='block';
       preview.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><div style="font-weight:700;color:var(--text3)">All units already in</div><div style="font-size:13px">${fcResult.fc.fcSerial} — ${fcResult.fc.name}</div></div>`;

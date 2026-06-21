@@ -817,12 +817,13 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .bar-val{font-size:12px;font-weight:600;color:var(--text);min-width:80px;text-align:right;font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
 
 /* ══ USER MANAGEMENT ══════════════════════════════ */
-.user-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow-sm);margin-bottom:10px}
-.user-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
-.user-info{flex:1}
+.user-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:11px 18px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow-sm);margin-bottom:8px}
+.user-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0}
+.user-info{flex:1;min-width:0}
 .user-name{font-size:14px;font-weight:600;color:var(--text)}
-.user-email{font-size:12px;color:var(--text3);margin-top:2px}
-.user-perms{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.user-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:3px}
+.user-email{font-size:12px;color:var(--text3);flex-shrink:0}
+.user-perms{display:flex;gap:5px;flex-wrap:wrap}
 .perm-chip{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px}
 .perm-crewpay{background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd)}
 .perm-hr{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
@@ -4895,6 +4896,7 @@ function renderUsers(){
     const hasAny=(prefix)=>u.role==='admin'||Object.keys(uPerms).some(k=>k.startsWith(prefix)&&uPerms[k]===true);
     if(u.role==='admin')perms.push('<span class="perm-chip perm-admin">Admin</span>');
     else if(uRoleName) perms.push(`<span class="perm-chip" style="background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-bd)">${uRoleName}</span>`);
+    else perms.push('<span class="perm-chip" style="background:var(--surface);color:var(--text3);border:1px solid var(--border)">Staff</span>');
     if(hasAny('crewpay')||hasAny('msging'))perms.push('<span class="perm-chip perm-crewpay">CrewPay</span>');
     if(hasAny('hr'))perms.push('<span class="perm-chip perm-hr">HR</span>');
     if(hasAny('cal')||hasAny('inv')||hasAny('eel')||hasAny('fault'))perms.push('<span class="perm-chip perm-calendar">Events/Equip</span>');
@@ -4907,8 +4909,10 @@ function renderUsers(){
         <div class="user-name">${u.name} ${isSelf?'<span style="font-size:11px;color:var(--text3)">(you)</span>':''}
           ${!isActive?'<span class="badge badge-red" style="font-size:10px;margin-left:6px;padding:2px 7px">Deactivated</span>':''}
         </div>
-        <div class="user-email">@${u.username} · ${u.role==='admin'?'Administrator':u.roleId?(appRoles.find(r=>String(r.id)===String(u.roleId))?.name||'Custom Role'):'Staff'}</div>
-        <div class="user-perms">${perms.join('')}</div>
+        <div class="user-meta">
+          <span class="user-email">@${u.username}</span>
+          <span class="user-perms">${perms.join('')}</span>
+        </div>
       </div>
       <div class="user-actions">
         <button class="btn btn-ghost btn-sm" onclick="openEditUser('${u.id}')">Edit</button>

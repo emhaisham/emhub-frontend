@@ -9393,7 +9393,7 @@ function renderCal(){
           const ev=t.ev;
           const completed=ev.completed===true;
           const c=completed?'#9ca3af':(ev.color||EVENT_COLORS[0]);
-          const bg=tint(c, completed?0.08:0.13);
+          const bg=tint(c, completed?0.12:0.22);
           const spanCols=t.endCol-t.startCol+1;
           const topOff=bandsTopOffset + t.track*bandHeight;
           const isStart=t.isStart, isEnd=t.isEnd;
@@ -9409,7 +9409,7 @@ function renderCal(){
         visiblePills.forEach(ev=>{
           const completed=ev.completed===true;
           const c=completed?'#9ca3af':(ev.color||EVENT_COLORS[0]);
-          const bg=tint(c, completed?0.08:0.13);
+          const bg=tint(c, completed?0.12:0.22);
           const tm=(ev.eventTimeFrom||'').slice(0,5);
           const tmStr=tm?calFmtTime(tm):'';
           const txtStyle=completed?`color:${c};opacity:.6;text-decoration:line-through`:`color:${c}`;

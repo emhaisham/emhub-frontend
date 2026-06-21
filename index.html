@@ -15236,43 +15236,65 @@ function _openQRScanner(callback){
   }
 }
 
-function _startCamera(){
+// Pick the MAIN rear lens. facingMode:'environment' alone lets Chrome on
+// multi-lens Android phones grab the ultra-wide (or tele/macro) camera. Once we
+// have permission, device labels are readable, so we choose the back camera
+// that ISN'T an ultra-wide/tele/macro/depth variant. Returns a deviceId or null.
+async function _pickBackCameraId(){
+  try{
+    if(!navigator.mediaDevices.enumerateDevices) return null;
+    const cams=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput');
+    if(cams.length<2) return null; // single camera — nothing to choose
+    const back=cams.filter(c=>/back|rear|environment/i.test(c.label));
+    const pool=back.length?back:cams;
+    // Drop non-main lenses by label; numeric-only labels fall through and we
+    // keep enumeration order (the main lens is virtually always listed first).
+    const notMain=/wide|ultra|tele|zoom|macro|depth|mono|fisheye|0\.5|infrared|\bir\b/i;
+    const main=pool.filter(c=>!notMain.test(c.label));
+    return (main[0]||pool[0])?.deviceId||null;
+  }catch(e){ return null; }
+}
+
+async function _startCamera(){
   const video=document.getElementById('qrVideo');
   const statusEl=document.getElementById('qrStatus');
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
     statusEl.textContent='Camera not supported in this browser — use manual entry or upload QR image below';
     return;
   }
-  // Try back camera first, fall back to any camera
-  const tryCamera=(constraints)=>{
-    navigator.mediaDevices.getUserMedia(constraints)
-      .then(stream=>{
-        _qrStream=stream;
-        video.srcObject=stream;
-        video.play().then(()=>{
-          statusEl.textContent='Point camera at a QR code';
-          _qrAnimFrame=requestAnimationFrame(_scanQRFrame);
-        }).catch(()=>{
-          statusEl.textContent='Camera started — point at QR code';
-          _qrAnimFrame=requestAnimationFrame(_scanQRFrame);
-        });
-      })
-      .catch(err=>{
-        if(constraints.video?.facingMode==='environment'){
-          // Try without facingMode constraint
-          tryCamera({video:true,audio:false});
-        } else {
-          if(err.name==='NotAllowedError'){
-            statusEl.textContent='Camera permission denied — please allow camera access in your browser settings, then try again';
-          } else if(err.name==='NotFoundError'){
-            statusEl.textContent='No camera found — use manual entry or upload a QR image below';
-          } else {
-            statusEl.textContent='Camera unavailable ('+err.message+') — use manual entry below';
-          }
-        }
-      });
+  const attach=(stream)=>{
+    _qrStream=stream;
+    video.srcObject=stream;
+    video.play().then(()=>{ statusEl.textContent='Point camera at a QR code'; })
+      .catch(()=>{ statusEl.textContent='Camera started — point at QR code'; });
+    _qrAnimFrame=requestAnimationFrame(_scanQRFrame);
   };
-  tryCamera({video:{facingMode:'environment'},audio:false});
+  const RES={width:{ideal:1280},height:{ideal:720}};
+  try{
+    // Step 1 — get permission + an initial rear stream (also unlocks labels).
+    let stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},...RES},audio:false});
+    // Step 2 — if Chrome handed us a non-main lens, switch to the main one.
+    const mainId=await _pickBackCameraId();
+    const curId=stream.getVideoTracks()[0]?.getSettings?.().deviceId;
+    if(mainId && curId && mainId!==curId){
+      stream.getTracks().forEach(t=>t.stop());
+      try{ stream=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:mainId},...RES},audio:false}); }
+      catch(e){ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},...RES},audio:false}); }
+    }
+    attach(stream);
+  }catch(err){
+    if(err.name==='NotAllowedError'){
+      statusEl.textContent='Camera permission denied — please allow camera access in your browser settings, then try again';
+      return;
+    }
+    // Last resort — any available camera.
+    try{ attach(await navigator.mediaDevices.getUserMedia({video:true,audio:false})); }
+    catch(e2){
+      statusEl.textContent = e2.name==='NotFoundError'
+        ? 'No camera found — use manual entry or upload a QR image below'
+        : 'Camera unavailable ('+e2.message+') — use manual entry below';
+    }
+  }
 }
 
 function _scanQRFrame(){

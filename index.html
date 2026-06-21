@@ -16082,16 +16082,24 @@ function toggleELExpand(evId){
 async function openAddEquipList(evId){
   // Lazy-load templates if we haven't yet
   if(!_listTemplatesLoaded) await loadListTemplates(true);
-  const tplOpts = ['<option value="">— Blank list —</option>']
-    .concat((listTemplates||[]).map(t => `<option value="${t.id}">${t.name}${(t.items||[]).length?` (${(t.items||[]).reduce((s,i)=>s+(i.qty||0),0)} items)`:''}</option>`))
-    .join('');
+  const tpls = listTemplates||[];
+  const tplChecks = tpls.length
+    ? tpls.map(t => {
+        const cnt=(t.items||[]).reduce((s,i)=>s+(i.qty||0),0);
+        return `<label style="display:flex;align-items:center;gap:8px;padding:6px 2px;cursor:pointer;border-bottom:1px solid var(--border)">
+          <input type="checkbox" class="el-tpl-chk" value="${t.id}" style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0">
+          <span style="font-size:13px;flex:1;min-width:0">${t.name}</span>
+          ${cnt?`<span style="font-size:11px;color:var(--text3);flex-shrink:0">${cnt} item${cnt!==1?'s':''}</span>`:''}
+        </label>`;
+      }).join('')
+    : '<div style="font-size:12px;color:var(--text3);padding:8px 2px">No saved templates yet — this will be a blank list.</div>';
   document.getElementById('simpleModalTitle').textContent='Add Team Equipment List';
   document.getElementById('simpleModalBody').innerHTML=`
     <div class="field"><label class="field-label">Team Name *</label>
       <input type="text" id="el_team" placeholder="e.g. Sound, Lighting, Video, Staging"></div>
-    <div class="field"><label class="field-label">Start from</label>
-      <select id="el_template">${tplOpts}</select>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px">Pre-fills items from a saved template. Available units are picked automatically; you can edit afterwards.</div>
+    <div class="field"><label class="field-label">Start from templates (optional — tick any)</label>
+      <div style="max-height:190px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 10px">${tplChecks}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Tick one or more templates to pre-fill items from all of them. Available units are picked automatically (no unit is added twice); you can edit afterwards.</div>
     </div>`;
   document.getElementById('simpleModalSave').textContent='Create List';
   const fn=async()=>{
@@ -16099,9 +16107,23 @@ async function openAddEquipList(evId){
     if(!teamName){toast('Enter team name');return;}
     const ev=calEvents.find(e=>String(e.id)===String(evId)); if(!ev) return;
     if(!ev.equipLists) ev.equipLists=[];
-    const tplId=document.getElementById('el_template')?.value||'';
-    const {items: tplItems, missingNote} = tplId ? _applyTemplateToList(tplId, ev) : {items:[], missingNote:''};
-    ev.equipLists.push({teamName, items: tplItems, createdAt:new Date().toISOString()});
+    // Merge items from every ticked template. Stage picks in a temp list so each
+    // template's _applyTemplateToList sees units already taken by the previous
+    // ones — no physical unit is double-booked across the selected templates.
+    const tplIds=[...document.querySelectorAll('.el-tpl-chk:checked')].map(c=>c.value);
+    let mergedItems=[]; const tplNotes=[];
+    if(tplIds.length){
+      const staging={teamName:'__staging__',items:[]};
+      ev.equipLists.push(staging);
+      for(const tid of tplIds){
+        const {items,missingNote}=_applyTemplateToList(tid, ev);
+        mergedItems.push(...items);
+        staging.items.push(...items);
+        if(missingNote) tplNotes.push(missingNote);
+      }
+      ev.equipLists.pop(); // drop staging before saving
+    }
+    ev.equipLists.push({teamName, items: mergedItems, createdAt:new Date().toISOString()});
     const res=await api('PATCH','/events/'+evId+'/equip-lists',{equipLists:ev.equipLists});
     if(!res){ev.equipLists.pop();toast('Failed to create list');return;}
     // Refresh calEvents
@@ -16112,7 +16134,7 @@ async function openAddEquipList(evId){
     _upsertById(calEvents,res,false);
     events=calEvents;
     closeSimpleModal(); renderEventLists();
-    toast(missingNote ? `List created. ${missingNote}` : 'List created ✓');
+    toast(tplNotes.length ? `List created. ${tplNotes.join(' ')}` : 'List created ✓');
   };
   document.getElementById('simpleModalSave').onclick=fn;
   window._simpleModalFn=fn;

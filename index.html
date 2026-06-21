@@ -14528,12 +14528,12 @@ async function saveInvItem(){
 
 // ── CSV Template ──────────────────────────────────────────────────────────────
 function downloadInvTemplate(){
-  // Two-section format: ITEMS section then UNITS section.
-  // ITEMS columns mirror inv_items (+ Flight Case Prefix -> inv_categories.fc_prefix).
-  // UNITS columns mirror inv_units (+ Quantity -> inv_units.qty).
+  // Three-section format: ITEMS, FLIGHT CASES (optional, user-numbered), UNITS.
+  // ITEMS -> inv_items (+ Flight Case Prefix); FLIGHT CASES -> inv_flightcases
+  // (Flight Case No becomes the serial); UNITS -> inv_units (reference a case by No).
   const csv='﻿'+`"EM HUB INVENTORY IMPORT TEMPLATE"
-"Fill in the ITEMS section first, then the UNITS section."
-"Do not change the section headers (ITEMS: and UNITS:)."
+"Fill in ITEMS, then FLIGHT CASES (optional), then UNITS."
+"Do not change the section headers (ITEMS:, FLIGHT CASES:, UNITS:)."
 ""
 "ITEMS: (one row per parent item)"
 "Item Name","Model Number","Manufacturer","Category","Flight Case Prefix","Sub-Category"
@@ -14542,25 +14542,31 @@ function downloadInvTemplate(){
 "Chauvet Rogue R1 Spot","Rogue R1 Spot","Chauvet","Lighting","LT","Moving Heads"
 "XLR Cable 5m","","Generic","Cables","CB","Audio Cables"
 ""
+"FLIGHT CASES: (one row per flight case - optional; units reference these by Flight Case No)"
+"Flight Case No","Flight Case Name","Category","Warehouse","Notes"
+"FC-001","Main PA Case","Sound","Main Warehouse","Tops and subs"
+"FC-002","Lighting Case 1","Lighting","Main Warehouse",""
+""
 "UNITS: (one row per physical unit - Item Name must match exactly)"
-"Item Name","Item Serial (manufacturer's)","Import Date (YYYY-MM-DD)","Warehouse","Flight Case Serial","Quantity","Notes"
-"DAS Event 210A Top","DAS-2024-001","2024-01-15","Main Warehouse","FC-00001","1","Left channel unit"
-"DAS Event 210A Top","DAS-2024-002","2024-01-15","Main Warehouse","FC-00001","1","Right channel unit"
+"Item Name","Item Serial (manufacturer's)","Import Date (YYYY-MM-DD)","Warehouse","Flight Case No","Quantity","Notes"
+"DAS Event 210A Top","DAS-2024-001","2024-01-15","Main Warehouse","FC-001","1","Left channel unit"
+"DAS Event 210A Top","DAS-2024-002","2024-01-15","Main Warehouse","FC-001","1","Right channel unit"
 "Shure SM58 Microphone","SHR-001","2024-03-20","Studio A","","1",""
 "Shure SM58 Microphone","SHR-002","2024-03-20","Studio A","","1",""
 "Shure SM58 Microphone","SHR-003","2024-03-20","Studio A","","1",""
-"Chauvet Rogue R1 Spot","CHV-001","2023-11-10","Main Warehouse","FC-00002","1",""
-"Chauvet Rogue R1 Spot","CHV-002","2023-11-10","Main Warehouse","FC-00002","1",""
+"Chauvet Rogue R1 Spot","CHV-001","2023-11-10","Main Warehouse","FC-002","1",""
+"Chauvet Rogue R1 Spot","CHV-002","2023-11-10","Main Warehouse","FC-002","1",""
 "XLR Cable 5m","","2024-02-01","Main Warehouse","","20","Bulk stock - 20 cables"
 ""
 "NOTES:"
-"* Each UNIT row creates one unit record with its own auto-generated EM serial (EM-00001, EM-00002 ...)."
+"* Fill ITEMS first, then FLIGHT CASES (optional), then UNITS."
+"* FLIGHT CASES: type your own Flight Case No (e.g. FC-001, matching the number on the physical case). Each number must be unique. Category and Warehouse are optional."
+"* UNITS Flight Case No must match a Flight Case No above (or an existing flight case). Leave blank if the unit is not in a case."
+"* Each UNIT row creates one unit with its own auto-generated EM serial (EM-00001, EM-00002 ...)."
 "* Quantity is how many identical pieces that row represents. Use 1 for serial-tracked gear, or a higher number for bulk stock like cables."
-"* Item Name in the UNITS section must match an Item Name in the ITEMS section exactly (or an item already in inventory)."
-"* If an item already exists in inventory, units are added to it - no duplicate parent item is created."
-"* Category, Sub-Category and Warehouse are created automatically if they do not already exist."
-"* Flight Case Prefix is 2 letters that set the serial prefix for flight cases in that category (e.g. SP -> SP-00001). Optional - leave blank to skip."
-"* Flight Case Serial must match an existing flight case (create flight cases first). Leave blank if the unit is not in a case."
+"* Item Name in UNITS must match an Item Name in ITEMS exactly (or an item already in inventory)."
+"* Categories, Sub-Categories, Warehouses and Flight Cases are created automatically if they do not already exist."
+"* Flight Case Prefix (ITEMS) only matters when the system auto-numbers a case; it is ignored when you type your own Flight Case No. Optional."
 "* Item Serial is the manufacturer's serial printed on the unit. Leave blank if none."
 "* Import Date must be in YYYY-MM-DD format. Leave blank if unknown."`;
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
@@ -14628,8 +14634,9 @@ async function _parseAndImportCSV(csvText){
   const lc=s=>String(s||'').trim().toLowerCase();
 
   const itemsStart=lines.findIndex(l=>norm(l).toUpperCase().startsWith('ITEMS:'));
+  const fcStart   =lines.findIndex(l=>norm(l).toUpperCase().startsWith('FLIGHT CASES:'));
   const unitsStart=lines.findIndex(l=>norm(l).toUpperCase().startsWith('UNITS:'));
-  if(itemsStart<0||unitsStart<0||unitsStart<itemsStart){
+  if(itemsStart<0||unitsStart<0){
     showInvFeedback('error','This file is not in the template format. Download the CSV template, fill it in, and keep the "ITEMS:" and "UNITS:" section headers.');
     return;
   }
@@ -14650,45 +14657,49 @@ async function _parseAndImportCSV(csvText){
     return '';
   };
 
-  // -- Parse ITEMS --
-  const itemHeaders=_csvParseLine(lines[itemsStart+1]||'').map(h=>h.toLowerCase().replace(/[^a-z0-9]/g,''));
-  const gi=mkGet(itemHeaders);
-  const itemRows=[];
-  for(let i=itemsStart+2;i<unitsStart;i++){
-    const row=_csvParseLine(lines[i]);
-    if(!row.length||row.every(c=>!norm(c))) continue;
-    const name=gi(row,'itemname','name'); if(!name) continue;
-    itemRows.push({
-      name,
-      model:gi(row,'modelnumber','model'),
-      manufacturer:gi(row,'manufacturer'),
-      category:gi(row,'category'),
-      fcPrefix:gi(row,'flightcaseprefix','fcprefix','prefix'),
-      subCategory:gi(row,'subcategory')
-    });
-  }
+  // Parse a section: rows from <start>+2 up to the next section header (or the
+  // NOTES footer / end). Handles ITEMS / FLIGHT CASES / UNITS, and a missing
+  // FLIGHT CASES section (older two-section templates still work).
+  const starts=[itemsStart,fcStart,unitsStart].filter(i=>i>=0).sort((a,b)=>a-b);
+  const parseSection=(start,mapRow)=>{
+    if(start<0) return [];
+    const next=starts.find(i=>i>start);
+    const end=next!==undefined?next:lines.length;
+    const headers=_csvParseLine(lines[start+1]||'').map(h=>h.toLowerCase().replace(/[^a-z0-9]/g,''));
+    const g=mkGet(headers);
+    const out=[];
+    for(let i=start+2;i<end;i++){
+      const raw=norm(lines[i]).toUpperCase();
+      if(raw.startsWith('NOTES:')||raw.startsWith('*')) break;
+      const row=_csvParseLine(lines[i]);
+      if(!row.length||row.every(c=>!norm(c))) continue;
+      const m=mapRow(g,row); if(m) out.push(m);
+    }
+    return out;
+  };
 
-  // -- Parse UNITS --
-  const unitHeaders=_csvParseLine(lines[unitsStart+1]||'').map(h=>h.toLowerCase().replace(/[^a-z0-9]/g,''));
-  const gu=mkGet(unitHeaders);
-  const unitRows=[];
-  for(let i=unitsStart+2;i<lines.length;i++){
-    const raw=norm(lines[i]).toUpperCase();
-    if(raw.startsWith('NOTES:')||raw.startsWith('*')) break; // footer reached
-    const row=_csvParseLine(lines[i]);
-    if(!row.length||row.every(c=>!norm(c))) continue;
-    const name=gu(row,'itemname','name'); if(!name) continue;
-    const qtyRaw=gu(row,'quantity','qty');
-    unitRows.push({
-      itemName:name,
-      itemSerial:gu(row,'itemserial','serialmanufacturers','serial'),
-      importDate:gu(row,'importdate'),
-      warehouse:gu(row,'warehouse'),
-      flightCaseSerial:gu(row,'flightcaseserial','flightcase'),
-      qty:Math.max(1,parseInt(qtyRaw,10)||1),
-      notes:gu(row,'notes')
-    });
-  }
+  const itemRows=parseSection(itemsStart,(g,row)=>{
+    const name=g(row,'itemname','name'); if(!name) return null;
+    return { name, model:g(row,'modelnumber','model'), manufacturer:g(row,'manufacturer'),
+             category:g(row,'category'), fcPrefix:g(row,'flightcaseprefix','fcprefix','prefix'),
+             subCategory:g(row,'subcategory') };
+  });
+
+  const fcRows=parseSection(fcStart,(g,row)=>{
+    const no=g(row,'flightcaseno','flightcasenumber','flightcaseserial');
+    const name=g(row,'flightcasename','casename','name');
+    if(!no&&!name) return null;
+    return { fcNo:no, name:name||no, category:g(row,'category'), warehouse:g(row,'warehouse'), notes:g(row,'notes') };
+  });
+
+  const unitRows=parseSection(unitsStart,(g,row)=>{
+    const name=g(row,'itemname','name'); if(!name) return null;
+    const qtyRaw=g(row,'quantity','qty');
+    return { itemName:name, itemSerial:g(row,'itemserial','serialmanufacturers','serial'),
+             importDate:g(row,'importdate'), warehouse:g(row,'warehouse'),
+             flightCaseSerial:g(row,'flightcaseno','flightcasenumber','flightcaseserial','flightcase'),
+             qty:Math.max(1,parseInt(qtyRaw,10)||1), notes:g(row,'notes') };
+  });
 
   if(!itemRows.length&&!unitRows.length){
     showInvFeedback('error','No data rows found. Fill in the ITEMS and UNITS sections of the template before importing.');
@@ -14742,9 +14753,23 @@ async function _parseAndImportCSV(csvText){
       }
     }
 
-    // 4. Flight cases - lookup ONLY (serials are server-generated, can't create from a serial).
+    // 4. Flight cases — create the ones defined in the FLIGHT CASES section
+    //    (using the number the user typed), plus map any that already exist.
+    //    Units reference a case by its number (or name).
     const fcs=await api('GET','/inventory/flightcases')||invFlightCases||[];
-    const fcMap=new Map(fcs.map(f=>[lc(f.fcSerial),f.id]));
+    const fcMap=new Map();
+    fcs.forEach(f=>{ if(f.fcSerial) fcMap.set(lc(f.fcSerial),f.id); if(f.name) fcMap.set(lc(f.name),f.id); });
+    let createdFcs=0;
+    for(const fr of fcRows){
+      if((fr.fcNo&&fcMap.has(lc(fr.fcNo)))||(fr.name&&fcMap.has(lc(fr.name)))) continue; // already exists -> reuse
+      const catId=fr.category?(catMap.get(lc(fr.category))||null):null;
+      const warehouseId=fr.warehouse?(whMap.get(lc(fr.warehouse))||null):null;
+      const res=await api('POST','/inventory/flightcases',{name:fr.name||fr.fcNo,fcSerial:fr.fcNo||'',catId,warehouseId,description:fr.notes||''});
+      if(!res||!res.id){ showInvFeedback('error',`Couldn't create the flight case "${fr.name||fr.fcNo}". The number "${fr.fcNo}" may already be taken, or you may not have permission to add flight cases.`); return; }
+      if(res.fcSerial) fcMap.set(lc(res.fcSerial),res.id);
+      if(fr.name) fcMap.set(lc(fr.name),res.id);
+      createdFcs++;
+    }
 
     // 5. Items (reuse existing by name; create the rest).
     let items=await api('GET','/inventory/items')||invItems||[];
@@ -14810,6 +14835,7 @@ async function _parseAndImportCSV(csvText){
 
     let msg=`Imported ${createdItems} item${createdItems!==1?'s':''} and ${createdUnits} unit${createdUnits!==1?'s':''}.`;
     const extras=[];
+    if(createdFcs) extras.push(`${createdFcs} flight case${createdFcs!==1?'s':''}`);
     if(createdCats) extras.push(`${createdCats} categor${createdCats!==1?'ies':'y'}`);
     if(createdSubs) extras.push(`${createdSubs} sub-categor${createdSubs!==1?'ies':'y'}`);
     if(createdWhs) extras.push(`${createdWhs} warehouse${createdWhs!==1?'s':''}`);

@@ -3646,6 +3646,7 @@ let taskPeople = [];
 let _taskScope = 'mine';     // 'mine' | 'all'
 let _taskAssignees = [];     // selected assignee ids while a task modal is open
 let _taskSelected = new Set(); // task ids ticked for bulk "mark as done"
+let _taskExpanded = new Set(); // task ids whose updates/notes log is expanded
 let _invPhotoData = null;
 
 const _uuidRegex=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -17900,34 +17901,68 @@ function renderTasks(){
       <button class="btn btn-ghost btn-sm" onclick="tasksClearSelection()">Clear</button>
     </div>`;
   }
-  el.innerHTML=bulk+`<div style="overflow-x:auto"><table class="data-table" style="min-width:640px">
-    <thead><tr><th style="width:34px"></th><th>Task</th><th>Assignee</th><th>Due date</th><th style="width:96px;text-align:right">Actions</th></tr></thead>
+  el.innerHTML=bulk+`<div style="overflow-x:auto"><table class="data-table" style="min-width:680px">
+    <thead><tr><th style="width:34px"></th><th>Task</th><th>Assignee</th><th>Due date</th><th style="width:150px;text-align:right">Actions</th></tr></thead>
     <tbody>${list.map(t=>{
       const done=t.status==='completed';
       const due=_taskDueLabel(t.dueDate,t.status);
       const canComp=_taskCanComplete(t);
       const isSel=_taskSelected.has(String(t.id));
+      const isExp=_taskExpanded.has(String(t.id));
+      const upd=Array.isArray(t.updates)?t.updates:[];
       const icon = isSel ? _TASK_CHECK_FILLED : (done ? _TASK_CHECK_FILLED : _TASK_CHECK_EMPTY);
       const iconColor = isSel ? 'var(--accent)' : (done ? 'var(--green)' : 'var(--text3)');
       const circle=canComp
         ? `<button type="button" title="Select" onclick="toggleTaskSelect('${t.id}')" style="background:none;border:none;cursor:pointer;padding:0;display:flex;color:${iconColor}">${icon}</button>`
         : `<span style="color:${done?'var(--green)':'var(--text3)'};display:flex">${done?_TASK_CHECK_FILLED:_TASK_CHECK_EMPTY}</span>`;
+      const caret=`<span style="display:inline-block;transition:transform .15s;transform:rotate(${isExp?'90':'0'}deg);color:var(--text3);font-size:11px;margin-right:6px">▶</span>`;
       return `<tr${isSel?' style="background:var(--accent-bg)"':''}>
         <td>${circle}</td>
         <td>
-          <div style="font-size:13.5px;font-weight:600;color:var(--text);${done?'text-decoration:line-through;color:var(--text3)':''}">${t.title}</div>
-          ${t.notes?`<div style="font-size:12px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px">${t.notes}</div>`:''}
-          ${done&&t.completedByName?`<div style="font-size:11px;color:var(--green);margin-top:2px">✓ Completed by ${t.completedByName}${t.completedAt?' · '+((typeof calFmtDate==='function')?calFmtDate(String(t.completedAt).slice(0,10)):String(t.completedAt).slice(0,10)):''}</div>`:''}
+          <div onclick="toggleTaskExpand('${t.id}')" style="cursor:pointer;display:flex;align-items:center">
+            ${caret}
+            <span style="font-size:13.5px;font-weight:600;color:var(--text);${done?'text-decoration:line-through;color:var(--text3)':''}">${t.title}</span>
+            ${upd.length?`<span style="margin-left:8px;font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-bg);border-radius:10px;padding:1px 7px">${upd.length} note${upd.length===1?'':'s'}</span>`:''}
+          </div>
+          ${t.notes?`<div style="font-size:12px;color:var(--text3);margin-top:2px;margin-left:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px">${t.notes}</div>`:''}
+          ${done&&t.completedByName?`<div style="font-size:11px;color:var(--green);margin-top:2px;margin-left:17px">✓ Completed by ${t.completedByName}${t.completedAt?' · '+((typeof calFmtDate==='function')?calFmtDate(String(t.completedAt).slice(0,10)):String(t.completedAt).slice(0,10)):''}</div>`:''}
         </td>
         <td>${_taskAssigneeAvatars(t.assigneeIds)}</td>
         <td><span style="font-size:12.5px;color:${due.cls};white-space:nowrap">${due.text}</span></td>
         <td style="text-align:right;white-space:nowrap">
+          ${_taskCanEdit(t)?`<button class="btn btn-ghost btn-xs" onclick="openTaskNotes('${t.id}')">+ Note</button>`:''}
           ${_taskCanEdit(t)?`<button class="btn btn-ghost btn-xs" onclick="openEditTask('${t.id}')">Edit</button>`:''}
           ${canDelete?`<button class="btn btn-red btn-xs" onclick="deleteTask('${t.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>`:''}
         </td>
-      </tr>`;
+      </tr>${isExp?`<tr><td></td><td colspan="4" style="padding-top:0">${_taskUpdatesHtml(t)}</td></tr>`:''}`;
     }).join('')}</tbody>
   </table></div>`;
+}
+// Expandable updates/notes log shown under a task when its title is clicked.
+function _taskUpdatesHtml(t){
+  const upd=(Array.isArray(t.updates)?t.updates:[]).slice().sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
+  const canAdd=_taskCanEdit(t);
+  const head=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <span style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text3)">Updates</span>
+    ${canAdd?`<button class="btn btn-ghost btn-xs" onclick="openTaskNotes('${t.id}')">+ Add note</button>`:''}
+  </div>`;
+  if(!upd.length) return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px">${head}<div style="font-size:12.5px;color:var(--text3)">No updates yet.</div></div>`;
+  const rows=upd.map(u=>{
+    const dateStr=(typeof calFmtDate==='function'&&u.date)?calFmtDate(String(u.date).slice(0,10)):(u.date||'');
+    return `<div style="padding:9px 0;border-top:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px">
+        <span style="font-size:12.5px;font-weight:700;color:var(--text)">${dateStr}</span>
+        <span style="font-size:11.5px;color:var(--text3)">by ${u.byName||'?'}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text2);white-space:pre-wrap">${(u.note||'').replace(/</g,'&lt;')}</div>
+    </div>`;
+  }).join('');
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px">${head}${rows}</div>`;
+}
+function toggleTaskExpand(id){
+  const k=String(id);
+  if(_taskExpanded.has(k)) _taskExpanded.delete(k); else _taskExpanded.add(k);
+  renderTasks();
 }
 // Assignees and the creator can edit/update a task (add notes etc.), plus
 // anyone with tasks_edit and admins.
@@ -18041,6 +18076,35 @@ function deleteTask(id){
     const res=await api('DELETE','/tasks/'+id);
     if(res){ tasks=tasks.filter(x=>String(x.id)!==String(id)); renderTasks(); if(typeof renderLauncher==='function') renderLauncher(); toast('Task deleted'); }
   });
+}
+
+function openTaskNotes(id){
+  const t=(tasks||[]).find(x=>String(x.id)===String(id)); if(!t) return;
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('userModalTitle').textContent='Add Note';
+  document.getElementById('userModalForm').innerHTML=`
+    <div style="font-size:12.5px;color:var(--text3);margin-bottom:10px">Add a progress update to <strong style="color:var(--text)">${(t.title||'').replace(/</g,'&lt;')}</strong></div>
+    <div class="field"><label class="field-label">Date</label>
+      <input type="date" id="tasknote_date" value="${today}"></div>
+    <div class="field"><label class="field-label">Note *</label>
+      <textarea id="tasknote_text" rows="4" placeholder="What's the update?"></textarea></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:8px;border-top:1px solid var(--border)">
+      <button class="btn btn-ghost btn-sm" onclick="closeUserModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveTaskNote('${id}')">Save note</button>
+    </div>`;
+  document.getElementById('userModal').classList.add('open');
+  setTimeout(()=>document.getElementById('tasknote_text')?.focus(),60);
+}
+async function saveTaskNote(id){
+  const date=document.getElementById('tasknote_date')?.value||null;
+  const note=document.getElementById('tasknote_text')?.value.trim();
+  if(!note) return toast('Enter a note');
+  const res=await api('POST','/tasks/'+id+'/notes',{date,note});
+  if(!res){ toast('Failed to add note'); return; }
+  const i=tasks.findIndex(x=>String(x.id)===String(id)); if(i>=0) tasks[i]=res;
+  _taskExpanded.add(String(id));   // auto-expand so the new note is visible
+  closeUserModal(); renderTasks();
+  toast('Note added ✓');
 }
 
 // ══ ROLES SYSTEM ══════════════════════════════════════

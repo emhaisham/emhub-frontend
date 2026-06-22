@@ -17930,7 +17930,7 @@ function renderTasks(){
         <td>${_taskAssigneeAvatars(t.assigneeIds)}</td>
         <td><span style="font-size:12.5px;color:${due.cls};white-space:nowrap">${due.text}</span></td>
         <td style="text-align:right;white-space:nowrap">
-          ${_taskCanEdit(t)?`<button class="btn btn-ghost btn-xs" onclick="openTaskNotes('${t.id}')">+ Note</button>`:''}
+          ${_taskCanAddNote(t)?`<button class="btn btn-ghost btn-xs" onclick="openTaskNotes('${t.id}')">+ Note</button>`:''}
           ${_taskCanEdit(t)?`<button class="btn btn-ghost btn-xs" onclick="openEditTask('${t.id}')">Edit</button>`:''}
           ${canDelete?`<button class="btn btn-red btn-xs" onclick="deleteTask('${t.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>`:''}
         </td>
@@ -17941,7 +17941,7 @@ function renderTasks(){
 // Expandable updates/notes log shown under a task when its title is clicked.
 function _taskUpdatesHtml(t){
   const upd=(Array.isArray(t.updates)?t.updates:[]).slice().sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
-  const canAdd=_taskCanEdit(t);
+  const canAdd=_taskCanAddNote(t);
   const head=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
     <span style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text3)">Updates</span>
     ${canAdd?`<button class="btn btn-ghost btn-xs" onclick="openTaskNotes('${t.id}')">+ Add note</button>`:''}
@@ -17969,6 +17969,11 @@ function toggleTaskExpand(id){
 function _taskCanEdit(t){
   const me=String(currentUser?.id||'');
   return _isAdmin()||hasPerm('tasks_edit')||String(t.createdBy)===me||(t.assigneeIds||[]).map(String).includes(me);
+}
+// Adding a progress note is allowed for editors, the dedicated tasks_notes
+// permission, and the task's own creator/assignees.
+function _taskCanAddNote(t){
+  return _taskCanEdit(t)||hasPerm('tasks_notes');
 }
 function toggleTaskSelect(id){
   const k=String(id);
@@ -18121,6 +18126,7 @@ const PERM_TREE = [
   { module:'Tasks', key:'tasks', pages:[
     { label:'Tasks', cols:{ view:'tasks_view_view', create:'tasks_create_edit', edit:'tasks_edit_edit', delete:'tasks_delete_edit' } },
     { label:'View All Tasks (every staff member\'s)', key:'tasks_view_all', actions:['view'] },
+    { label:'Add Notes / Updates to Tasks', key:'tasks_notes', actions:['edit'] },
   ]},
   { module:'Equipment', key:'equipment', pages:[
     { label:'Inventory Items', cols:{ view:'inv_list_view', create:'inv_add_edit', edit:'inv_edit_edit', delete:'inv_delete_edit' } },

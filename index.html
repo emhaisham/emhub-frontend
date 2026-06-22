@@ -1741,6 +1741,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
         <button class="hub-tab active" onclick="switchModule('launcher')" id="tab-launcher"><span class="tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span> Home</button>
         <button class="hub-tab" onclick="switchModule('calendar')" id="tab-calendar"><span class="tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Events</button>
         <button class="hub-tab" onclick="switchModule('loans')" id="tab-loans"><span class="tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span> Equipment</button>
+        <button class="hub-tab" onclick="switchModule('tasks')" id="tab-tasks"><span class="tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span> Tasks</button>
         <button class="hub-tab" onclick="switchModule('crewpay')" id="tab-crewpay"><span class="tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></span> CrewPay <span class="tab-badge" id="crewBadge" style="display:none">!</span></button>
         <button class="hub-tab" onclick="switchModule('hr')" id="tab-hr"><span class="tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span> HR</button>
         <button class="hub-tab" onclick="switchModule('msging')" id="tab-msging"><span class="tab-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span> Push Notification <span class="tab-badge" id="msgBadge" style="display:none"></span></button>
@@ -1834,6 +1835,40 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 
             </div>
 
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TASKS MODULE ─────────────────────── -->
+      <div class="module" id="mod-tasks">
+        <div class="app-shell">
+          <aside class="sidebar">
+            <div class="sidebar-brand">
+              <div class="sidebar-brand-name"><span class="sidebar-brand-dot" style="background:#2563eb"></span>Tasks</div>
+              <div class="sidebar-brand-sub">Assignments & to-dos</div>
+            </div>
+            <div class="nav-wrap">
+              <div class="nav-item active" id="tasksNavMine" onclick="tasksNav('mine')"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>My Tasks</div>
+              <div class="nav-item" id="tasksNavAll" onclick="tasksNav('all')" style="display:none"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>All Tasks</div>
+            </div>
+          </aside>
+          <div class="main-area">
+            <div class="content">
+              <div class="page active" id="tasks-page-list">
+                <div class="page-hdr"><div class="page-title" id="tasksTitle">My Tasks</div><div class="page-sub">Track and complete assigned work</div></div>
+                <div class="toolbar">
+                  <button class="btn btn-primary btn-sm" id="tasksAddBtn" onclick="guardAction('tasks_create',()=>openEditTask(null))">＋ Add Task</button>
+                  <select id="tasksStatusFilter" onchange="renderTasks()">
+                    <option value="open">Open</option>
+                    <option value="completed">Completed</option>
+                    <option value="all">All statuses</option>
+                  </select>
+                  <input type="text" id="tasksSearch" placeholder="Search tasks…" oninput="renderTasks()" style="flex:1;min-width:140px">
+                  <span class="toolbar-count" id="tasksCount"></span>
+                </div>
+                <div id="tasksList"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -3199,6 +3234,10 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
     <span>Equipment</span>
   </button>
+  <button class="mobile-nav-item" id="mtab-tasks" onclick="mobileNav('tasks',this)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    <span>Tasks</span>
+  </button>
   <button class="mobile-nav-item" id="mtab-crewpay" onclick="mobileNav('crewpay',this)">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
     <span>CrewPay</span>
@@ -3600,6 +3639,12 @@ let invSubCats = [];
 let invWarehouses = [];
 let invFlightCases = [];
 let _editInvId = null;
+// ── Tasks module state (declared here so the data bootstrap can assign them
+//    before the Tasks UI functions, defined further down, ever run) ──
+let tasks = [];
+let taskPeople = [];
+let _taskScope = 'mine';     // 'mine' | 'all'
+let _taskAssignees = [];     // selected assignee ids while a task modal is open
 let _invPhotoData = null;
 
 const _uuidRegex=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -3821,7 +3866,8 @@ async function _loadAllData(){
   const anyCal = isAdmin || has('events_view');
   const anyCrew= isAdmin || has('crewpay_view')||has('crewpay_edit')||has('crewpay_export');
   const needsUsers = isAdmin || has('hr_add_emp') || has('hr_edit_emp') || has('users_manage') || has('roles_manage');
-  const [evts, emps, loans, payrolls, pensions, leave, inv, cats, subcats, wh, fc, usrs, lvTypes, crewEvts, depts] = await Promise.all([
+  const anyTasks = isAdmin || has('tasks_view') || has('tasks_create') || has('tasks_edit') || has('tasks_delete');
+  const [evts, emps, loans, payrolls, pensions, leave, inv, cats, subcats, wh, fc, usrs, lvTypes, crewEvts, depts, taskData, taskPpl] = await Promise.all([
     (anyCal||anyInv)             ? api('GET', '/events')                : Promise.resolve([]),
     anyHR                        ? api('GET', '/hr/employees')          : Promise.resolve([]),
     has('hr_loans')              ? api('GET', '/hr/loans')              : Promise.resolve([]),
@@ -3837,6 +3883,8 @@ async function _loadAllData(){
     has('hr_leave')              ? api('GET', '/hr/leave-types')        : Promise.resolve([]),
     anyCrew                      ? api('GET', '/crewpay/events')        : Promise.resolve([]),
     anyHR                        ? api('GET', '/hr/departments')        : Promise.resolve([]),
+    anyTasks                     ? api('GET', '/tasks')                 : Promise.resolve([]),
+    anyTasks                     ? api('GET', '/tasks/people')          : Promise.resolve([]),
   ]);
   calEvents = (evts||[]).map(e=>({
     ...e,
@@ -3862,6 +3910,8 @@ async function _loadAllData(){
   if(lvTypes) _cacheLeaveTypes(hrLeaveTypes);
   if(Array.isArray(depts) && depts.length){ hrDepartments = depts; _cacheDepartments(hrDepartments); }
   crewEvents = crewEvts || [];
+  tasks = taskData || [];
+  taskPeople = taskPpl || [];
   // Restore payments from API events + localStorage fallback
   const localPays = JSON.parse(localStorage.getItem('em_pays')||'{}');
   crewEvents.forEach(e=>{
@@ -3875,7 +3925,7 @@ async function _loadAllData(){
   // don't immediately re-fetch what we just loaded
   ['events','hrEmployees','hrLoans','hrPayrolls','hrPensions','hrLeave',
    'invItems','invCats','invSubCats','invWarehouses','invFlightCases',
-   'users','hrLeaveTypes','crewEvents'].forEach(markFresh);
+   'users','hrLeaveTypes','crewEvents','tasks'].forEach(markFresh);
 }
 
 function resetToDefaults(){ toast('Account management is now handled via the backend.'); }
@@ -3916,6 +3966,7 @@ function applyPermissions(){
   // launcher (Home) — always visible
   show('mtab-launcher', true);
   showBoth('calendar', p('events_view'));
+  showBoth('tasks',    isAdmin||p('tasks_view')||p('tasks_create')||p('tasks_edit')||p('tasks_delete'));
   showBoth('loans',    p('inv_list')||p('eel_page')||p('checkout_page')||p('checkin_page')||p('loan_dash'));
   showBoth('crewpay',  p('crewpay_view'));
   showBoth('hr',       p('hr_view_all')||p('hr_view_own')||p('hr_add_emp')||p('hr_payroll')||p('hr_leave')||p('hr_disc')||p('hr_assets')||p('hr_loans')||p('hr_pension')||p('hr_letters'));
@@ -4105,6 +4156,26 @@ function switchModule(name){
       }
     }
     if(name==='audit'){ loadAudit(1); }
+    if(name==='tasks'){
+      // Tasks-specific gating (applyPerms early-returns for admins, so set these
+      // directly here so admins see them too).
+      const canViewAll=_isAdmin()||hasPerm('tasks_view_all');
+      const allNav=document.getElementById('tasksNavAll'); if(allNav) allNav.style.display=canViewAll?'':'none';
+      const addBtn=document.getElementById('tasksAddBtn'); if(addBtn) addBtn.style.display=(_isAdmin()||hasPerm('tasks_create'))?'':'none';
+      if(!canViewAll && _taskScope==='all') _taskScope='mine';
+      const _afterTasks = () => { tasksNav(_taskScope); };
+      if(isDataFresh('tasks')){
+        _afterTasks();
+      } else {
+        const el=document.getElementById('tasksList');
+        if(el) el.innerHTML='<div style="padding:30px;text-align:center;color:var(--text3)">Loading…</div>';
+        Promise.all([api('GET','/tasks'), api('GET','/tasks/people')]).then(([t,p])=>{
+          if(t){ tasks=t; markFresh('tasks'); }
+          if(p){ taskPeople=p; }
+          _afterTasks();
+        });
+      }
+    }
     if(name==='launcher'){}
     setTimeout(_injectMobileMenubars,150);
   });
@@ -11210,6 +11281,22 @@ function _buildInbox(){
     });
   }
 
+  // 5. Tasks assigned to me (open) — surfaces on the home inbox too.
+  if (typeof tasks!=='undefined' && Array.isArray(tasks)) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const mine = tasks.filter(t => t.status!=='completed' && (t.assigneeIds||[]).map(String).includes(myUserId));
+    if (mine.length) {
+      const overdueN = mine.filter(t => t.dueDate && new Date(t.dueDate+'T00:00:00') < today).length;
+      items.push({
+        tone: overdueN ? 'red' : 'blue',
+        icon:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+        html:`<strong>${mine.length}</strong> task${mine.length===1?'':'s'} assigned to you`,
+        sub: overdueN ? `${overdueN} overdue` : 'Tap to view your tasks',
+        onClick: () => switchModule('tasks')
+      });
+    }
+  }
+
   return items.slice(0, 5);
 }
 
@@ -11226,6 +11313,16 @@ function _moduleBadges(){
     return from && from >= today && from <= in7 && !e.completed;
   });
   if (upcoming.length) out.calendar = { tone:'blue', text:`${upcoming.length} this week` };
+
+  // Tasks: my open tasks (overdue emphasised)
+  if (typeof tasks!=='undefined' && Array.isArray(tasks)) {
+    const myUid = String(currentUser?.id||'');
+    const myOpen = tasks.filter(t => t.status!=='completed' && (t.assigneeIds||[]).map(String).includes(myUid));
+    if (myOpen.length) {
+      const od = myOpen.filter(t => t.dueDate && new Date(t.dueDate+'T00:00:00') < today).length;
+      out.tasks = od ? { tone:'red', text:`${od} overdue` } : { tone:'blue', text:`${myOpen.length} open` };
+    }
+  }
 
   // Equipment: overdue check-outs
   let overdue = 0;
@@ -11265,6 +11362,7 @@ function _moduleBadges(){
 // Modules registry — id + icon + name + description + tint
 const LAUNCHER_MODULES = [
   { id:'calendar', name:'Events',            desc:'Plan and manage events with calendar view, phases, staff assignments and conflict tracking.', iconBg:'var(--accent-bg)', iconClr:'var(--accent)', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' },
+  { id:'tasks',    name:'Tasks',             desc:'Assign and track to-dos with due dates and notes. Mark complete when done.',                 iconBg:'var(--accent-bg)', iconClr:'#2563eb',      icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>' },
   { id:'loans',    name:'Equipment',         desc:'Inventory, flight cases, fault tracking, event equipment lists and check-in/out.',           iconBg:'var(--green-bg)',  iconClr:'var(--green)',  icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>' },
   { id:'crewpay',  name:'CrewPay',           desc:'Track labour payments, manage staff groups, calculate wages and generate payment reports.',  iconBg:'var(--amber-bg)',  iconClr:'var(--amber)',  icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>' },
   { id:'hr',       name:'HR',                desc:'Employee records, payroll, leave, loans, training, probation, salary revisions, reports.',   iconBg:'var(--purple-bg)', iconClr:'var(--purple)', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>' },
@@ -11335,6 +11433,7 @@ function renderLauncher(){
     // Lightweight visibility: show calendar+hr+crewpay+loans always (any view perm); users module only if user_view
     if (m.id === 'users') return myPerms['user_view'] === true || myPerms['user_view_view'] === true || myPerms['user_view_edit'] === true;
     if (m.id === 'msging') return myPerms['msg_send'] === true || myPerms['msg_send_edit'] === true || myPerms['msg_history'] === true || myPerms['msg_history_view'] === true;
+    if (m.id === 'tasks') return _hasPerm('tasks_view') || _hasPerm('tasks_create') || _hasPerm('tasks_edit') || _hasPerm('tasks_delete');
     return true;
   });
   document.getElementById('launcherModules').innerHTML = visibleModules.map(m => {
@@ -17722,6 +17821,167 @@ async function doTransfer(){
   renderTrRecent();
 }
 
+// ══ TASKS MODULE ══════════════════════════════════════
+// Assignable to-dos. Staff see only their own (created-by or assigned-to);
+// managers with tasks_view_all can flip to "All Tasks". Globals `tasks`,
+// `taskPeople`, `_taskScope`, `_taskAssignees` are declared near the inventory
+// globals so the data bootstrap can fill them before this UI ever renders.
+const _TASK_CHECK_EMPTY='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>';
+const _TASK_CHECK_FILLED='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>';
+
+function _taskPersonName(id){
+  const p=(taskPeople||[]).find(x=>String(x.id)===String(id));
+  if(p) return p.name;
+  const u=(users||[]).find(x=>String(x.id)===String(id));
+  if(u) return u.name;
+  if(String(id)===String(currentUser?.id)) return currentUser?.name||'You';
+  return 'Unknown';
+}
+function _taskCanComplete(t){
+  const me=String(currentUser?.id||'');
+  return _isAdmin()||hasPerm('tasks_edit')||String(t.createdBy)===me||(t.assigneeIds||[]).map(String).includes(me);
+}
+function _taskDueLabel(due,status){
+  if(!due) return {text:'—',cls:'var(--text3)'};
+  const fmt=(typeof calFmtDate==='function')?calFmtDate(due):due;
+  if(status==='completed') return {text:fmt,cls:'var(--text3)'};
+  const d=new Date(due+'T00:00:00'); const today=new Date(); today.setHours(0,0,0,0);
+  const days=Math.round((d-today)/86400000);
+  if(days<0) return {text:fmt+' · overdue',cls:'var(--red)'};
+  if(days===0) return {text:'Today',cls:'var(--amber)'};
+  if(days===1) return {text:'Tomorrow',cls:'var(--amber)'};
+  return {text:fmt,cls:'var(--text2)'};
+}
+function _taskAssigneeAvatars(ids){
+  if(!ids||!ids.length) return '<span style="font-size:12px;color:var(--text3)">Unassigned</span>';
+  return '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+ids.map(id=>{
+    const name=_taskPersonName(id);
+    return `<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:22px;height:22px;border-radius:50%;background:${avatarColor(name)};color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${(name[0]||'?').toUpperCase()}</span><span style="font-size:12.5px;color:var(--text2)">${name}</span></span>`;
+  }).join('')+'</div>';
+}
+
+function tasksNav(scope){
+  _taskScope=scope;
+  document.getElementById('tasksNavMine')?.classList.toggle('active',scope==='mine');
+  document.getElementById('tasksNavAll')?.classList.toggle('active',scope==='all');
+  const title=document.getElementById('tasksTitle'); if(title) title.textContent=scope==='all'?'All Tasks':'My Tasks';
+  renderTasks();
+}
+
+function renderTasks(){
+  const el=document.getElementById('tasksList'); if(!el) return;
+  const statusF=document.getElementById('tasksStatusFilter')?.value||'open';
+  const search=(document.getElementById('tasksSearch')?.value||'').toLowerCase();
+  const me=String(currentUser?.id||'');
+  let list=(tasks||[]).slice();
+  if(_taskScope==='mine') list=list.filter(t=>String(t.createdBy)===me||(t.assigneeIds||[]).map(String).includes(me));
+  if(statusF==='open') list=list.filter(t=>t.status!=='completed');
+  else if(statusF==='completed') list=list.filter(t=>t.status==='completed');
+  if(search) list=list.filter(t=>(t.title||'').toLowerCase().includes(search)||(t.notes||'').toLowerCase().includes(search));
+  const countEl=document.getElementById('tasksCount'); if(countEl) countEl.textContent=list.length?`${list.length} task${list.length===1?'':'s'}`:'';
+  if(!list.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div><div class="empty-title">No tasks</div><div class="empty-sub">'+(hasPerm('tasks_create')?'Click “Add Task” to create one.':'Tasks assigned to you will appear here.')+'</div></div>';
+    return;
+  }
+  const canEdit=_isAdmin()||hasPerm('tasks_edit');
+  const canDelete=_isAdmin()||hasPerm('tasks_delete');
+  el.innerHTML=`<div style="overflow-x:auto"><table class="data-table" style="min-width:640px">
+    <thead><tr><th style="width:34px"></th><th>Task</th><th>Assignee</th><th>Due date</th><th style="width:96px;text-align:right">Actions</th></tr></thead>
+    <tbody>${list.map(t=>{
+      const done=t.status==='completed';
+      const due=_taskDueLabel(t.dueDate,t.status);
+      const canComp=_taskCanComplete(t);
+      const circle=canComp
+        ? `<button type="button" title="${done?'Mark open':'Mark complete'}" onclick="toggleTaskComplete('${t.id}')" style="background:none;border:none;cursor:pointer;padding:0;display:flex;color:${done?'var(--green)':'var(--text3)'}">${done?_TASK_CHECK_FILLED:_TASK_CHECK_EMPTY}</button>`
+        : `<span style="color:${done?'var(--green)':'var(--text3)'};display:flex">${done?_TASK_CHECK_FILLED:_TASK_CHECK_EMPTY}</span>`;
+      return `<tr>
+        <td>${circle}</td>
+        <td>
+          <div style="font-size:13.5px;font-weight:600;color:var(--text);${done?'text-decoration:line-through;color:var(--text3)':''}">${t.title}</div>
+          ${t.notes?`<div style="font-size:12px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px">${t.notes}</div>`:''}
+          ${done&&t.completedByName?`<div style="font-size:11px;color:var(--green);margin-top:2px">✓ Completed by ${t.completedByName}${t.completedAt?' · '+((typeof calFmtDate==='function')?calFmtDate(String(t.completedAt).slice(0,10)):String(t.completedAt).slice(0,10)):''}</div>`:''}
+        </td>
+        <td>${_taskAssigneeAvatars(t.assigneeIds)}</td>
+        <td><span style="font-size:12.5px;color:${due.cls};white-space:nowrap">${due.text}</span></td>
+        <td style="text-align:right;white-space:nowrap">
+          ${canEdit?`<button class="btn btn-ghost btn-xs" onclick="openEditTask('${t.id}')">Edit</button>`:''}
+          ${canDelete?`<button class="btn btn-red btn-xs" onclick="deleteTask('${t.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>`:''}
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function _renderTaskAssigneePicker(){
+  const wrap=document.getElementById('task_assignees_wrap'); if(!wrap) return;
+  const people=(taskPeople&&taskPeople.length)?taskPeople:(users||[]).map(u=>({id:u.id,name:u.name}));
+  if(!people.length){ wrap.innerHTML='<div style="font-size:12px;color:var(--text3)">No people available to assign</div>'; return; }
+  wrap.innerHTML=people.map(p=>{
+    const sel=_taskAssignees.map(String).includes(String(p.id));
+    return `<button type="button" onclick="_toggleTaskAssignee('${p.id}')" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;border:1px solid ${sel?'var(--accent)':'var(--border)'};background:${sel?'var(--accent-bg)':'var(--white)'};color:${sel?'var(--accent)':'var(--text2)'};font-size:12.5px;font-weight:${sel?'600':'500'};cursor:pointer;font-family:inherit;margin:0 6px 6px 0">
+      <span style="width:18px;height:18px;border-radius:50%;background:${avatarColor(p.name)};color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">${(p.name[0]||'?').toUpperCase()}</span>
+      ${p.name}${sel?' ✓':''}</button>`;
+  }).join('');
+}
+function _toggleTaskAssignee(id){
+  const i=_taskAssignees.map(String).indexOf(String(id));
+  if(i>=0) _taskAssignees.splice(i,1); else _taskAssignees.push(id);
+  _renderTaskAssigneePicker();
+}
+
+function openEditTask(id){
+  const t=id?(tasks||[]).find(x=>String(x.id)===String(id)):null;
+  if(id&&!t) return;
+  _taskAssignees = t ? (t.assigneeIds||[]).slice() : [];
+  document.getElementById('userModalTitle').textContent = t ? 'Edit Task' : 'New Task';
+  document.getElementById('userModalForm').innerHTML=`
+    <div class="field"><label class="field-label">Task name *</label>
+      <input type="text" id="task_title" value="${t?(t.title||'').replace(/"/g,'&quot;'):''}" placeholder="e.g. Send invites"></div>
+    <div class="field"><label class="field-label">Assignees</label>
+      <div id="task_assignees_wrap" style="display:flex;flex-wrap:wrap;margin-top:2px"></div></div>
+    <div class="field"><label class="field-label">Due date</label>
+      <input type="date" id="task_due" value="${t?.dueDate||''}"></div>
+    <div class="field"><label class="field-label">Notes</label>
+      <textarea id="task_notes" rows="3" placeholder="Details, context, links…">${t?(t.notes||''):''}</textarea></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:8px;border-top:1px solid var(--border)">
+      <button class="btn btn-ghost btn-sm" onclick="closeUserModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveTask('${t?t.id:''}')">Save</button>
+    </div>`;
+  document.getElementById('userModal').classList.add('open');
+  _renderTaskAssigneePicker();
+}
+
+async function saveTask(id){
+  const title=document.getElementById('task_title')?.value.trim();
+  const notes=document.getElementById('task_notes')?.value.trim()||'';
+  const dueDate=document.getElementById('task_due')?.value||null;
+  if(!title) return toast('Enter a task name');
+  const body={title, notes, dueDate, assigneeIds:_taskAssignees.slice()};
+  const res = id ? await api('PUT','/tasks/'+id,body) : await api('POST','/tasks',body);
+  if(!res){ toast('Failed to save task'); return; }
+  if(id){ const i=tasks.findIndex(x=>String(x.id)===String(id)); if(i>=0) tasks[i]=res; }
+  else { tasks.unshift(res); }
+  closeUserModal(); renderTasks(); if(typeof renderLauncher==='function') renderLauncher();
+  toast(id?'Task updated ✓':'Task created ✓');
+}
+
+async function toggleTaskComplete(id){
+  const t=(tasks||[]).find(x=>String(x.id)===String(id)); if(!t) return;
+  const completing = t.status!=='completed';
+  const res=await api('PATCH','/tasks/'+id+'/complete',{completed:completing});
+  if(!res){ toast('Could not update task'); return; }
+  const i=tasks.findIndex(x=>String(x.id)===String(id)); if(i>=0) tasks[i]=res;
+  renderTasks(); if(typeof renderLauncher==='function') renderLauncher();
+  toast(completing?'Task completed ✓':'Task reopened');
+}
+
+function deleteTask(id){
+  openConfirm('Delete this task?','This cannot be undone.','Delete',async()=>{
+    const res=await api('DELETE','/tasks/'+id);
+    if(res){ tasks=tasks.filter(x=>String(x.id)!==String(id)); renderTasks(); if(typeof renderLauncher==='function') renderLauncher(); toast('Task deleted'); }
+  });
+}
+
 // ══ ROLES SYSTEM ══════════════════════════════════════
 
 // Permission tree — modules → pages → actions
@@ -17732,6 +17992,10 @@ const PERM_TREE = [
   { module:'Events', key:'events', pages:[
     { label:'Events', cols:{ view:'events_view_view', create:'events_create_edit', edit:'events_edit_edit', delete:'events_delete_edit' } },
     { label:'Mark Event Done', key:'events_done', actions:['edit'] },
+  ]},
+  { module:'Tasks', key:'tasks', pages:[
+    { label:'Tasks', cols:{ view:'tasks_view_view', create:'tasks_create_edit', edit:'tasks_edit_edit', delete:'tasks_delete_edit' } },
+    { label:'View All Tasks (every staff member\'s)', key:'tasks_view_all', actions:['view'] },
   ]},
   { module:'Equipment', key:'equipment', pages:[
     { label:'Inventory Items', cols:{ view:'inv_list_view', create:'inv_add_edit', edit:'inv_edit_edit', delete:'inv_delete_edit' } },

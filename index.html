@@ -2828,7 +2828,8 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                   <input type="text" id="invSearch" placeholder="Search by name, model, serial…" oninput="_pages.inv=1;renderInventory()" style="flex:1">
                   <button class="btn btn-ghost btn-sm" onclick="_openQRScanner(_handleInvQRScan)" style="white-space:nowrap;flex-shrink:0">Scan QR</button>
                 </div>
-                <select id="invFilterCat" onchange="_pages.inv=1;renderInventory()"><option value="">All Categories</option></select>
+                <select id="invFilterCat" onchange="_pages.inv=1;populateInvSubCatFilter();renderInventory()"><option value="">All Categories</option></select>
+                <select id="invFilterSubCat" onchange="_pages.inv=1;renderInventory()"><option value="">All Sub-categories</option></select>
                 <select id="invFilterWh" onchange="_pages.inv=1;renderInventory()"><option value="">All Locations</option></select>
                 <select id="invFilterStatus" onchange="_pages.inv=1;renderInventory()">
                   <option value="">All Status</option>
@@ -4081,7 +4082,7 @@ function switchModule(name){
     }
     if(name==='msging'){ renderMsgHistory(); updateMsgBadge(); msgNav('compose'); }
     if(name==='loans'){
-      const _afterInv = () => { populateInvCatFilter(); populateInvWhFilter(); renderInventory(); loanEquipNav('inventory'); applyPerms(); };
+      const _afterInv = () => { populateInvCatFilter(); populateInvSubCatFilter(); populateInvWhFilter(); renderInventory(); loanEquipNav('inventory'); applyPerms(); };
       // All 5 inventory datasets share freshness as a group — if any is stale, refetch all
       const invFresh = ['invItems','invCats','invSubCats','invWarehouses','invFlightCases'].every(isDataFresh);
       if(invFresh){
@@ -12517,7 +12518,7 @@ function loanEquipNav(page){
     api('GET','/crewpay/equip-requests').then(r=>{if(r)equipRequests=r; renderEquipOverdue();});
     return;
   }
-  else if(page==='inventory'){ populateInvCatFilter(); populateInvWhFilter(); renderInventory(); }
+  else if(page==='inventory'){ populateInvCatFilter(); populateInvSubCatFilter(); populateInvWhFilter(); renderInventory(); }
   else if(page==='categories'){ renderInvCats(); renderInvSubCats(); }
   else if(page==='warehouses'){ renderWarehouses(); }
   else if(page==='whtransfer'){ renderWhTransferPage(); }
@@ -13430,6 +13431,21 @@ function populateInvCatFilter(){
   sel.innerHTML='<option value="">All Categories</option>'+
     invCats.map(c=>`<option value="${c.id}" ${cur===String(c.id)?'selected':''}>${c.name}</option>`).join('');
 }
+function populateInvSubCatFilter(){
+  const sel=document.getElementById('invFilterSubCat'); if(!sel) return;
+  const cur=sel.value;
+  // When a category is selected, narrow to its sub-categories; otherwise list
+  // them all, prefixed with the parent category so same-named ones are distinct.
+  const catFilter=document.getElementById('invFilterCat')?.value||'';
+  const subs=invSubCats.filter(s=>!catFilter||String(s.catId)===String(catFilter));
+  const stillValid=subs.some(s=>String(s.id)===String(cur));
+  sel.innerHTML='<option value="">All Sub-categories</option>'+
+    subs.map(s=>{
+      const label=catFilter?s.name:`${(invCats.find(c=>String(c.id)===String(s.catId))||{}).name||'?'} › ${s.name}`;
+      return `<option value="${s.id}" ${stillValid&&String(cur)===String(s.id)?'selected':''}>${label}</option>`;
+    }).join('');
+  if(!stillValid) sel.value='';
+}
 
 // ══ NEW INVENTORY: PARENT + CHILD ITEMS ═══════════════════════════════════════
 // invItems = parent items (name, model, manufacturer, category etc)
@@ -13538,10 +13554,12 @@ async function getSignedUrl(key){
 function renderInventory(){
   const search=(document.getElementById('invSearch')?.value||'').toLowerCase();
   const fCat=document.getElementById('invFilterCat')?.value||'';
+  const fSubCat=document.getElementById('invFilterSubCat')?.value||'';
   const fWh=document.getElementById('invFilterWh')?.value||'';
   const fStatus=document.getElementById('invFilterStatus')?.value||'';
   let list=invItems.filter(item=>{
     if(fCat&&String(item.catId)!==String(fCat)) return false;
+    if(fSubCat&&String(item.subCatId)!==String(fSubCat)) return false;
     if(search&&!((item.name||'').toLowerCase().includes(search)||(item.model||'').toLowerCase().includes(search)||(item.manufacturer||'').toLowerCase().includes(search))) return false;
     if(fStatus){ const units=item.units||[]; if(!units.some(u=>u.status===fStatus)) return false; }
     if(fWh){ const units=item.units||[]; if(!units.some(u=>String(u.warehouseId)===String(fWh)||String(u.fcId||u.flightCaseId)===String(fWh))) return false; }

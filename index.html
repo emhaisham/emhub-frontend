@@ -1858,7 +1858,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <div class="page-hdr"><div class="page-title" id="tasksTitle">My Tasks</div><div class="page-sub">Track and complete assigned work</div></div>
                 <div class="toolbar">
                   <button class="btn btn-primary btn-sm" id="tasksAddBtn" onclick="guardAction('tasks_create',()=>openEditTask(null))">＋ Add Task</button>
-                  <select id="tasksStatusFilter" onchange="renderTasks()">
+                  <select id="tasksStatusFilter" onchange="_taskSelected.clear();renderTasks()">
                     <option value="open">Open</option>
                     <option value="completed">Completed</option>
                     <option value="all">All statuses</option>
@@ -3645,6 +3645,7 @@ let tasks = [];
 let taskPeople = [];
 let _taskScope = 'mine';     // 'mine' | 'all'
 let _taskAssignees = [];     // selected assignee ids while a task modal is open
+let _taskSelected = new Set(); // task ids ticked for bulk "mark as done"
 let _invPhotoData = null;
 
 const _uuidRegex=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -17862,6 +17863,7 @@ function _taskAssigneeAvatars(ids){
 
 function tasksNav(scope){
   _taskScope=scope;
+  _taskSelected.clear();
   document.getElementById('tasksNavMine')?.classList.toggle('active',scope==='mine');
   document.getElementById('tasksNavAll')?.classList.toggle('active',scope==='all');
   const title=document.getElementById('tasksTitle'); if(title) title.textContent=scope==='all'?'All Tasks':'My Tasks';
@@ -17883,18 +17885,34 @@ function renderTasks(){
     el.innerHTML='<div class="empty"><div class="empty-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div><div class="empty-title">No tasks</div><div class="empty-sub">'+(hasPerm('tasks_create')?'Click “Add Task” to create one.':'Tasks assigned to you will appear here.')+'</div></div>';
     return;
   }
-  const canEdit=_isAdmin()||hasPerm('tasks_edit');
   const canDelete=_isAdmin()||hasPerm('tasks_delete');
-  el.innerHTML=`<div style="overflow-x:auto"><table class="data-table" style="min-width:640px">
+  // Bulk-action bar: shown when one or more tasks are ticked. Ticking does NOT
+  // complete a task immediately — the user picks rows then presses Mark as done.
+  const selIds=[..._taskSelected].filter(id=>(tasks||[]).some(t=>String(t.id)===String(id)));
+  let bulk='';
+  if(selIds.length){
+    const selOpen=selIds.filter(id=>{const t=tasks.find(x=>String(x.id)===String(id));return t&&t.status!=='completed';}).length;
+    const selDone=selIds.filter(id=>{const t=tasks.find(x=>String(x.id)===String(id));return t&&t.status==='completed';}).length;
+    bulk=`<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;margin-bottom:10px;background:var(--accent-bg);border:1px solid var(--accent);border-radius:8px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:600;color:var(--accent)">${selIds.length} selected</span>
+      ${selOpen?`<button class="btn btn-primary btn-sm" onclick="tasksMarkSelectedDone()">✓ Mark as done</button>`:''}
+      ${selDone?`<button class="btn btn-ghost btn-sm" onclick="tasksReopenSelected()">Reopen</button>`:''}
+      <button class="btn btn-ghost btn-sm" onclick="tasksClearSelection()">Clear</button>
+    </div>`;
+  }
+  el.innerHTML=bulk+`<div style="overflow-x:auto"><table class="data-table" style="min-width:640px">
     <thead><tr><th style="width:34px"></th><th>Task</th><th>Assignee</th><th>Due date</th><th style="width:96px;text-align:right">Actions</th></tr></thead>
     <tbody>${list.map(t=>{
       const done=t.status==='completed';
       const due=_taskDueLabel(t.dueDate,t.status);
       const canComp=_taskCanComplete(t);
+      const isSel=_taskSelected.has(String(t.id));
+      const icon = isSel ? _TASK_CHECK_FILLED : (done ? _TASK_CHECK_FILLED : _TASK_CHECK_EMPTY);
+      const iconColor = isSel ? 'var(--accent)' : (done ? 'var(--green)' : 'var(--text3)');
       const circle=canComp
-        ? `<button type="button" title="${done?'Mark open':'Mark complete'}" onclick="toggleTaskComplete('${t.id}')" style="background:none;border:none;cursor:pointer;padding:0;display:flex;color:${done?'var(--green)':'var(--text3)'}">${done?_TASK_CHECK_FILLED:_TASK_CHECK_EMPTY}</button>`
+        ? `<button type="button" title="Select" onclick="toggleTaskSelect('${t.id}')" style="background:none;border:none;cursor:pointer;padding:0;display:flex;color:${iconColor}">${icon}</button>`
         : `<span style="color:${done?'var(--green)':'var(--text3)'};display:flex">${done?_TASK_CHECK_FILLED:_TASK_CHECK_EMPTY}</span>`;
-      return `<tr>
+      return `<tr${isSel?' style="background:var(--accent-bg)"':''}>
         <td>${circle}</td>
         <td>
           <div style="font-size:13.5px;font-weight:600;color:var(--text);${done?'text-decoration:line-through;color:var(--text3)':''}">${t.title}</div>
@@ -17904,29 +17922,75 @@ function renderTasks(){
         <td>${_taskAssigneeAvatars(t.assigneeIds)}</td>
         <td><span style="font-size:12.5px;color:${due.cls};white-space:nowrap">${due.text}</span></td>
         <td style="text-align:right;white-space:nowrap">
-          ${canEdit?`<button class="btn btn-ghost btn-xs" onclick="openEditTask('${t.id}')">Edit</button>`:''}
+          ${_taskCanEdit(t)?`<button class="btn btn-ghost btn-xs" onclick="openEditTask('${t.id}')">Edit</button>`:''}
           ${canDelete?`<button class="btn btn-red btn-xs" onclick="deleteTask('${t.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>`:''}
         </td>
       </tr>`;
     }).join('')}</tbody>
   </table></div>`;
 }
+// Assignees and the creator can edit/update a task (add notes etc.), plus
+// anyone with tasks_edit and admins.
+function _taskCanEdit(t){
+  const me=String(currentUser?.id||'');
+  return _isAdmin()||hasPerm('tasks_edit')||String(t.createdBy)===me||(t.assigneeIds||[]).map(String).includes(me);
+}
+function toggleTaskSelect(id){
+  const k=String(id);
+  if(_taskSelected.has(k)) _taskSelected.delete(k); else _taskSelected.add(k);
+  renderTasks();
+}
+function tasksClearSelection(){ _taskSelected.clear(); renderTasks(); }
+async function tasksMarkSelectedDone(){
+  const ids=[..._taskSelected].filter(id=>{const t=tasks.find(x=>String(x.id)===String(id));return t&&t.status!=='completed'&&_taskCanComplete(t);});
+  if(!ids.length) return;
+  const results=await Promise.all(ids.map(id=>api('PATCH','/tasks/'+id+'/complete',{completed:true}).catch(()=>null)));
+  results.forEach(res=>{ if(res){ const i=tasks.findIndex(x=>String(x.id)===String(res.id)); if(i>=0) tasks[i]=res; } });
+  _taskSelected.clear(); renderTasks(); if(typeof renderLauncher==='function') renderLauncher();
+  toast(ids.length+' task'+(ids.length===1?'':'s')+' marked done ✓');
+}
+async function tasksReopenSelected(){
+  const ids=[..._taskSelected].filter(id=>{const t=tasks.find(x=>String(x.id)===String(id));return t&&t.status==='completed'&&_taskCanComplete(t);});
+  if(!ids.length) return;
+  const results=await Promise.all(ids.map(id=>api('PATCH','/tasks/'+id+'/complete',{completed:false}).catch(()=>null)));
+  results.forEach(res=>{ if(res){ const i=tasks.findIndex(x=>String(x.id)===String(res.id)); if(i>=0) tasks[i]=res; } });
+  _taskSelected.clear(); renderTasks(); if(typeof renderLauncher==='function') renderLauncher();
+  toast('Reopened ✓');
+}
 
-function _renderTaskAssigneePicker(){
-  const wrap=document.getElementById('task_assignees_wrap'); if(!wrap) return;
-  const people=(taskPeople&&taskPeople.length)?taskPeople:(users||[]).map(u=>({id:u.id,name:u.name}));
-  if(!people.length){ wrap.innerHTML='<div style="font-size:12px;color:var(--text3)">No people available to assign</div>'; return; }
-  wrap.innerHTML=people.map(p=>{
-    const sel=_taskAssignees.map(String).includes(String(p.id));
-    return `<button type="button" onclick="_toggleTaskAssignee('${p.id}')" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;border:1px solid ${sel?'var(--accent)':'var(--border)'};background:${sel?'var(--accent-bg)':'var(--white)'};color:${sel?'var(--accent)':'var(--text2)'};font-size:12.5px;font-weight:${sel?'600':'500'};cursor:pointer;font-family:inherit;margin:0 6px 6px 0">
-      <span style="width:18px;height:18px;border-radius:50%;background:${avatarColor(p.name)};color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">${(p.name[0]||'?').toUpperCase()}</span>
-      ${p.name}${sel?' ✓':''}</button>`;
+// Assignee picker = selected chips + a search box with a filtered dropdown.
+function _taskAllPeople(){ return (taskPeople&&taskPeople.length)?taskPeople:(users||[]).map(u=>({id:u.id,name:u.name})); }
+function _renderTaskAssigneeChips(){
+  const wrap=document.getElementById('task_assignee_chips'); if(!wrap) return;
+  if(!_taskAssignees.length){ wrap.innerHTML='<span style="font-size:12px;color:var(--text3)">No one assigned yet</span>'; return; }
+  wrap.innerHTML=_taskAssignees.map(id=>{
+    const name=_taskPersonName(id);
+    return `<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 8px 4px 4px;border-radius:20px;background:var(--accent-bg);color:var(--accent);font-size:12.5px;font-weight:600;margin:0 6px 6px 0">
+      <span style="width:20px;height:20px;border-radius:50%;background:${avatarColor(name)};color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">${(name[0]||'?').toUpperCase()}</span>
+      ${name}
+      <button type="button" title="Remove" onclick="_removeTaskAssignee('${id}')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:16px;line-height:1;padding:0 2px">×</button>
+    </span>`;
   }).join('');
 }
-function _toggleTaskAssignee(id){
-  const i=_taskAssignees.map(String).indexOf(String(id));
-  if(i>=0) _taskAssignees.splice(i,1); else _taskAssignees.push(id);
-  _renderTaskAssigneePicker();
+function _taskAssigneeDropdown(show){ const dd=document.getElementById('task_assignee_dropdown'); if(dd) dd.style.display=show?'block':'none'; }
+function _taskAssigneeSearch(q){
+  const dd=document.getElementById('task_assignee_dropdown'); if(!dd) return;
+  const sel=_taskAssignees.map(String);
+  const ql=(q||'').toLowerCase().trim();
+  const matches=_taskAllPeople().filter(p=>!sel.includes(String(p.id)) && (!ql||(p.name||'').toLowerCase().includes(ql))).slice(0,8);
+  if(!matches.length){ dd.innerHTML='<div style="padding:9px 11px;font-size:12.5px;color:var(--text3)">'+(ql?'No matches':'Everyone is assigned')+'</div>'; }
+  else dd.innerHTML=matches.map(p=>`<div onmousedown="event.preventDefault();_addTaskAssignee('${p.id}')" style="padding:8px 11px;display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--text)" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
+      <span style="width:22px;height:22px;border-radius:50%;background:${avatarColor(p.name)};color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${(p.name[0]||'?').toUpperCase()}</span>${p.name}</div>`).join('');
+  _taskAssigneeDropdown(true);
+}
+function _addTaskAssignee(id){
+  if(!_taskAssignees.map(String).includes(String(id))) _taskAssignees.push(id);
+  const inp=document.getElementById('task_assignee_search'); if(inp){ inp.value=''; inp.focus(); }
+  _renderTaskAssigneeChips(); _taskAssigneeSearch('');
+}
+function _removeTaskAssignee(id){
+  _taskAssignees=_taskAssignees.filter(x=>String(x)!==String(id));
+  _renderTaskAssigneeChips(); _taskAssigneeSearch(document.getElementById('task_assignee_search')?.value||'');
 }
 
 function openEditTask(id){
@@ -17938,7 +18002,13 @@ function openEditTask(id){
     <div class="field"><label class="field-label">Task name *</label>
       <input type="text" id="task_title" value="${t?(t.title||'').replace(/"/g,'&quot;'):''}" placeholder="e.g. Send invites"></div>
     <div class="field"><label class="field-label">Assignees</label>
-      <div id="task_assignees_wrap" style="display:flex;flex-wrap:wrap;margin-top:2px"></div></div>
+      <div id="task_assignee_chips" style="display:flex;flex-wrap:wrap;margin-bottom:6px"></div>
+      <div style="position:relative">
+        <input type="text" id="task_assignee_search" placeholder="Search people to assign…" autocomplete="off"
+          oninput="_taskAssigneeSearch(this.value)" onfocus="_taskAssigneeSearch(this.value)"
+          onblur="setTimeout(()=>_taskAssigneeDropdown(false),150)">
+        <div id="task_assignee_dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:60;background:var(--white);border:1px solid var(--border);border-radius:8px;margin-top:4px;max-height:240px;overflow-y:auto;box-shadow:0 10px 28px rgba(0,0,0,.14)"></div>
+      </div></div>
     <div class="field"><label class="field-label">Due date</label>
       <input type="date" id="task_due" value="${t?.dueDate||''}"></div>
     <div class="field"><label class="field-label">Notes</label>
@@ -17948,7 +18018,7 @@ function openEditTask(id){
       <button class="btn btn-primary btn-sm" onclick="saveTask('${t?t.id:''}')">Save</button>
     </div>`;
   document.getElementById('userModal').classList.add('open');
-  _renderTaskAssigneePicker();
+  _renderTaskAssigneeChips();
 }
 
 async function saveTask(id){
@@ -17965,15 +18035,6 @@ async function saveTask(id){
   toast(id?'Task updated ✓':'Task created ✓');
 }
 
-async function toggleTaskComplete(id){
-  const t=(tasks||[]).find(x=>String(x.id)===String(id)); if(!t) return;
-  const completing = t.status!=='completed';
-  const res=await api('PATCH','/tasks/'+id+'/complete',{completed:completing});
-  if(!res){ toast('Could not update task'); return; }
-  const i=tasks.findIndex(x=>String(x.id)===String(id)); if(i>=0) tasks[i]=res;
-  renderTasks(); if(typeof renderLauncher==='function') renderLauncher();
-  toast(completing?'Task completed ✓':'Task reopened');
-}
 
 function deleteTask(id){
   openConfirm('Delete this task?','This cannot be undone.','Delete',async()=>{

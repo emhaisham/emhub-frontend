@@ -9556,14 +9556,14 @@ function showCalPopup(eid, evt){
   let docsHtml='';
   if(ev.eventDocs&&ev.eventDocs.length){
     docsHtml=`<div class="cal-popup-section"><div class="cal-popup-section-title"> Documents</div>`;
-    ev.eventDocs.forEach(d=>{
+    ev.eventDocs.forEach((d,i)=>{
       const ext=d.name.split('.').pop().toUpperCase();
       const icons={'PDF':'PDF','DOC':'DOC','DOCX':'DOC','XLS':'XLS','XLSX':'XLS','JPG':'IMG','JPEG':'IMG','PNG':'IMG','MP4':'MP4','ZIP':'ZIP'};
-      docsHtml+=`<a href="${d.data}" download="${d.name}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:7px;margin-bottom:6px;text-decoration:none">
+      docsHtml+=`<button type="button" onclick="openEventDoc('${ev.id}',${i})" style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:7px;margin-bottom:6px;text-decoration:none;width:100%;text-align:left;cursor:pointer;font-family:inherit">
         <span>${icons[ext]||''}</span>
         <span style="font-size:12.5px;color:var(--accent);font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name}</span>
-        <span style="font-size:11px;color:var(--text3)">${Math.round(d.size/1024)}KB</span>
-      </a>`;
+        <span style="font-size:11px;color:var(--text3)">${d.size?Math.round(d.size/1024)+'KB':''}</span>
+      </button>`;
     });
     docsHtml+='</div>';
   }
@@ -9823,12 +9823,28 @@ function renderCalOtherMembers(){
 }
 
 // ── Event Documents ────────────────────────────────────
+// Each attachment is uploaded ONCE to Spaces (via /files/upload) and the event
+// then carries only a small {key} reference instead of the full base64 bytes —
+// so saving/editing an event no longer re-uploads megabytes of documents. The
+// inline base64 is kept until the upload confirms a key (so the doc is usable
+// immediately and survives an upload failure or a disallowed file type — old
+// behaviour, no regression). Legacy events whose docs only have `.data` still
+// render and download via openSecureFile's data:-URL passthrough.
 function handleCalDocs(input){
   const files = Array.from(input.files);
   files.forEach(file=>{
     const reader = new FileReader();
-    reader.onload = e => {
-      calEventDocs.push({id:uid(), name:file.name, size:file.size, data:e.target.result});
+    reader.onload = async e => {
+      const base64 = e.target.result;
+      const doc = {id:uid(), name:file.name, size:file.size, data:base64, uploading:true};
+      calEventDocs.push(doc);
+      renderCalDocs();
+      try {
+        const mimeType = file.type || (base64.match(/^data:([^;]+);/)||[])[1] || 'application/octet-stream';
+        const res = await api('POST','/files/upload',{data:base64, mimeType, folder:'documents', docType:'events'});
+        if(res&&res.key){ doc.key=res.key; doc.mimeType=mimeType; delete doc.data; }
+      } catch(err){ /* upload failed/disallowed type — keep the base64 fallback */ }
+      doc.uploading=false;
       renderCalDocs();
     };
     reader.readAsDataURL(file);
@@ -9836,21 +9852,29 @@ function handleCalDocs(input){
   input.value='';
 }
 function removeCalDoc(id){ calEventDocs=calEventDocs.filter(d=>String(d.id)!==String(id)); renderCalDocs(); }
+// Open a doc from the edit-form working copy (calEventDocs); prefers the Spaces
+// key, falls back to a legacy inline data URL.
+function openCalDoc(id){ const d=calEventDocs.find(x=>String(x.id)===String(id)); if(d) openSecureFile(d.key||d.data); }
+// Open a doc from a saved event in the calendar (used by the event popup).
+function openEventDoc(eventId, idx){ const ev=calEvents.find(e=>String(e.id)===String(eventId)); const d=ev&&ev.eventDocs&&ev.eventDocs[idx]; if(d) openSecureFile(d.key||d.data); }
 function renderCalDocs(){
   const el=document.getElementById('cef_docs');if(!el)return;
   if(!calEventDocs.length){ el.innerHTML='<div style="font-size:12px;color:var(--text3)">No documents attached</div>'; return; }
   el.innerHTML=calEventDocs.map(d=>{
-    const kb=Math.round(d.size/1024);
-    const ext=d.name.split('.').pop().toUpperCase();
+    const kb=Math.round((d.size||0)/1024);
+    const ext=(d.name.split('.').pop()||'').toUpperCase();
     const icons={'PDF':'PDF','DOC':'DOC','DOCX':'DOC','XLS':'XLS','XLSX':'XLS','JPG':'IMG','JPEG':'IMG','PNG':'IMG','MP4':'MP4','ZIP':'ZIP'};
     const icon=icons[ext]||'';
+    const action = d.uploading
+      ? `<span style="font-size:11px;color:var(--text3)">Uploading…</span>`
+      : `<button type="button" class="btn btn-ghost btn-xs" onclick="openCalDoc('${d.id}')">⬇</button>`;
     return`<div style="display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:8px 12px;margin-bottom:6px">
       <span style="font-size:18px">${icon}</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name}</div>
         <div style="font-size:11px;color:var(--text3)">${kb}KB · ${ext}</div>
       </div>
-      <a href="${d.data}" download="${d.name}" class="btn btn-ghost btn-xs">⬇</a>
+      ${action}
       <button class="btn btn-red btn-xs" onclick="removeCalDoc('${d.id}')">✕</button>
     </div>`;
   }).join('');
@@ -9880,7 +9904,7 @@ async function saveCalEvent(){
     phases:calPhases.map(p=>({...p})),
     loadings:calLoadings.map(l=>({...l})),
     otherMembers:calOtherMembers.filter(m=>m.name).map(m=>({...m})),
-    eventDocs:calEventDocs.map(d=>({...d})),
+    eventDocs:calEventDocs.map(({uploading,...d})=>d),
     equipLists:calEditId?(calEvents.find(e=>String(e.id)===String(calEditId))?.equipLists||[]):[],
   };
   let res;

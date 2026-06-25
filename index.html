@@ -460,9 +460,10 @@ input,select,textarea{font-size:16px !important}
   .field-label[style*="font-size:10px"], .field-label[style*="font-size:11px"] {
     font-size: 12px !important;
   }
-  /* Buttons inside forms: minimum tap target without bloating them */
-  .btn.btn-xs { min-height: 36px; padding: 6px 12px; }
-  .btn.btn-sm { min-height: 40px; padding: 8px 14px; }
+  /* Buttons match the 44px input height on mobile so filter/action rows line up */
+  .btn { min-height: 44px; }
+  .btn.btn-sm { min-height: 44px; padding: 8px 14px; }
+  .btn.btn-xs { min-height: 38px; padding: 6px 12px; }
 
   /* === MOBILE TABLE BASELINE ===
      Lets wide tables scroll horizontally instead of overflowing or
@@ -543,7 +544,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 input::placeholder{color:var(--text3);font-weight:400}
 input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator{opacity:.5;cursor:pointer}
 
-.btn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:7px;padding:8px 16px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:7px;padding:8px 16px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
 .btn-primary{background:var(--accent);color:#fff;box-shadow:0 1px 4px rgba(19,71,111,.28)}
 .btn-primary:hover{background:var(--accent-hover);transform:translateY(-1px)}
 .btn-ghost{background:none;border:1px solid var(--border2);color:var(--text2)}
@@ -555,6 +556,16 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
 .btn-amber{background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber)}
 .btn-sm{padding:5px 11px;font-size:12px}
 .btn-xs{padding:3px 8px;font-size:11.5px}
+/* ── Uniform control height ────────────────────────────────────────────────
+   On desktop, inputs, selects and buttons in the same row are forced to one
+   height (38px) so filter bars and action rows line up. .btn-xs (compact
+   in-table actions) stays small. The ≤640px block below raises interactive
+   controls to a 44px touch target uniformly. */
+@media(min-width:641px){
+  input[type=text],input[type=date],input[type=time],input[type=number],input[type=password],input[type=email],input[type=month],input[type=tel],input[type=search],input[type=url],select{min-height:38px}
+  .btn{min-height:38px}
+  .btn.btn-xs{min-height:auto}
+}
 
 .stat-row{display:grid;gap:14px;margin-bottom:18px}
 .stat-row-4{grid-template-columns:repeat(4,1fr)}
@@ -1968,11 +1979,11 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
             <div class="page" id="cp-page-reports">
               <div class="page-hdr"><div class="page-title">Reports</div><div class="page-sub">Summary analytics with date range filtering</div></div>
               <div class="card" style="margin-bottom:16px">
-                <div class="card-body" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between">
-                  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <div class="card-body" style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;justify-content:space-between">
+                  <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
                     <div class="field" style="max-width:160px"><label class="field-label">From Date</label><input type="date" id="rptFrom" oninput="renderReports()"></div>
                     <div class="field" style="max-width:160px"><label class="field-label">To Date</label><input type="date" id="rptTo" oninput="renderReports()"></div>
-                    <div style="display:flex;gap:6px;margin-top:18px;flex-wrap:wrap">
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
                       <button class="btn btn-ghost btn-sm" onclick="setRptRange('thismonth')">This Month</button>
                       <button class="btn btn-ghost btn-sm" onclick="setRptRange('lastmonth')">Last Month</button>
                       <button class="btn btn-ghost btn-sm" onclick="setRptRange('quarter')">This Quarter</button>
@@ -1981,7 +1992,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                       <button class="btn btn-ghost btn-sm" onclick="setRptRange('all')">All Time</button>
                     </div>
                   </div>
-                  <div style="display:flex;gap:8px;margin-top:18px;flex-shrink:0">
+                  <div style="display:flex;gap:8px;flex-shrink:0">
                     <button class="btn btn-ghost btn-sm" onclick="guardAction('crewpay_export',exportReportPDF)">Export PDF</button>
                     <button class="btn btn-primary btn-sm" onclick="guardAction('crewpay_export',exportReportExcel)">Export Excel</button>
                   </div>
@@ -2141,14 +2152,14 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <div class="stat-card"><div class="stat-top"><span class="stat-label">Net Payable</span><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span></div><div class="stat-val blue" id="prStatNet">MVR 0</div></div>
               </div>
               <div class="card" style="margin-bottom:16px">
-                <div class="card-body" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+                <div class="card-body" style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap">
                   <div class="field" style="max-width:180px"><label class="field-label">Payroll Month</label><input type="month" id="prMonth" oninput="renderPayroll()"></div>
                   <div class="field" style="max-width:200px"><label class="field-label">Department</label><select id="prDept" onchange="_pages.payroll=1;renderPayroll()"><option value="">All Departments</option></select></div>
-                  <div style="margin-top:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                     <button class="btn btn-primary btn-sm" id="prGenerateBtn" onclick="guardAction('hr_payroll', runPayroll)">Generate Payroll</button>
                     <span id="prGenerateMsg" style="display:none;font-size:12px;color:var(--amber);font-weight:600"></span>
                   </div>
-                  <button class="btn btn-ghost btn-sm" id="prExportBtn" style="margin-top:20px" onclick="guardAction('hr_payroll',exportPayrollSheet)">Export Finance Sheet</button>
+                  <button class="btn btn-ghost btn-sm" id="prExportBtn" onclick="guardAction('hr_payroll',exportPayrollSheet)">Export Finance Sheet</button>
                 </div>
               </div>
               <div id="prScopeBanner" style="display:none"></div>
@@ -2184,9 +2195,9 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <div class="stat-card"><div class="stat-top"><span class="stat-label">Paid This Year</span><span class="stat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span></div><div class="stat-val green" id="pensPaid">MVR 0</div></div>
               </div>
               <div class="card" style="margin-bottom:16px">
-                <div class="card-body" style="display:flex;align-items:center;gap:14px">
+                <div class="card-body" style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap">
                   <div class="field" style="max-width:180px"><label class="field-label">Month</label><input type="month" id="pensMonth" oninput="renderPension()"></div>
-                  <button class="btn btn-primary btn-sm" style="margin-top:20px" onclick="recordPensionPayment()">✓ Record Payment</button>
+                  <button class="btn btn-primary btn-sm" onclick="recordPensionPayment()">✓ Record Payment</button>
                 </div>
               </div>
               <div id="pensionList"></div>

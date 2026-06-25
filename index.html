@@ -3587,6 +3587,7 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(err => console.warn('SW register failed:', err));
 }
 
+let _lastApiError = null;   // {status, error} of the most recent failed api() call
 async function api(method, path, body){
   const _t0 = performance.now();
   try {
@@ -3605,11 +3606,13 @@ async function api(method, path, body){
     // surface in the console without spamming for fast ones.
     const _ms = Math.round(performance.now() - _t0);
     if(_ms > 1500) console.warn('[api slow]', _ms+'ms', method, path);
-    if(!res.ok){ toast((data && data.error) || ('Server error ('+res.status+')')); return null; }
+    if(!res.ok){ const _em=(data && data.error) || ('Server error ('+res.status+')'); _lastApiError={status:res.status,error:_em}; toast(_em); return null; }
+    _lastApiError = null;
     return data;
   } catch(err){
     const _ms = Math.round(performance.now() - _t0);
     console.error('[api error]', _ms+'ms', method, path, err);
+    _lastApiError = {status:0, error:(err && err.message) || 'Connection error'};
     toast('Connection error — check your internet');
     return null;
   }
@@ -14762,6 +14765,32 @@ async function _excelToCsvText(file){
 // dependency order: categories -> sub-categories -> warehouses -> items -> units.
 // Flight cases are looked up (their serials are server-generated, so they
 // must already exist). Caches are refetched only at the very end.
+// Normalise a CSV import date to YYYY-MM-DD. Accepts ISO (YYYY-MM-DD or
+// YYYY/MM/DD) plus day-first DD/MM/YYYY and DD-MM-YYYY (Maldives convention) and
+// month-first MM/DD/YYYY when a part > 12 makes it unambiguous. Returns
+// {date:'YYYY-MM-DD'} on success, {error:'<original>'} if it can't be parsed.
+function _normalizeImportDate(raw){
+  const s=String(raw||'').trim();
+  if(!s) return {date:null};
+  const build=(y,mo,d)=>{
+    y=+y; mo=+mo; d=+d;
+    if(mo<1||mo>12||d<1||d>31) return {error:s};
+    const iso=`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dt=new Date(iso+'T00:00:00');
+    if(isNaN(dt.getTime())||dt.getMonth()+1!==mo||dt.getDate()!==d) return {error:s};
+    return {date:iso};
+  };
+  let m=s.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);          // YYYY-MM-DD / YYYY/MM/DD
+  if(m) return build(m[1],m[2],m[3]);
+  m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);              // D/M/Y or M/D/Y
+  if(m){
+    const a=+m[1], b=+m[2], y=m[3];
+    if(a>12 && b<=12) return build(y,b,a);   // DD/MM/YYYY (day clearly first)
+    if(b>12 && a<=12) return build(y,a,b);   // MM/DD/YYYY (month clearly first)
+    return build(y,b,a);                     // ambiguous -> assume day-first (local convention)
+  }
+  return {error:s};
+}
 async function _parseAndImportCSV(csvText){
   const text=String(csvText||'').replace(/^﻿/,'');
   const lines=text.split('\n').map(l=>l.replace(/\r$/,''));
@@ -14899,8 +14928,9 @@ async function _parseAndImportCSV(csvText){
       if((fr.fcNo&&fcMap.has(lc(fr.fcNo)))||(fr.name&&fcMap.has(lc(fr.name)))) continue; // already exists -> reuse
       const catId=fr.category?(catMap.get(lc(fr.category))||null):null;
       const warehouseId=fr.warehouse?(whMap.get(lc(fr.warehouse))||null):null;
+      _lastApiError=null;
       const res=await api('POST','/inventory/flightcases',{name:fr.name||fr.fcNo,fcSerial:fr.fcNo||'',catId,warehouseId,description:fr.notes||''});
-      if(!res||!res.id){ showInvFeedback('error',`Couldn't create the flight case "${fr.name||fr.fcNo}". The number "${fr.fcNo}" may already be taken, or you may not have permission to add flight cases.`); return; }
+      if(!res||!res.id){ const sm=(_lastApiError&&_lastApiError.error)?` Server said: “${_lastApiError.error}”.`:''; showInvFeedback('error',`Couldn't create the flight case “${fr.name||fr.fcNo}”.${sm} The number “${fr.fcNo}” may already be taken, or you may not have permission to add flight cases.`); return; }
       if(res.fcSerial) fcMap.set(lc(res.fcSerial),res.id);
       if(fr.name) fcMap.set(lc(fr.name),res.id);
       createdFcs++;
@@ -14909,14 +14939,17 @@ async function _parseAndImportCSV(csvText){
     // 5. Items (reuse existing by name; create the rest).
     let items=await api('GET','/inventory/items')||invItems||[];
     const itemMap=new Map(items.map(it=>[lc(it.name),it.id]));
+    const idToName=new Map(items.map(it=>[String(it.id),it.name]));   // for clear error messages
     let createdItems=0;
     for(const ir of itemRows){
       if(itemMap.has(lc(ir.name))) continue; // already in inventory -> reuse parent
       const catId=ir.category?(catMap.get(lc(ir.category))||null):null;
       const subCatId=(ir.subCategory&&catId)?(subMap.get(subKey(catId,ir.subCategory))||null):null;
+      _lastApiError=null;
       const res=await api('POST','/inventory/items',{name:ir.name,model:ir.model,manufacturer:ir.manufacturer,catId,subCatId});
-      if(!res||!res.id){ showInvFeedback('error',`Couldn't create the item "${ir.name}". You may not have permission to add inventory items.`); return; }
+      if(!res||!res.id){ const sm=(_lastApiError&&_lastApiError.error)?` Server said: “${_lastApiError.error}”.`:''; showInvFeedback('error',`Couldn't create the item “${ir.name}”.${sm} You may not have permission to add inventory items.`); return; }
       itemMap.set(lc(ir.name),res.id);
+      idToName.set(String(res.id),ir.name);
       createdItems++;
     }
 
@@ -14931,10 +14964,15 @@ async function _parseAndImportCSV(csvText){
         if(!fcId) warn.push(`Flight case "${ur.flightCaseSerial}" not found - its unit was imported without a case.`);
       }
       const warehouseId=ur.warehouse?(whMap.get(lc(ur.warehouse))||null):null;
+      // Accept common date formats (e.g. 20/07/2025) and normalise to YYYY-MM-DD.
+      // An unparseable date is flagged and the unit is imported without one
+      // rather than failing the whole batch.
+      const nd=_normalizeImportDate(ur.importDate);
+      if(nd.error) warn.push(`Unit "${ur.itemSerial||ur.itemName}": Import Date "${nd.error}" isn't a valid date — imported without a date. Use YYYY-MM-DD.`);
       if(!byItem.has(itemId)) byItem.set(itemId,[]);
       byItem.get(itemId).push({
         itemSerial:ur.itemSerial||'',
-        importDate:ur.importDate||null,
+        importDate:nd.date||null,
         warehouseId,
         fcId,
         notes:ur.notes||'',
@@ -14944,8 +14982,18 @@ async function _parseAndImportCSV(csvText){
     let createdUnits=0;
     for(const [itemId,arr] of byItem){
       if(!arr.length) continue;
+      _lastApiError=null;
       const res=await api('POST','/inventory/items/'+itemId+'/units',arr);
-      if(!res){ showInvFeedback('error','Some units could not be created. Items and any units before this point were saved.'); return; }
+      if(!res){
+        const itName=idToName.get(String(itemId))||('item '+itemId);
+        const serials=arr.map(u=>u.itemSerial||'(no serial)').slice(0,6).join(', ');
+        const serverMsg=(_lastApiError&&_lastApiError.error)?` Server said: “${_lastApiError.error}”.`:'';
+        showInvFeedback('error',
+          `Couldn't create ${arr.length} unit${arr.length!==1?'s':''} for “${itName}” (serial${arr.length!==1?'s':''}: ${serials}${arr.length>6?', …':''}).${serverMsg}`+
+          ` ${createdUnits} unit${createdUnits!==1?'s':''} + the items before this point were saved.`+
+          ` Common causes: Import Date not in YYYY-MM-DD, a duplicate Item Serial, or no permission to add units.`);
+        return;
+      }
       createdUnits+=arr.length;
     }
 

@@ -1829,10 +1829,6 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                     <div class="self-srv-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
                     <div class="self-srv-text"><div class="self-srv-title">Request a Letter</div><div class="self-srv-sub">Employment, NOC, salary cert…</div></div>
                   </button>
-                  <button class="self-srv-tile" onclick="openMakeRequest();setTimeout(()=>_mkSwitch('loan'),30)">
-                    <div class="self-srv-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
-                    <div class="self-srv-text"><div class="self-srv-title">Loan / Advance</div><div class="self-srv-sub">Request a salary advance</div></div>
-                  </button>
                 </div>
               </div>
 
@@ -2420,7 +2416,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
                 <div>
                   <div class="page-title">Employee Requests</div>
-                  <div class="page-sub">Self-service queue: profile update, letter, and loan/advance requests submitted by staff. Review and approve or reject.</div>
+                  <div class="page-sub">Self-service queue: profile update and letter requests submitted by staff. Review and approve or reject.</div>
                 </div>
               </div>
               <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
@@ -3349,7 +3345,6 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
       <div style="display:flex;gap:0;border-bottom:2px solid var(--border);padding:0 12px">
         <button class="staff-tab active" id="mkTab-profile" onclick="_mkSwitch('profile')">Profile Update</button>
         <button class="staff-tab" id="mkTab-letter"  onclick="_mkSwitch('letter')">Letter</button>
-        <button class="staff-tab" id="mkTab-loan"    onclick="_mkSwitch('loan')">Loan / Advance</button>
       </div>
       <div id="mkReqBody" style="padding:18px 24px"></div>
       <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 24px;border-top:1px solid var(--border)">
@@ -6680,6 +6675,9 @@ function openMakeRequest(){
 }
 function closeMakeRequest(){document.getElementById('mkReqModal').classList.remove('open');}
 function _mkSwitch(kind){
+  // Staff loan / salary-advance self-requests have been removed — staff can
+  // only request profile updates and letters. Anything else falls back to profile.
+  if (kind !== 'letter') kind = 'profile';
   document.querySelectorAll('#mkReqModal .staff-tab').forEach(b=>b.classList.remove('active'));
   const btn = document.getElementById('mkTab-'+kind); if(btn) btn.classList.add('active');
   const body = document.getElementById('mkReqBody'); if(!body) return;
@@ -6718,16 +6716,6 @@ function _mkSwitch(kind){
         </select></div>
       <div class="field"><label class="field-label">Purpose</label><input type="text" id="mk_purpose" placeholder="e.g. Visa application, bank account"></div>
       <div class="field"><label class="field-label">Addressee (optional)</label><input type="text" id="mk_addressee" placeholder="e.g. Embassy of India, BML"></div>`;
-  } else { // loan
-    body.innerHTML = `
-      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Request a salary advance or loan. HR will review and create the loan record on approval.</div>
-      <div style="display:grid;grid-template-columns:1fr 100px;gap:10px">
-        <div class="field"><label class="field-label">Amount *</label><input type="number" id="mk_amount" min="1" placeholder="e.g. 5000"></div>
-        <div class="field"><label class="field-label">Currency</label>
-          <select id="mk_currency"><option value="MVR">MVR</option><option value="USD">USD</option></select></div>
-      </div>
-      <div class="field"><label class="field-label">Repay Over (months)</label><input type="number" id="mk_months" min="1" max="60" placeholder="e.g. 6"></div>
-      <div class="field"><label class="field-label">Reason *</label><textarea id="mk_reason" rows="3" placeholder="Why do you need this?"></textarea></div>`;
   }
 }
 async function submitMakeRequest(){
@@ -6741,25 +6729,13 @@ async function submitMakeRequest(){
     if (!Object.keys(changes).length) { toast('Enter at least one change'); return; }
     payload = { requestedChanges: changes, reason: document.getElementById('mk_reason')?.value || null };
     path = '/hr/profile-requests';
-  } else if (kind === 'letter') {
+  } else { // letter
     payload = {
       template: document.getElementById('mk_template').value,
       purpose: document.getElementById('mk_purpose')?.value || null,
       addressee: document.getElementById('mk_addressee')?.value || null
     };
     path = '/hr/letter-requests';
-  } else {
-    const amount = parseFloat(document.getElementById('mk_amount')?.value);
-    const reason = document.getElementById('mk_reason')?.value?.trim();
-    if (!amount || amount <= 0) { toast('Enter an amount'); return; }
-    if (!reason) { toast('Reason required'); return; }
-    payload = {
-      amount,
-      currency: document.getElementById('mk_currency').value,
-      months: parseInt(document.getElementById('mk_months')?.value, 10) || null,
-      reason
-    };
-    path = '/hr/loan-requests';
   }
   const res = await api('POST', path, payload);
   if (!res) return;
@@ -8324,7 +8300,7 @@ function renderProfile(empId){
           </div>
           <div style="min-width:0">
             <div style="font-size:13.5px;font-weight:600;color:var(--text)">Need to update something?</div>
-            <div style="font-size:11.5px;color:var(--text3)">Submit a profile change, letter, or loan request &mdash; HR will review.</div>
+            <div style="font-size:11.5px;color:var(--text3)">Submit a profile change or letter request &mdash; HR will review.</div>
           </div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="openMakeRequest();setTimeout(()=>_mkSwitch('profile'),30)" style="white-space:nowrap;flex-shrink:0">Request Update</button>
@@ -8895,19 +8871,17 @@ function openEditLoan(loanId){
   _openLoanModal(loan.empId,loan);
 }
 
-// Header CTA dispatcher: approvers create directly, everyone else submits a request.
+// Loans are recorded by HR only. Approvers open the New-Loan form; staff have
+// no apply path (the CTA is hidden for them — this is just a safe fallback).
 function loanHdrCta(){
   if(hasPerm('hr_self_request_approve')){ openAddLoan(); return; }
-  if(typeof openMakeRequest === 'function'){
-    openMakeRequest();
-    setTimeout(()=>{ if(typeof _mkSwitch==='function') _mkSwitch('loan'); }, 30);
-    return;
-  }
-  toast('You don\'t have permission to approve loans');
+  toast('Loans are managed by HR.');
 }
 
 function _openLoanModal(preEmpId,loan){
   const canApprove = hasPerm('hr_self_request_approve');
+  // Loans are recorded by HR only — staff can no longer apply for one.
+  if(!canApprove){ toast('Loans are managed by HR.'); return; }
   // Non-approvers may only act on their own linked employee record.
   let empOptions;
   if(canApprove){
@@ -8954,19 +8928,6 @@ async function saveLoan(){
   const start=document.getElementById('ln_start')?.value;
   const notes=document.getElementById('ln_notes')?.value.trim();
 
-  // Non-approvers go through the request queue, not direct loan creation.
-  const canApprove = hasPerm('hr_self_request_approve');
-  if(!editingLoanId && !canApprove){
-    if(!amount||amount<=0) return toast('Enter an amount');
-    if(!notes) return toast('Reason required');
-    const months = monthly>0 ? Math.max(1, Math.ceil(amount/monthly)) : null;
-    const res = await api('POST','/hr/loan-requests',{ amount, currency:'MVR', months, reason: notes });
-    if(!res) return;
-    closeUserModal();
-    toast('Loan request submitted. HR will review.');
-    return;
-  }
-
   if(!empId||!amount||!monthly||!start) return toast('Fill all required fields');
 
   const schedule=[];let[y,m]=start.split('-').map(Number);let rem=amount;
@@ -9002,9 +8963,13 @@ async function saveLoan(){
 
 function renderLoans(){
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
-  // Header CTA label tracks approval right (request flow vs. direct creation)
+  // Loans are recorded by HR only — staff can no longer apply, so the header
+  // CTA is shown to approvers only ("+ New Loan") and hidden for everyone else.
   const hdrCta=document.getElementById('loansHdrCta');
-  if(hdrCta) hdrCta.textContent = hasPerm('hr_self_request_approve') ? '＋ New Loan' : '＋ Request Loan';
+  if(hdrCta){
+    hdrCta.textContent = '＋ New Loan';
+    hdrCta.style.display = hasPerm('hr_self_request_approve') ? '' : 'none';
+  }
   // Permission scope: admin or hr_loans_edit sees all; view-only sees own
   const lnRole=appRoles.find(r=>String(r.id)===String(currentUser?.roleId));
   const lnPerms=lnRole?.perms||currentUser?.rolePerms||{};

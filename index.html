@@ -8239,19 +8239,23 @@ function deleteEmployee(id){
 }
 
 let profileActiveTab='info';
+const _profilePhotoUrls = {};   // cache signed URLs by key so tab switches don't refetch/flash
 async function loadProfilePhoto(empId){
   const emp = hrEmployees.find(e=>String(e.id)===String(empId));
-  if(!emp?.photo) return;
+  const key = emp?.photo || emp?.docs?.photo?.key;
+  if(!key) return;
   const wrap = document.getElementById('profilePhotoWrap');
   if(!wrap) return;
+  const initial = (emp.name||'?')[0].toUpperCase();
+  const setImg = (url)=>{
+    wrap.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    const img = wrap.querySelector('img');
+    if(img) img.onerror = ()=>{ delete _profilePhotoUrls[key]; wrap.textContent = initial; };
+  };
+  if(_profilePhotoUrls[key]){ setImg(_profilePhotoUrls[key]); return; }  // cached → instant, no flash
   try {
-    const res = await api('GET', '/files/signed-url?key=' + encodeURIComponent(emp.photo));
-    if(res?.url){
-      const initial = (emp.name||'?')[0].toUpperCase();
-      wrap.innerHTML = `<img src="${res.url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-      const img = wrap.querySelector('img');
-      if(img) img.onerror = ()=>{ wrap.textContent = initial; };
-    }
+    const res = await api('GET', '/files/signed-url?key=' + encodeURIComponent(key));
+    if(res?.url){ _profilePhotoUrls[key] = res.url; setImg(res.url); }
   } catch(e) {}
 }
 
@@ -8277,8 +8281,8 @@ function renderProfile(empId){
   );
   document.getElementById('hrProfileContent').innerHTML=`
     <div class="page-hdr" style="display:flex;align-items:flex-start;justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:14px">
-        <div style="width:52px;height:52px;border-radius:50%;background:${hrAvColor(emp.name)};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden" id="profilePhotoWrap">${emp.name[0].toUpperCase()}</div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="width:clamp(72px,18vw,104px);height:clamp(72px,18vw,104px);border-radius:50%;background:${hrAvColor(emp.name)};display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.12)" id="profilePhotoWrap">${emp.name[0].toUpperCase()}</div>
         <div><div class="page-title">${emp.name}</div><div class="page-sub">${emp.title||'—'} · ${emp.dept||'—'} · ${emp.type==='expat'?' Expat':' Local'} ${wpBadge}</div></div>
       </div>
       <div style="display:flex;gap:8px">
@@ -8420,6 +8424,9 @@ function renderProfile(empId){
         <div class="info-item"><div class="info-label">Emergency Phone</div><div class="info-val">${emp.emgPhone||'—'}</div></div>
       </div>
     </div>`;
+  // Load the employee's photo into the (enlarged) header avatar. Falls back to
+  // the coloured initial when there is no photo.
+  loadProfilePhoto(emp.id);
   // Lazy-load tabs that need an API call (these aren't held in any local cache)
   if (profileActiveTab === 'salary-history') {
     setTimeout(()=>renderSalaryHistoryTab(emp.id), 0);

@@ -6424,6 +6424,19 @@ function saveEmployee(){
     company: emp.company||null, visaCompany: emp.visaCompany||null,
     salaryConfidential: emp.salaryConfidential===true
   };
+  // A local employee never carries expat/foreign-worker docs (work permit,
+  // passport, quota, medical, insurance) and an expat never carries a Maldivian
+  // NID — null the inapplicable fields on save so stale values from a type
+  // switch don't linger or resurface. (The form hides these sections by type,
+  // but the hidden inputs still hold old values.)
+  if(apiEmp.type==='local'){
+    apiEmp.passportNo=null; apiEmp.passportExpiry=null;
+    apiEmp.workPermitNo=null; apiEmp.workPermitExpiry=null; apiEmp.visaCompany=null;
+    apiEmp.insuranceNo=null; apiEmp.insuranceAgency=null; apiEmp.insuranceExpiry=null;
+    apiEmp.quotaExpiry=null; apiEmp.medicalExpiry=null;
+  } else if(apiEmp.type==='expat'){
+    apiEmp.nidNo=null; apiEmp.nidExpiry=null;
+  }
   (async()=>{
     let res;
     if(editingEmpId){ res=await api('PUT','/hr/employees/'+editingEmpId,apiEmp); }
@@ -8123,12 +8136,18 @@ function renderEmployees(){
   // across every active employee, counting each incident (one staff with
   // both WP and passport expiring contributes 2). Matches what the
   // Expiring Documents page actually surfaces.
-  const docCheck = ['workPermitExpiry','passportExpiry','nidExpiry','insuranceExpiry','quotaExpiry','medicalExpiry','contractExpiry'];
+  // Only count docs that apply to each employee's type — expat docs (work
+  // permit/passport/quota/medical/insurance) for expats, NID for locals,
+  // contract for all — so a local with stale expat fields isn't over-counted.
+  // Mirrors the /hr/expiring-documents backend filter.
+  const docApplies = { workPermitExpiry:'expat', passportExpiry:'expat', nidExpiry:'local', insuranceExpiry:'expat', quotaExpiry:'expat', medicalExpiry:'expat', contractExpiry:'all' };
   let compliance = 0;
-  active.forEach(e => docCheck.forEach(k => {
+  active.forEach(e => { const isExpat = e.type==='expat'; Object.keys(docApplies).forEach(k => {
+    const a = docApplies[k];
+    if((a==='expat'&&!isExpat)||(a==='local'&&isExpat)) return;
     const d = daysUntil(e[k]);
     if (d !== null && d <= 90) compliance++;
-  }));
+  }); });
   const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
   set('hrStatTotal', total);
   set('hrStatTotalSub', `across ${new Set(active.map(e=>e.dept).filter(Boolean)).size||0} departments`);
@@ -11214,15 +11233,19 @@ function _buildInbox(){
     });
   }
 
-  // 2. My own work permit / contract expiring within 60 days (if I'm an emp)
+  // 2. My own work permit / contract expiring within 60 days (if I'm an emp).
+  //    Expat-only docs (work permit/passport/insurance) are skipped for local
+  //    staff so stale fields don't surface a bogus reminder.
   if (myEmp) {
+    const _meExpat = myEmp.type === 'expat';
     const checks = [
-      { key:'workPermitExpiry', label:'work permit' },
-      { key:'passportExpiry', label:'passport' },
-      { key:'contractExpiry', label:'contract' },
-      { key:'insuranceExpiry', label:'insurance' }
+      { key:'workPermitExpiry', label:'work permit', expat:true },
+      { key:'passportExpiry', label:'passport', expat:true },
+      { key:'contractExpiry', label:'contract', expat:false },
+      { key:'insuranceExpiry', label:'insurance', expat:true }
     ];
     checks.forEach(c => {
+      if (c.expat && !_meExpat) return;
       const d = _daysUntilFrom(myEmp[c.key]);
       if (d !== null && d <= 60) {
         const tone = d < 0 ? 'red' : (d <= 14 ? 'red' : 'amber');

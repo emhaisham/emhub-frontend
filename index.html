@@ -1977,8 +1977,8 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
               <div class="card" style="margin-bottom:16px">
                 <div class="card-body" style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;justify-content:space-between">
                   <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
-                    <div class="field" style="max-width:160px"><label class="field-label">From Date</label><input type="date" id="rptFrom" oninput="renderReports()"></div>
-                    <div class="field" style="max-width:160px"><label class="field-label">To Date</label><input type="date" id="rptTo" oninput="renderReports()"></div>
+                    <div class="field" style="max-width:160px"><label class="field-label">From Date</label><input type="date" id="rptFrom" data-no-hint="true" oninput="renderReports()"></div>
+                    <div class="field" style="max-width:160px"><label class="field-label">To Date</label><input type="date" id="rptTo" data-no-hint="true" oninput="renderReports()"></div>
                     <div style="display:flex;gap:6px;flex-wrap:wrap">
                       <button class="btn btn-ghost btn-sm" onclick="setRptRange('thismonth')">This Month</button>
                       <button class="btn btn-ghost btn-sm" onclick="setRptRange('lastmonth')">Last Month</button>

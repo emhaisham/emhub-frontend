@@ -565,6 +565,8 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
   input[type=text],input[type=date],input[type=time],input[type=number],input[type=password],input[type=email],input[type=month],input[type=tel],input[type=search],input[type=url],select{min-height:38px}
   .btn{min-height:38px}
   .btn.btn-xs{min-height:auto}
+  /* Labor-payment work-day rows are dense tables: use a compact control height */
+  .workday-row input,.workday-row select,.group-block-label-input{min-height:32px}
 }
 
 .stat-row{display:grid;gap:14px;margin-bottom:18px}
@@ -1928,7 +1930,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-ca
                 <div class="card-body">
                   <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:18px">
                     <div class="field"><label class="field-label">Event Name</label><input type="text" id="newName" placeholder="e.g. Crossroads Indian Wedding"></div>
-                    <div class="field"><label class="field-label">Reference Date</label><input type="date" id="newDate"></div>
+                    <div class="field"><label class="field-label">Reference Date</label><input type="date" id="newDate" oninput="onRefDateChange()"></div>
                   </div>
                   <div class="groups-hdr"><span class="groups-hdr-lbl">Staff Groups</span><button class="btn btn-ghost btn-sm" onclick="addFormGroup()">＋ Add Group</button></div>
                   <div class="group-rows" id="formGroupRows"></div>
@@ -4247,7 +4249,17 @@ function addFormGroup(){
   fGroups.push({id:++fgSeq,label:'',days:[newDay()]});
   renderFormGroups();
 }
-function newDay(){return{id:uid(),pax:'',startDate:'',startTime:'',endDate:'',endTime:'',override:false,customRate:''}}
+function _refDateOr(id){return document.getElementById(id)?.value||new Date().toISOString().slice(0,10)}
+// New work days start on the event's Reference Date (same month, fewer clicks).
+// _auto stays true until the user edits a date, so changing the Reference Date
+// re-syncs only the days they haven't touched.
+function newDay(){const r=_refDateOr('newDate');return{id:uid(),pax:'',startDate:r,startTime:'',endDate:r,endTime:'',override:false,customRate:'',_auto:true}}
+function onRefDateChange(){
+  const r=document.getElementById('newDate')?.value;if(!r)return;
+  let changed=false;
+  fGroups.forEach(g=>g.days.forEach(d=>{if(d._auto&&(d.startDate!==r||d.endDate!==r)){d.startDate=r;d.endDate=r;changed=true}}));
+  if(changed)renderFormGroups();
+}
 function removeFormGroup(id){if(fGroups.length===1)return toast('Need at least one group');fGroups=fGroups.filter(g=>String(g.id)!==String(id));renderFormGroups()}
 function addFormGroupDay(gid){const g=fGroups.find(x=>String(x.id)===String(gid));if(g){g.days.push(newDay());renderFormGroups()}}
 function removeFormGroupDay(gid,did){const g=fGroups.find(x=>String(x.id)===String(gid));if(!g)return;if(g.days.length===1)return toast('Need at least one work day');g.days=g.days.filter(d=>String(d.id)!==String(did));renderFormGroups()}
@@ -4257,6 +4269,7 @@ function onFGDay(gid,did,field,val){
   const g=fGroups.find(x=>String(x.id)===String(gid));if(!g)return;
   const d=g.days.find(x=>x.id===did);if(!d)return;
   if(field==='override')d.override=val;else d[field]=val;
+  if(field==='startDate'||field==='endDate')d._auto=false;
   updateFormPreviews();
 }
 function toggleDayOverride(gid,did,checked){
@@ -4390,7 +4403,7 @@ function saveEvent(){
     delete newEv._pendingCreate;
   }).catch(()=>{ delete newEv._pendingCreate; });
   document.getElementById('newName').value='';
-  document.getElementById('newDate').valueAsDate=new Date();
+  { const nd=document.getElementById('newDate'); nd.valueAsDate=new Date(); nd.dispatchEvent(new Event('change')); }
   initForm();populateMonths();renderAll();
   // Show save dialog
   pendingReportEid=eid;
@@ -5514,7 +5527,7 @@ function openEditEvent(eid){
 function closeEditEvent(){document.getElementById('editEventModal').classList.remove('open');editingEventId=null;eGroups=[]}
 
 function addEditGroup(){eGroups.push({id:++egSeq,origId:null,label:'',days:[newEditDay()]});renderEditGroups()}
-function newEditDay(){return{id:uid(),origId:null,pax:'',startDate:'',startTime:'',endDate:'',endTime:'',hours:0,override:false,customRate:''}}
+function newEditDay(){const r=_refDateOr('editDate');return{id:uid(),origId:null,pax:'',startDate:r,startTime:'',endDate:r,endTime:'',hours:0,override:false,customRate:''}}
 function removeEditGroup(id){if(eGroups.length===1)return toast('Need at least one group');eGroups=eGroups.filter(g=>String(g.id)!==String(id));renderEditGroups()}
 function addEditGroupDay(gid){const g=eGroups.find(x=>String(x.id)===String(gid));if(g){g.days.push(newEditDay());renderEditGroups()}}
 function removeEditGroupDay(gid,did){const g=eGroups.find(x=>String(x.id)===String(gid));if(!g)return;if(g.days.length===1)return toast('Need at least one work day');g.days=g.days.filter(d=>d.id!==did);renderEditGroups()}

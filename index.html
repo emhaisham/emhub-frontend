@@ -5555,12 +5555,12 @@ function renderEditDayRow(gid,d,di,totalDays){
   return`<div class="workday-row" id="edrow_${d.id}">
     <div><input type="number" min="1" placeholder="Pax" value="${d.pax}" oninput="onEGDay(${gid},${d.id},'pax',this.value)" style="width:100%"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-      <input type="date" value="${d.startDate}" oninput="onEGDay(${gid},${d.id},'startDate',this.value)">
-      <input type="time" value="${d.startTime}" oninput="onEGDay(${gid},${d.id},'startTime',this.value)">
+      <div><input type="date" value="${d.startDate}" oninput="onEGDay(${gid},${d.id},'startDate',this.value)" style="width:100%"></div>
+      <div><input type="time" value="${d.startTime}" oninput="onEGDay(${gid},${d.id},'startTime',this.value)" style="width:100%"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-      <input type="date" value="${d.endDate}" oninput="onEGDay(${gid},${d.id},'endDate',this.value)">
-      <input type="time" value="${d.endTime}" oninput="onEGDay(${gid},${d.id},'endTime',this.value)">
+      <div><input type="date" value="${d.endDate}" oninput="onEGDay(${gid},${d.id},'endDate',this.value)" style="width:100%"></div>
+      <div><input type="time" value="${d.endTime}" oninput="onEGDay(${gid},${d.id},'endTime',this.value)" style="width:100%"></div>
     </div>
     <div id="edhours_${d.id}" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;color:var(--accent)">${h&&h>0?fmtH(h):'—'}</div>
     <div id="edrate_${d.id}" style="font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;font-size:12px;color:var(--amber)">${h&&h>0?'MVR '+rate.toLocaleString():'—'}</div>
